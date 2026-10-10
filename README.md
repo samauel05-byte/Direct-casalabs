@@ -106,6 +106,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Guía central de empresas**: `public/js/empresas.js` es el conector compartido que lee la lista de clientes (`/api/clients`, aislada por firma) y autocompleta **nombre ↔ RNC** donde se pidan (Estimación Fiscal, IR-2, CAMI). Al elegir/escribir el nombre rellena el RNC y viceversa; normaliza los datos (quita el prefijo «GENERALES » de la importación y deduplica por nombre). Cada módulo lo incluye y conecta su par de campos con `SERP_EMPRESAS.attach(nombreId, rncId)`. NALA usa la misma guía con su propia lista ya cargada (`NALA.state.clients`) en el formulario de empresa cliente.
 
+Los nombres de empresa de la **bóveda de credenciales** (lista de empresas de un portal, buscador global de accesos, detalle y edición) también se limpian del prefijo heredado «GENERALES » al descifrarse en el navegador (`C._cleanCompany` dentro de `C.dec`, en `public/index.html`): es conservador (solo al inicio, nunca deja el nombre vacío) y, al guardar una credencial editada, el nombre queda limpio de forma permanente.
+
 ---
 
 ## Roles de usuario

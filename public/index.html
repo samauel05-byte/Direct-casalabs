@@ -880,9 +880,18 @@ const C = {
     const ct = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, key, new TextEncoder().encode(JSON.stringify(obj)));
     return { iv:C._b64(iv), ct:C._b64(new Uint8Array(ct)) };
   },
+  // Quita el prefijo heredado «GENERALES » del nombre de empresa (venía de una
+  // importación vieja). Solo al inicio y nunca deja el nombre vacío.
+  _cleanCompany(name) {
+    if (typeof name !== 'string') return name;
+    const cleaned = name.replace(/^\s*generales\b[\s,.:;·\-]*/i, '').trim();
+    return cleaned || name.trim();
+  },
   async dec(key, iv64, ct64) {
     const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:C._u8(iv64) }, key, C._u8(ct64));
-    return JSON.parse(new TextDecoder().decode(pt));
+    const obj = JSON.parse(new TextDecoder().decode(pt));
+    if (obj && typeof obj.companyName === 'string') obj.companyName = C._cleanCompany(obj.companyName);
+    return obj;
   },
   async encBytes(key, bytes) {
     const iv = crypto.getRandomValues(new Uint8Array(12));

@@ -91,9 +91,16 @@
     title: 'Empresas clientes',
     async render(root) {
       const canManage = NALA.can('clients_manage');
-      root.innerHTML = `<div class="stack"><div class="row"><label class="f" style="flex:1;min-width:220px"><span>Buscar</span><input id="cq" placeholder="Nombre, RNC o cédula"></label>
-        <label class="f"><span>Estado</span><select id="cs"><option value="">Todas</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></label>
-        ${canManage ? '<button class="btn primary" id="cnew">+ Registrar empresa</button>' : ''}</div><div id="ctable"></div></div>`;
+      root.innerHTML = `<div class="stack">
+        <div style="position:relative">
+          <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;opacity:.55" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input id="cq" placeholder="Buscar empresa por nombre, RNC o cédula…" autocomplete="off" style="width:100%;box-sizing:border-box;padding:12px 14px 12px 42px;font-size:15px;border-radius:10px">
+        </div>
+        <div class="row">
+          <label class="f"><span>Estado</span><select id="cs"><option value="">Todas</option><option value="active">Activas</option><option value="inactive">Inactivas</option></select></label>
+          ${canManage ? '<button class="btn primary" id="cnew" style="margin-left:auto">+ Registrar empresa</button>' : ''}
+        </div>
+        <div id="ctable"></div></div>`;
       // Filters on each column of the table (like Excel) plus sorting by
       // clicking a title; applied on the list already loaded.
       const colFilter = { name: '', id: '', status: '', config: '', source: '' };

@@ -288,7 +288,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 <!-- Clientes multiempresa -->
 <div id="view-clients" class="layer" hidden>
-  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div><div class="hdr-right"><button class="back-btn" style="margin:0" onclick="showPortals()">Portales</button><button class="icon-btn" title="Cerrar sesión" onclick="lockVault()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div><div class="hdr-right"><button class="back-btn" style="margin:0" onclick="showPortals()">Portales</button><button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
   <main class="main">
     <div class="client-hero"><div><h1>Clientes</h1><p id="clients-subtitle">Gestiona los clientes de tu empresa.</p></div><div class="client-count"><strong id="clients-count">0</strong><span>clientes</span></div></div>
     <div class="client-toolbar" id="clients-toolbar" hidden><label class="client-upload">Importar Excel<input id="clients-file" type="file" accept=".xlsx,.xls,.csv" onchange="importClientsFile(this.files[0])"></label></div>
@@ -349,7 +349,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <button class="icon-btn" id="btn-users" title="Usuarios" onclick="showUsers()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
-      <button class="icon-btn" title="Cerrar sesión" onclick="lockVault()">
+      <button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </button>
     </div>
@@ -366,7 +366,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
     </div>
     <div class="hdr-right">
       <div class="sync-pill"><span class="sync-dot"></span><span id="sync-txt2">En línea</span></div>
-      <button class="icon-btn" title="Bloquear" onclick="lockVault()">
+      <button class="icon-btn" title="Bloquear" onclick="confirmLogout()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </button>
     </div>
@@ -377,26 +377,25 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       Volver a portales
     </button>
     <div id="portal-banner"></div>
-    <div id="portal-sync-action" style="display:flex;justify-content:flex-end;margin:0 0 12px">
-      <button class="add-company-btn btn-solid" type="button" onclick="openImportModal()">
-        Sincronizar Excel
-      </button>
-    </div>
-    <div id="company-search-wrap" hidden style="margin-bottom:8px">
-      <input id="company-search" type="search" placeholder="Buscar empresa…" autocomplete="off"
-        style="width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;outline:none"
-        oninput="filterCompanies(this.value)">
+    <!-- Buscador arriba y claro: filtra la lista de empresas en vivo -->
+    <div id="company-search-wrap" hidden style="margin:0 0 14px">
+      <div style="position:relative">
+        <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text2,#7a9bc0)" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="company-search" type="search" placeholder="Buscar empresa por nombre o RNC…" autocomplete="off"
+          style="width:100%;box-sizing:border-box;padding:12px 14px 12px 40px;border:2px solid var(--border2,var(--border));border-radius:10px;background:var(--bg);color:var(--text);font-size:15px;outline:none"
+          oninput="filterCompanies(this.value)">
+      </div>
     </div>
     <div class="company-list" id="company-list"></div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-    <button class="add-company-btn" id="add-company-btn" onclick="openCompanyModal(null)">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-      Agregar empresa
-    </button>
-    <button class="add-company-btn btn-solid" id="import-xlsx-btn" onclick="openImportModal()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      Importar Excel
-    </button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:4px">
+      <button class="add-company-btn" id="add-company-btn" onclick="openCompanyModal(null)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar empresa
+      </button>
+      <button type="button" id="import-xlsx-btn" onclick="openImportModal()" title="Sincronizar desde Excel"
+        style="margin-left:auto;background:none;border:none;color:var(--text2,#7a9bc0);font-size:12px;cursor:pointer;text-decoration:underline;padding:6px 4px">
+        Sincronizar Excel
+      </button>
     </div>
   </main>
 </div>
@@ -471,7 +470,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Volver
       </button>
-      <button class="icon-btn" title="Cerrar sesión" onclick="lockVault()">
+      <button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </button>
     </div>
@@ -498,7 +497,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Volver
       </button>
-      <button class="icon-btn" title="Cerrar sesión" onclick="lockVault()">
+      <button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </button>
     </div>
@@ -509,21 +508,21 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 <!-- Usuarios (admin) -->
 <div id="view-dx-cards" class="layer" hidden>
   <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div>
-    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="lockVault()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
   <main class="main"><button class="back-btn" onclick="showPortals()">← Volver a portales</button>
     <div class="page-head"><div><h1>Tarjetas de códigos DGII</h1><p>Revisa que cada empresa tenga sus 40 códigos, sin faltantes ni repetidos.</p></div></div>
     <div id="dx-cards-body" style="margin-top:14px"></div></main></div>
 
 <div id="view-dx-history" class="layer" hidden>
   <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div>
-    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="lockVault()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
   <main class="main"><button class="back-btn" onclick="showPortals()">← Volver a portales</button>
     <div class="page-head"><div><h1>Historial de entradas</h1><p>Quién entró a cada portal y cuándo.</p></div></div>
     <div id="dx-history-body" style="margin-top:14px"></div></main></div>
 
 <div id="view-dx-usage" class="layer" hidden>
   <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div>
-    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="lockVault()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
   <main class="main"><button class="back-btn" onclick="showPortals()">← Volver a portales</button>
     <div class="page-head"><div><h1>Uso del sistema</h1><p>Actividad en vivo de los accesos a portales.</p></div><button class="back-btn" onclick="DX.openUsage()" style="margin:0">↻ Actualizar</button></div>
     <div id="dx-usage-body" style="margin-top:14px"></div></main></div>
@@ -534,7 +533,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px">
     </div>
     <div class="hdr-right">
-      <button class="icon-btn" title="Cerrar sesión" onclick="lockVault()">
+      <button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </button>
     </div>
@@ -1167,6 +1166,13 @@ function lockVault(message='') {
   if(message) toast(message,'warn');
 }
 
+// Salida iniciada por el usuario (botón «Cerrar sesión»/«Bloquear»): confirma
+// antes de cerrar para evitar salidas accidentales. Los cierres automáticos
+// (sesión reemplazada, inactividad) siguen llamando a lockVault() directo.
+function confirmLogout() {
+  if (confirm('¿Seguro que quieres salir? Se cerrará tu sesión.')) lockVault();
+}
+
 /* ── Views ── */
 function show(id) {
   ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
@@ -1633,21 +1639,16 @@ async function renderCompaniesView() {
   const inst=INST[activePortal];
   const hasUrl=!!(appConfig[activePortal+'_loginUrl']||inst?.url);
 
-  // banner
-  const bannerLogo=logoMarkup(activePortal,inst,'banner-logo','3px',['10px','11px','13px']);
-  document.getElementById('portal-banner').innerHTML=`
-    <div class="portal-banner">
-      ${bannerLogo}
-      <div class="banner-info">
-        <div class="banner-name">${inst.name}</div>
-        <div class="banner-sub">${hasUrl?'Portal configurado — listo para entrar':'URL de login sin configurar'}</div>
-      </div>
+  // Encabezado: se quitó el banner con el nombre del portal (redundante: ya
+  // entraste a ese portal). «Configurar URL» solo lo ve el administrador.
+  const isAdmin = currentUser?.role === 'admin';
+  document.getElementById('portal-banner').innerHTML = isAdmin ? `
+    <div style="display:flex;justify-content:flex-end;margin:0 0 10px">
       <button class="btn-cfg-portal" onclick="openPortalCfg('${activePortal}')">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
         Configurar URL
       </button>
-    </div>`;
-  hydrateLogos(document.getElementById('portal-banner'));
+    </div>` : '';
 
   // list — decrypt all, deduplicate by company name (keep newest updated_at)
   const list=document.getElementById('company-list');
@@ -1693,12 +1694,14 @@ async function renderCompaniesView() {
     unique.push(entries[0]);
     if (entries.length>1) { _dupeGroups.push(entries); dupeCount+=entries.length-1; }
   }
+  // Orden alfabético por nombre de empresa.
+  unique.sort((a,b)=>(a.plain.companyName||'').localeCompare((b.plain.companyName||''),'es',{sensitivity:'base'}));
 
-  // reset search
+  // reset search — buscador visible en cuanto hay más de una empresa
   const searchWrap=document.getElementById('company-search-wrap');
   const searchInput=document.getElementById('company-search');
   searchInput.value='';
-  searchWrap.hidden = unique.length < 6;
+  searchWrap.hidden = unique.length < 2;
 
   // Show "clean duplicates" button if there are any
   let dupeBanner=document.getElementById('dupe-banner');
@@ -1722,6 +1725,7 @@ async function renderCompaniesView() {
     item.className='company-card';
     item.dataset.cred=cred.id;
     item.dataset.name=(plain.companyName||'').toLowerCase();
+    item.dataset.search=((plain.companyName||'')+' '+(plain.rnc||'')+' '+(plain.username||'')).toLowerCase();
     item.tabIndex=0;
     item.setAttribute('role','button');
     item.title=(plain.companyName||'Sin nombre')+' · Entrar';
@@ -1750,7 +1754,8 @@ async function renderCompaniesView() {
 function filterCompanies(q) {
   const term=q.toLowerCase().trim();
   document.querySelectorAll('#company-list .company-card').forEach(el=>{
-    el.hidden = term.length > 0 && !el.dataset.name.includes(term);
+    const hay=el.dataset.search||el.dataset.name||'';
+    el.hidden = term.length > 0 && !hay.includes(term);
   });
 }
 

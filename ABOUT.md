@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Direct — nombres de empresa sin el prefijo «GENERALES»**: algunas credenciales traían el nombre con el prefijo heredado «GENERALES » (artefacto de una importación vieja). Ahora, al mostrar cualquier nombre de empresa de la bóveda (lista de empresas de un portal, buscador global de accesos, detalle y edición), se quita ese prefijo automáticamente. La limpieza se hace al descifrar en el navegador (el servidor nunca ve texto plano) y es conservadora: solo quita un «GENERALES» al inicio y nunca deja el nombre vacío; al editar y guardar una credencial, el nombre queda limpio de forma permanente. (La lista de Clientes ya se limpiaba igual.)
+
 - **Direct — buscador global de accesos en el inicio**: en la pantalla de Accesos, cualquier usuario puede escribir el nombre de una empresa (o su RNC) y ver, agrupados, **todos los portales donde esa empresa tiene acceso**, con un botón para entrar directo a cada uno. El índice se arma descifrando las credenciales en el navegador (el servidor nunca ve texto plano) y solo incluye los portales permitidos a ese usuario.
 
 - **Direct — permisos de portales por usuario (todos los portales)**: antes 8 portales (Cámara, ONAPI, Formalízate, Citrus, IDOPPRIL, Digisign, Correo GD, Nexo) se mostraban a todos sin importar la asignación. Ahora **cada usuario ve solo los portales que el administrador le asigna**; el admin los ve todos. Esos 8 portales se agregaron a la pantalla de permisos del usuario para poder asignarlos uno por uno. (Tras el cambio, asigna a cada usuario los portales que debe ver.)

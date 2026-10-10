@@ -99,6 +99,11 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .btn-cfg-portal:hover{background:rgba(255,255,255,.1);color:var(--text)}
 
 .company-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px;margin-bottom:10px}
+.home-access-card{background:linear-gradient(145deg,var(--surface) 0%,var(--bg2) 100%);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.home-access-head{font-size:14px;margin-bottom:8px}
+.home-access-chips{display:flex;flex-wrap:wrap;gap:8px}
+.home-access-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(37,99,235,.14);border:1px solid var(--border2);color:var(--text);border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.home-access-chip:hover{background:rgba(37,99,235,.28)}
 @media(max-width:540px){.company-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}}
 /* Companies are small square tiles, like the portals on the home screen:
    the whole tile enters the company; the pencil edits it. */
@@ -854,6 +859,8 @@ let refreshToken = null, tokenExpiresAt = 0, refreshTimer = null, _refreshing = 
 // SOLO los que se le asignan (portals_direct). Antes 8 de ellos se mostraban
 // siempre, sin importar el permiso.
 const DIRECT_PORTALS = ['dgii','tss','trabajo','sirla','carnet','azul','camara','onapi','formalizate','citrus','idoppril','digisign','gdmail','nexo'];
+// Índice (desencriptado en el navegador) de accesos para el buscador del inicio.
+let _homeIndex = null;
 
 /* ── Crypto ── */
 const C = {
@@ -1630,19 +1637,96 @@ function renderPortalGrid() {
   head.innerHTML='<div><h1>Accesos</h1><p>Elige un portal o herramienta para continuar.</p></div>';
   main.appendChild(head);
 
+  // Buscador global: escribe una empresa y ve TODOS los portales donde tiene
+  // acceso (para cualquier usuario). Vacío = se muestran los grupos normales.
+  const searchWrap=document.createElement('div');
+  searchWrap.innerHTML=`
+    <div style="margin:0 0 14px">
+      <div style="position:relative">
+        <svg style="position:absolute;left:13px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--text2,#7a9bc0)" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="home-search" type="search" autocomplete="off" placeholder="Buscar empresa y ver todos sus accesos…" oninput="filterHomeAccess(this.value)" style="width:100%;box-sizing:border-box;padding:12px 14px 12px 42px;border:2px solid var(--border2,var(--border));border-radius:10px;background:var(--bg);color:var(--text);font-size:15px;outline:none">
+      </div>
+    </div>
+    <div id="home-results" hidden></div>`;
+  main.appendChild(searchWrap);
+
+  const groupsWrap=document.createElement('div');
+  groupsWrap.id='home-groups';
+  main.appendChild(groupsWrap);
+
   for (const group of GROUPS){
     const groupKeys=group.keys.filter(k=>allowed.includes(k)&&INST[k]);
     if(!groupKeys.length) continue;
     const label=document.createElement('p');
     label.className='sect-label';
     label.textContent=group.label;
-    main.appendChild(label);
+    groupsWrap.appendChild(label);
     const grid=document.createElement('div');
     grid.className='portal-grid';
     for(const key of groupKeys) grid.appendChild(makeCard(key,INST[key]));
-    main.appendChild(grid);
+    groupsWrap.appendChild(grid);
   }
   hydrateLogos(main);
+
+  // Construye el índice de accesos (solo portales permitidos) para el buscador.
+  _homeIndex=null;
+  buildHomeIndex(allowed.filter(k=>DIRECT_PORTALS.includes(k)));
+}
+
+// Desencripta las credenciales de los portales permitidos para poder buscar por
+// nombre de empresa / RNC / usuario. Se hace en el navegador (como todo lo de la
+// bóveda); el servidor nunca ve texto plano.
+async function buildHomeIndex(portalKeys) {
+  const set=new Set(portalKeys);
+  const items=[];
+  for (const c of credentials) {
+    if (!set.has(c.institution)) continue;
+    try {
+      const p=await C.dec(masterKey,c.iv,c.ct);
+      items.push({ credId:c.id, institution:c.institution, name:(p.companyName||'').trim(), rnc:String(p.rnc||p.cedula||'').trim(), user:(p.username||'').trim() });
+    } catch {}
+  }
+  _homeIndex=items;
+  const q=document.getElementById('home-search')?.value||'';
+  if (q.trim()) renderHomeResults(q);
+}
+
+function filterHomeAccess(q) {
+  const term=(q||'').trim();
+  const groups=document.getElementById('home-groups');
+  const results=document.getElementById('home-results');
+  if (!term) { if(groups) groups.hidden=false; if(results){ results.hidden=true; results.innerHTML=''; } return; }
+  if (groups) groups.hidden=true;
+  renderHomeResults(q);
+}
+
+function renderHomeResults(q) {
+  const results=document.getElementById('home-results');
+  if (!results) return;
+  results.hidden=false;
+  if (_homeIndex===null) { results.innerHTML='<p class="sect-label" style="opacity:.7">Cargando accesos…</p>'; return; }
+  const norm=s=>String(s||'').toLowerCase();
+  const term=norm((q||'').trim());
+  const digits=(q||'').replace(/\D/g,'');
+  const matches=_homeIndex.filter(it=> it.name && (
+    norm(it.name).includes(term) ||
+    (digits && it.rnc.replace(/\D/g,'').includes(digits)) ||
+    norm(it.user).includes(term)
+  ));
+  const byCompany=new Map();
+  for (const it of matches) {
+    const key=norm(it.name)+'|'+it.rnc;
+    if (!byCompany.has(key)) byCompany.set(key,{ name:it.name, rnc:it.rnc, items:[] });
+    byCompany.get(key).items.push(it);
+  }
+  const list=[...byCompany.values()].sort((a,b)=>a.name.localeCompare(b.name,'es',{sensitivity:'base'}));
+  if (!list.length) { results.innerHTML=`<p class="sect-label" style="opacity:.7">Sin resultados para «${esc((q||'').trim())}»</p>`; return; }
+  results.innerHTML=list.map(g=>`
+    <div class="home-access-card">
+      <div class="home-access-head"><strong>${esc(g.name)}</strong>${g.rnc?` <span style="color:var(--text2,#7a9bc0)">· ${esc(g.rnc)}</span>`:''} <span style="color:var(--text2,#7a9bc0)">· ${g.items.length} acceso${g.items.length>1?'s':''}</span></div>
+      <div class="home-access-chips">${g.items.map(it=>`<button type="button" class="home-access-chip" data-cred="${esc(it.credId)}">${esc(INST[it.institution]?.name||it.institution)} <span aria-hidden="true">→</span></button>`).join('')}</div>
+    </div>`).join('');
+  results.querySelectorAll('.home-access-chip').forEach(b=>b.addEventListener('click',()=>enterCompany(b.dataset.cred)));
 }
 
 /* ── Companies view ── */

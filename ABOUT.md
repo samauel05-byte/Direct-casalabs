@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Direct — buscador global de accesos en el inicio**: en la pantalla de Accesos, cualquier usuario puede escribir el nombre de una empresa (o su RNC) y ver, agrupados, **todos los portales donde esa empresa tiene acceso**, con un botón para entrar directo a cada uno. El índice se arma descifrando las credenciales en el navegador (el servidor nunca ve texto plano) y solo incluye los portales permitidos a ese usuario.
+
 - **Direct — permisos de portales por usuario (todos los portales)**: antes 8 portales (Cámara, ONAPI, Formalízate, Citrus, IDOPPRIL, Digisign, Correo GD, Nexo) se mostraban a todos sin importar la asignación. Ahora **cada usuario ve solo los portales que el administrador le asigna**; el admin los ve todos. Esos 8 portales se agregaron a la pantalla de permisos del usuario para poder asignarlos uno por uno. (Tras el cambio, asigna a cada usuario los portales que debe ver.)
 - **Direct — arreglo de la pantalla «No tienes ninguna empresa creada»**: se veía apretada en una columna angosta (una palabra por línea); ahora ocupa todo el ancho y se lee bien.
 

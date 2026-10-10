@@ -34,6 +34,9 @@
 
 ## Estado y novedades recientes
 
+- **Direct — permisos de portales por usuario (todos los portales)**: antes 8 portales (Cámara, ONAPI, Formalízate, Citrus, IDOPPRIL, Digisign, Correo GD, Nexo) se mostraban a todos sin importar la asignación. Ahora **cada usuario ve solo los portales que el administrador le asigna**; el admin los ve todos. Esos 8 portales se agregaron a la pantalla de permisos del usuario para poder asignarlos uno por uno. (Tras el cambio, asigna a cada usuario los portales que debe ver.)
+- **Direct — arreglo de la pantalla «No tienes ninguna empresa creada»**: se veía apretada en una columna angosta (una palabra por línea); ahora ocupa todo el ancho y se lee bien.
+
 - **NALA — buscador de clientes grande y arriba**: la lista de empresas clientes de NALA muestra ahora un buscador prominente arriba (nombre, RNC o cédula) y sigue en orden alfabético por defecto, igual que la vista de empresas de los portales.
 - **Direct — mejoras de la vista de empresas de un portal**: al cerrar sesión ahora se pide confirmación («¿Seguro que quieres salir?») para evitar salidas accidentales (los cierres automáticos por inactividad o sesión reemplazada siguen siendo inmediatos). El buscador de empresas se movió arriba, más grande y claro (filtra por nombre o RNC en vivo). La lista de empresas sale en orden alfabético. Se quitó el banner con el nombre del portal (era redundante) y «Configurar URL» ahora solo lo ve el administrador. «Sincronizar Excel» pasó a ser un enlace pequeño al final.
 

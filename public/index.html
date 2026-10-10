@@ -169,7 +169,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .client-hero h1{font-size:24px;letter-spacing:-.5px}.client-hero p{margin-top:6px;color:var(--text2);font-size:13px;line-height:1.5}
 .client-count{min-width:96px;text-align:center;padding:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
 .client-count strong{display:block;font-size:24px;color:var(--accent3)}.client-count span{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text3)}
-.client-empty{border:1px dashed var(--border2);background:rgba(15,30,56,.62);border-radius:var(--rl);padding:42px 24px;text-align:center}
+.client-empty{grid-column:1/-1;width:100%;border:1px dashed var(--border2);background:rgba(15,30,56,.62);border-radius:var(--rl);padding:42px 24px;text-align:center}
 .client-empty h2{font-size:18px}.client-empty p{color:var(--text2);font-size:13px;line-height:1.55;max-width:520px;margin:10px auto 20px}
 .client-upload{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:42px;padding:0 18px;border-radius:10px;background:linear-gradient(135deg,var(--p1),var(--accent));color:#fff;font-size:13px;font-weight:700;cursor:pointer}.client-upload input{display:none}
 .client-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.client-card{border:1px solid var(--border);border-radius:12px;background:var(--surface);padding:15px}.client-card h3{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.client-card p{margin-top:5px;color:var(--text2);font-size:12px}.client-toolbar{display:flex;justify-content:flex-end;margin-bottom:14px}@media(max-width:540px){.client-list{grid-template-columns:1fr}.client-hero{align-items:center}.client-hero h1{font-size:20px}}
@@ -579,7 +579,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <p class="slabel">Módulos de acceso</p>
       <label class="chk-row" style="padding:4px 0;font-weight:600">
         <input type="checkbox" id="u-access-direct" checked onchange="toggleDirectPortals(this.checked)">
-        Direct — Portales gubernamentales
+        Direct — Portales
       </label>
       <div id="portals-section" class="portals-grid" style="margin-left:24px">
         <label class="chk-row"><input type="checkbox" id="u-portal-dgii" checked> DGII</label>
@@ -588,6 +588,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
         <label class="chk-row"><input type="checkbox" id="u-portal-sirla" checked> SISALRIL</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-carnet"> Carnet</label>
         <label class="chk-row"><input type="checkbox" id="u-portal-azul"> Azul</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-camara"> Cámara de Comercio</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-onapi"> ONAPI</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-formalizate"> Formalízate</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-citrus"> Citrus</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-idoppril"> IDOPPRIL</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-digisign"> Digisign</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-gdmail"> Correo GD</label>
+        <label class="chk-row"><input type="checkbox" id="u-portal-nexo"> Nexo</label>
       </div>
       <div id="u-companies-section" style="margin-left:24px"></div>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-cami"> CAMI — Análisis 606/607 e IT-1</label>
@@ -842,6 +850,10 @@ let _dupeGroups = [];
 let activePortal = null;
 let sessionToken = null, currentUser = null, vaultSecret = null, activeSessionId = null;
 let refreshToken = null, tokenExpiresAt = 0, refreshTimer = null, _refreshing = null;
+// Portales de Direct asignables por usuario. El admin ve todos; cada usuario ve
+// SOLO los que se le asignan (portals_direct). Antes 8 de ellos se mostraban
+// siempre, sin importar el permiso.
+const DIRECT_PORTALS = ['dgii','tss','trabajo','sirla','carnet','azul','camara','onapi','formalizate','citrus','idoppril','digisign','gdmail','nexo'];
 
 /* ── Crypto ── */
 const C = {
@@ -1320,8 +1332,8 @@ async function openUserModal(userData=null) {
   const directOn = userData ? (userData.access_direct !== false) : true;
   document.getElementById('u-access-direct').checked = directOn;
   toggleDirectPortals(directOn);
-  const portals = userData?.portals_direct || ['dgii','tss','trabajo','sirla'];
-  ['dgii','tss','trabajo','sirla','carnet','azul'].forEach(p => { document.getElementById('u-portal-'+p).checked = portals.includes(p); });
+  const portals = userData?.portals_direct || (userData ? [] : ['dgii','tss','trabajo','sirla']);
+  DIRECT_PORTALS.forEach(p => { const el=document.getElementById('u-portal-'+p); if(el) el.checked = portals.includes(p); });
   document.getElementById('u-access-cami').checked = userData?.access_cami || false;
   document.getElementById('u-access-nala').checked = userData?.access_nala || false;
   document.getElementById('u-access-ir2').checked = userData?.access_ir2 || false;
@@ -1338,7 +1350,7 @@ async function saveUser() {
   const password=document.getElementById('u-pw').value;
   const role=document.getElementById('u-role').value;
   const access_direct=document.getElementById('u-access-direct').checked;
-  const portals_direct=access_direct?['dgii','tss','trabajo','sirla','carnet','azul'].filter(p=>document.getElementById('u-portal-'+p).checked):[];
+  const portals_direct=access_direct?DIRECT_PORTALS.filter(p=>document.getElementById('u-portal-'+p)?.checked):[];
   const access_cami=document.getElementById('u-access-cami').checked;
   const access_nala=document.getElementById('u-access-nala').checked;
   const access_ir2=document.getElementById('u-access-ir2').checked;
@@ -1576,10 +1588,9 @@ function renderPortalGrid() {
   main.innerHTML='';
   const allowed = [];
   if (currentUser?.access_direct !== false) {
-    const allPortals=['dgii','tss','trabajo','sirla','carnet','azul'];
-    const userPortals=Array.isArray(currentUser?.portals)?currentUser.portals:allPortals;
-    allowed.push(...(currentUser?.role==='admin'?allPortals:userPortals));
-    allowed.push('camara','onapi','formalizate','citrus','idoppril','digisign','gdmail','nexo');
+    // El admin ve todos los portales; cada usuario ve solo los asignados.
+    const userPortals=Array.isArray(currentUser?.portals)?currentUser.portals:[];
+    allowed.push(...(currentUser?.role==='admin'?DIRECT_PORTALS:userPortals));
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');

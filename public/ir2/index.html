@@ -470,6 +470,7 @@ function autoTipo(c){
 
 /* ── Volver ── */
 function volverPortales(){
+  if(!confirm('¿Seguro que quieres salir del módulo?')) return;
   try{ window.parent.postMessage({action:'showPortals'},'*'); }catch(e){}
 }
 

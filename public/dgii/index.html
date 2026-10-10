@@ -88,7 +88,7 @@ select option{background:var(--surf2)}
 
 <div class="hdr">
   <div class="hdr-l">
-    <button class="btn-back" onclick="window.parent.postMessage({action:'showPortals'},'*')">← Volver</button>
+    <button class="btn-back" onclick="if(confirm('¿Seguro que quieres salir del módulo?'))window.parent.postMessage({action:'showPortals'},'*')">← Volver</button>
     <div class="logo">SAVE</div>
     <div class="hdr-title">Estimación Fiscal</div>
   </div>

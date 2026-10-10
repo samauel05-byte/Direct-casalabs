@@ -466,7 +466,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       Direct
     </div>
     <div class="hdr-right">
-      <button class="back-btn" style="margin:0" onclick="showPortals()">
+      <button class="back-btn" style="margin:0" onclick="confirmExitModule()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Volver
       </button>
@@ -493,7 +493,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
       <img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px">
     </div>
     <div class="hdr-right">
-      <button class="back-btn" style="margin:0" onclick="showPortals()">
+      <button class="back-btn" style="margin:0" onclick="confirmExitModule()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         Volver
       </button>
@@ -1171,6 +1171,12 @@ function lockVault(message='') {
 // (sesión reemplazada, inactividad) siguen llamando a lockVault() directo.
 function confirmLogout() {
   if (confirm('¿Seguro que quieres salir? Se cerrará tu sesión.')) lockVault();
+}
+
+// Salir de un módulo (NALA, CAMI, IR-2, Estimación) hacia Portales: confirma
+// antes, para evitar salidas accidentales. Los datos del módulo se autoguardan.
+function confirmExitModule() {
+  if (confirm('¿Seguro que quieres salir del módulo?')) showPortals();
 }
 
 /* ── Views ── */

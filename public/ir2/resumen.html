@@ -380,6 +380,7 @@ function getToken(){
   try { return sessionStorage.getItem('dtoken') || parent?.sessionStorage?.getItem('dtoken') || null; } catch { return null; }
 }
 function goBack(){
+  if(!confirm('¿Seguro que quieres salir?')) return;
   if(history.length > 1) history.back();
   else location.href='/ir2/';
 }

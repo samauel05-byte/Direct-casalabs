@@ -100,6 +100,54 @@ async function usageStats(session) {
   return { status: 200, body: { ok: true, resumen, por_dia, por_usuario, por_portal, por_hora, recientes } };
 }
 
+// ── Analítica de uso DENTRO de SERP (privacy-safe, por usuario) ──
+// Registra navegación del sistema (módulos, vistas, buscador, sesión) para
+// aprender a qué se dedica cada quien. NUNCA guarda nombres de empresa, RNC ni
+// textos de búsqueda: 'target' son claves opacas y 'meta' solo contadores.
+const USAGE_KINDS = new Set(['module_open', 'portal_view', 'view', 'search', 'session', 'feature']);
+// Depura meta: solo contadores/banderas seguros, nunca texto libre del usuario.
+function safeMeta(meta) {
+  if (!meta || typeof meta !== 'object' || Array.isArray(meta)) return null;
+  const out = {};
+  let n = 0;
+  for (const k of Object.keys(meta)) {
+    if (n >= 8 || !/^[a-z_]{1,20}$/.test(k)) continue;
+    const v = meta[k];
+    if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
+    else if (typeof v === 'boolean') out[k] = v;
+    else if (typeof v === 'string' && /^[a-z0-9_-]{1,40}$/i.test(v)) out[k] = v;
+    else continue;
+    n++;
+  }
+  return n ? out : null;
+}
+async function recordUsage(session, body) {
+  const kind = String(body.kind || '');
+  if (!USAGE_KINDS.has(kind)) return { status: 400, body: { error: 'Evento no válido' } };
+  // 'target' opaco: solo claves tipo módulo/portal/vista/feature.
+  let target = body.target == null ? null : String(body.target).slice(0, 60);
+  if (target && !/^[a-z0-9_.:-]{1,60}$/i.test(target)) target = null;
+  // Mejor esfuerzo: la analítica nunca debe romper la app ni ensuciar logs si
+  // falta la migración; se traga el error y responde ok.
+  try {
+    await supabase.from('direct_usage_events').insert({
+      tenant_id: session.tenantId, user_id: session.userId, username: session.username || null,
+      kind, target, meta: safeMeta(body.meta),
+    });
+  } catch (e) { /* best-effort */ }
+  return { status: 200, body: { ok: true } };
+}
+async function listUsage(session, q) {
+  if (session.role !== 'admin') return { status: 403, body: { error: 'Solo administradores' } };
+  let query = supabase.from('direct_usage_events').select('id, user_id, username, kind, target, meta, created_at')
+    .eq('tenant_id', session.tenantId).order('created_at', { ascending: false }).limit(Math.min(Number(q.limit) || 2000, 10000));
+  if (q.user) query = query.eq('user_id', q.user);
+  if (q.kind) query = query.eq('kind', q.kind);
+  const { data, error } = await query;
+  if (error) throw error;
+  return { status: 200, body: { ok: true, events: data || [] } };
+}
+
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
@@ -109,6 +157,11 @@ module.exports = async (req, res) => {
   const portals = session.role === 'admin' ? null : session.portals_direct;
   const companies = session.role === 'admin' ? null : session.companies_direct;
   try {
+    if (req.query.usage === '1') {
+      if (!session.tenantId) return res.status(409).json({ error: 'Falta la migración de empresas' });
+      const out = req.method === 'POST' ? await recordUsage(session, req.body || {}) : await listUsage(session, req.query);
+      return res.status(out.status).json(out.body);
+    }
     if (req.query.events === '1' || req.query.event === '1' || req.query.status === '1' || req.query.stats === '1') {
       if (!session.tenantId) return res.status(409).json({ error: 'Falta la migración de empresas' });
       let out;

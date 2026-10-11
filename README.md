@@ -143,6 +143,29 @@ El admin puede:
 
 ---
 
+## Analítica de uso (aprender cómo se usa el sistema)
+
+Para entender a qué se dedica cada usuario dentro de SERP y proponer mejoras, se
+registra la **navegación del sistema** (no lo que pasa dentro de los portales):
+
+- Tabla `direct_usage_events` (aislada por firma, RLS deny-all, solo servidor vía
+  service role). Columnas: `kind` (`module_open` | `portal_view` | `view` |
+  `search` | `session` | `feature`), `target` (clave opaca de módulo/portal/vista),
+  `meta` (jsonb, solo contadores), `user_id`/`username`, `created_at`.
+- API en `api/credentials.js` bajo `?usage=1`: `POST` registra (mejor esfuerzo,
+  nunca rompe la app ni filtra errores), `GET` lista (solo admin) para el panel.
+- Frontend: helper `trackUsage(kind, target, meta)` en `public/index.html`
+  (fire-and-forget, aplasta repetidos en 3s). Instrumentado en apertura de
+  portal/módulo, uso del buscador (solo cuenta) e inicio de sesión. Las entradas
+  por empresa y los resultados de login siguen en `direct_access_events`.
+
+**Privacidad (regla dura)**: nunca se guardan nombres de empresa, RNC, textos de
+búsqueda ni nada de dentro de los portales del gobierno (va cifrado en el
+navegador; el servidor no lo ve). La medición es **por usuario con nombre**, así
+que debe declararse en la Política de Privacidad y en «Seguridad de los datos»
+de Play Store. Alimenta el panel de inteligencia del admin y el reporte periódico
+de recomendaciones (etapas siguientes).
+
 ## Experiencia móvil
 
 El sistema está pulido para usarse cómodo en el teléfono (preparación para el

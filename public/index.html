@@ -1051,6 +1051,23 @@ const A = {
   del:  p     => apiRequest(p, {method:'DELETE', signal:AbortSignal.timeout(12000), headers:authH()}),
 };
 
+/* ── Analítica de uso (privacy-safe) ──
+   Registra, por usuario, a qué entra dentro de SERP (módulos, vistas, buscador,
+   sesión) para aprender el uso y proponer mejoras. NUNCA manda nombres de
+   empresa, RNC ni textos de búsqueda: 'target' son claves (módulo/portal/vista)
+   y 'meta' solo contadores. A prueba de fallos: nunca rompe la app.
+   Se "aplasta" el mismo evento repetido en 3s para no inflar el registro. */
+let _trackLast = {};
+function trackUsage(kind, target, meta) {
+  try {
+    if (!sessionToken) return;
+    const now = Date.now(), k = kind + '|' + (target || '');
+    if (_trackLast[k] && now - _trackLast[k] < 3000) return;
+    _trackLast[k] = now;
+    A.post('/api/credentials?usage=1', { kind, target: target || null, meta: meta || null }).catch(() => {});
+  } catch (e) { /* la analítica nunca interrumpe */ }
+}
+
 /* ── Boot ── */
 async function boot() {
   show('view-loading');
@@ -1262,8 +1279,10 @@ function show(id) {
   ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
+let _sessionTracked=false;
 function showPortals() {
   activePortal=null;
+  if(!_sessionTracked){ _sessionTracked=true; trackUsage('session','start'); } // una vez por sesión
   renderPortalGrid();
   show('view-portals');
   // Show users button only for admin
@@ -1610,6 +1629,7 @@ function openDirectPortal(instKey) {
 
 function openPortal(instKey) {
   activePortal=instKey;
+  trackUsage('portal_view', instKey);
   renderCompaniesView();
   show('view-companies');
 }
@@ -1687,7 +1707,10 @@ function renderPortalGrid() {
     card.className='p-card'+(key==='nala'?' p-card-nala':'');
     card.title=inst.desc;
     card.setAttribute('aria-label',`Abrir ${inst.name}`);
-    card.addEventListener('click',()=>inst.openDirect?openDirectPortal(key):inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key));
+    card.addEventListener('click',()=>{
+      if(isTool) trackUsage('module_open', key);
+      inst.openDirect?openDirectPortal(key):inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key);
+    });
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
     const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
     const countHtml=isTool
@@ -1778,6 +1801,8 @@ function renderHomeResults(q) {
     (digits && it.rnc.replace(/\D/g,'').includes(digits)) ||
     norm(it.user).includes(term)
   ));
+  if (term) trackUsage('search', 'home', { n: matches.length }); // solo cuenta, nunca el texto
+
   const byCompany=new Map();
   for (const it of matches) {
     const key=norm(it.name)+'|'+it.rnc;

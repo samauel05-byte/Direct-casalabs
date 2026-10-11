@@ -1,0 +1,27 @@
+/* ─────────────────────────────────────────────────────────────
+   SERP · base móvil compartida (módulos: NALA, CAMI, IR-2, DGII…)
+   Solo reglas seguras y universales que mejoran el uso en celular
+   sin cambiar el estilo de cada módulo:
+   - Evita que el navegador infle el texto o haga zoom al escribir.
+   - Quita el destello azul al tocar y el retardo de 300ms.
+   - Evita desbordes horizontales por imágenes/medios anchos.
+   - Respeta los bordes seguros del teléfono (notch / barra de gestos).
+   El pulido de layout específico de cada módulo va aparte.
+   ───────────────────────────────────────────────────────────── */
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { overflow-x: hidden; }
+
+/* Toque cómodo: sin flash y sin retardo al pulsar */
+button, a, label, select, summary, [role="button"], [onclick] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Medios nunca empujan el ancho de la página */
+img, svg, video, canvas { max-width: 100%; height: auto; }
+
+/* En celular, los campos a 16px para que el navegador NO haga zoom al enfocar */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px; }
+}

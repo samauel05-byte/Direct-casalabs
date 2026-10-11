@@ -139,6 +139,26 @@ El admin puede:
 - **Sesión exclusiva**: al abrir el mismo usuario en otro equipo se bloquea la sesión anterior
 - **Sincronización en tiempo real** — cualquier cambio se refleja al instante
 - **Tema claro / oscuro** según preferencia del sistema o manual
+- **Experiencia móvil** pulida para uso en celular (ver abajo)
+
+---
+
+## Experiencia móvil
+
+El sistema está pulido para usarse cómodo en el teléfono (preparación para el
+lanzamiento en Play Store como app), manteniendo el estilo actual:
+
+- `viewport-fit=cover` + `env(safe-area-inset-*)` para respetar notch y barra de
+  gestos en pantalla completa; `theme-color` por tema para la barra del navegador.
+- Campos de formulario a 16px en celular para que el navegador **no** haga zoom al
+  enfocar; `text-size-adjust:100%` para que no infle el texto.
+- Sin destello azul ni retardo de 300ms al tocar (`-webkit-tap-highlight-color`,
+  `touch-action:manipulation`); sin scroll horizontal.
+- En Accesos: cabecera y márgenes compactos, botón de editar empresa con mayor
+  área táctil, y **modales como hoja inferior** en pantallas pequeñas.
+- Los módulos (NALA, CAMI, IR-2, DGII, Estimación) comparten
+  `public/css/mobile-base.css` con las mejoras universales y seguras; el pulido de
+  layout propio de cada módulo (tablas anchas, pestañas) es trabajo incremental.
 
 ---
 

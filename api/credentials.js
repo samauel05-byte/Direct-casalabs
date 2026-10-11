@@ -62,14 +62,20 @@ async function usageStats(session) {
   if (session.role !== 'admin') return { status: 403, body: { error: 'Solo administradores' } };
   const RD = -4 * 60; // Rep. Dominicana: UTC-4 fijo (sin horario de verano).
   const local = iso => { const d = new Date(new Date(iso).getTime() + RD * 60000); return { day: d.toISOString().slice(0, 10), hour: d.getUTCHours() }; };
-  const [evRes, profRes, credRes] = await Promise.all([
+  const [evRes, profRes, credRes, usageRes] = await Promise.all([
     supabase.from('direct_access_events').select('user_id, username, institution, event, credential_id, created_at')
       .eq('tenant_id', session.tenantId).order('created_at', { ascending: false }).limit(10000),
     supabase.from('direct_profiles').select('id', { count: 'exact', head: true }).eq('tenant_id', session.tenantId),
     supabase.from('direct_credentials').select('id', { count: 'exact', head: true }).eq('tenant_id', session.tenantId),
+    // Analítica de navegación DENTRO de SERP (mejor esfuerzo: si falta la tabla,
+    // el panel sigue funcionando con los eventos de acceso).
+    supabase.from('direct_usage_events').select('user_id, username, kind, target, created_at')
+      .eq('tenant_id', session.tenantId).order('created_at', { ascending: false }).limit(10000)
+      .then(r => r, () => ({ data: [], error: null })),
   ]);
   if (evRes.error) throw evRes.error;
   const events = evRes.data || [];
+  const usage = (usageRes && usageRes.data) || [];
   const now = Date.now(); const h24 = now - 864e5, d7 = now - 7 * 864e5;
   const resumen = {
     eventos_total: events.length,
@@ -97,7 +103,54 @@ async function usageStats(session) {
   const por_hora = Array.from({ length: 24 }, () => 0);
   for (const e of events) por_hora[local(e.created_at).hour]++;
   const recientes = events.slice(0, 20).map(e => ({ at: e.created_at, usuario: e.username || '(sin nombre)', portal: e.institution, event: e.event }));
-  return { status: 200, body: { ok: true, resumen, por_dia, por_usuario, por_portal, por_hora, recientes } };
+
+  // ── Inteligencia a partir de la navegación DENTRO de SERP ──
+  const TOOLS = ['nala', 'cami', 'ir2', 'dgii-modulos', 'clients'];
+  resumen.sesiones = usage.filter(u => u.kind === 'session').length;
+  resumen.modulos_abiertos = usage.filter(u => u.kind === 'module_open').length;
+  resumen.busquedas = usage.filter(u => u.kind === 'search').length;
+
+  // Módulos: cuánto se abre cada herramienta y cuáles nunca se tocan.
+  const mMap = {};
+  for (const u of usage) if (u.kind === 'module_open' && u.target) {
+    const m = (mMap[u.target] = mMap[u.target] || { modulo: u.target, n: 0, users: new Set(), last: u.created_at });
+    m.n++; m.users.add(u.user_id); if (+new Date(u.created_at) > +new Date(m.last)) m.last = u.created_at;
+  }
+  const modulos = TOOLS.map(k => mMap[k]
+    ? { modulo: k, n: mMap[k].n, users: mMap[k].users.size, last: mMap[k].last }
+    : { modulo: k, n: 0, users: 0, last: null }).sort((a, b) => b.n - a.n);
+
+  // Actividad por usuario: a qué se dedica (módulos, portales, búsquedas, sesiones)
+  // y su actividad principal. Combina portales (eventos de acceso) con módulos.
+  const aMap = {};
+  const act = u => (aMap[u] = aMap[u] || { usuario: u, mods: {}, ports: {}, ses: 0, bus: 0 });
+  for (const u of usage) {
+    const name = u.username || '(sin nombre)'; const a = act(name);
+    if (u.kind === 'module_open' && u.target) a.mods[u.target] = (a.mods[u.target] || 0) + 1;
+    else if (u.kind === 'portal_view' && u.target) a.ports[u.target] = (a.ports[u.target] || 0) + 1;
+    else if (u.kind === 'session') a.ses++;
+    else if (u.kind === 'search') a.bus++;
+  }
+  // Portales por entradas reales (más fiable que portal_view): suma del acceso 'open'.
+  for (const e of events) if (e.event === 'open') { const a = act(e.username || '(sin nombre)'); a.ports[e.institution] = (a.ports[e.institution] || 0) + 1; }
+  const topKey = o => { let k = null, n = -1; for (const x in o) if (o[x] > n) { n = o[x]; k = x; } return k ? { k, n } : null; };
+  const actividad = Object.values(aMap).map(a => ({
+    usuario: a.usuario, ses: a.ses, bus: a.bus,
+    top_modulo: topKey(a.mods), top_portal: topKey(a.ports),
+    mods: Object.entries(a.mods).map(([k, n]) => ({ k, n })).sort((x, y) => y.n - x.n),
+    ports: Object.entries(a.ports).map(([k, n]) => ({ k, n })).sort((x, y) => y.n - x.n),
+  })).sort((a, b) => (b.ses + b.bus) - (a.ses + a.bus));
+
+  // Cuellos de botella: empresas con más "clave rechazada" (el navegador resuelve
+  // el nombre; aquí solo va el id de credencial, nunca el nombre en claro).
+  const fMap = {};
+  for (const e of events) if (e.event === 'login_failed') {
+    const m = (fMap[e.credential_id] = fMap[e.credential_id] || { credential_id: e.credential_id, institution: e.institution, n: 0, last: e.created_at });
+    m.n++; if (+new Date(e.created_at) > +new Date(m.last)) m.last = e.created_at;
+  }
+  const cuellos = Object.values(fMap).sort((a, b) => b.n - a.n).slice(0, 20);
+
+  return { status: 200, body: { ok: true, resumen, por_dia, por_usuario, por_portal, por_hora, recientes, modulos, actividad, cuellos } };
 }
 
 // ── Analítica de uso DENTRO de SERP (privacy-safe, por usuario) ──

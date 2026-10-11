@@ -163,8 +163,16 @@ registra la **navegación del sistema** (no lo que pasa dentro de los portales):
 búsqueda ni nada de dentro de los portales del gobierno (va cifrado en el
 navegador; el servidor no lo ve). La medición es **por usuario con nombre**, así
 que debe declararse en la Política de Privacidad y en «Seguridad de los datos»
-de Play Store. Alimenta el panel de inteligencia del admin y el reporte periódico
-de recomendaciones (etapas siguientes).
+de Play Store.
+
+**Panel de inteligencia (admin)**: `usageStats` (`?stats=1`) combina
+`direct_access_events` y `direct_usage_events` y el panel (`DX.openUsage` en
+`public/js/direct-extras.js`) muestra, además de KPIs y actividad por
+día/portal/hora: **uso por módulo** (con aviso de módulos nunca usados),
+**a qué se dedica cada usuario** (módulo y portal principal, sesiones, búsquedas)
+y **cuellos de botella** (empresas con más logins rechazados; el nombre se
+resuelve en el navegador). El reporte periódico de recomendaciones es la
+siguiente etapa.
 
 ## Experiencia móvil
 

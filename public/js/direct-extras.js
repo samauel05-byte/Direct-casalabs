@@ -280,12 +280,41 @@
     const recHtml = rec.length ? `<div class="table-wrap"><table class="dx-table"><tr><th>Fecha</th><th>Usuario</th><th>Portal</th><th>Acción</th></tr>
       ${rec.map(e => `<tr><td class="dx-mono dx-sm">${esc(fmtWhen(e.at))}</td><td>${esc(e.usuario)}</td><td>${esc(instName(e.portal))}</td><td><span class="dx-chip ${evCls[e.event] || ''}">${esc(evLbl[e.event] || e.event)}</span></td></tr>`).join('')}</table></div>` : '';
 
+    // ── Inteligencia (Etapa 2) ──
+    const TOOL_LABELS = { nala: 'NALA', cami: 'CAMI', ir2: 'IR-2', 'dgii-modulos': 'Estimación Fiscal', clients: 'Clientes' };
+    const lab = k => TOOL_LABELS[k] || instName(k);
+
+    // Módulos: uso de cada herramienta + aviso de los que nadie usa.
+    const mods = d.modulos || [];
+    const maxM = Math.max(1, ...mods.map(m => m.n));
+    const modsHtml = mods.length ? `<div class="dx-u-rows">${mods.map(m => `<div class="dx-u-r"><span class="nm">${esc(lab(m.modulo))}</span><span class="tr"><span class="fl" style="width:${m.n / maxM * 100}%"></span></span><span class="am">${m.n ? `${m.n} · ${m.users} usr` : '<span class="dx-chip dx-chip-bad">nunca usado</span>'}</span></div>`).join('')}</div>` : '<p class="dx-muted">Aún sin datos de módulos.</p>';
+
+    // Actividad por usuario: a qué se dedica cada quien.
+    const acts = d.actividad || [];
+    const actHtml = acts.length ? `<div class="table-wrap"><table class="dx-table"><tr><th>Usuario</th><th>Se dedica a</th><th>Portal principal</th><th>Ses.</th><th>Búsq.</th></tr>
+      ${acts.map(a => `<tr><td><b>${esc(a.usuario)}</b></td><td>${a.top_modulo ? esc(lab(a.top_modulo.k)) + ` <span class="dx-muted dx-sm">×${a.top_modulo.n}</span>` : '<span class="dx-muted">—</span>'}</td><td>${a.top_portal ? esc(lab(a.top_portal.k)) + ` <span class="dx-muted dx-sm">×${a.top_portal.n}</span>` : '<span class="dx-muted">—</span>'}</td><td>${a.ses}</td><td>${a.bus}</td></tr>`).join('')}</table></div>` : '<p class="dx-muted">Aún sin datos de navegación. Se irán llenando con el uso.</p>';
+
+    // Cuellos de botella: empresas con más "clave rechazada" (nombre resuelto aquí).
+    const cuellos = d.cuellos || [];
+    let cuellosHtml = '';
+    if (cuellos.length) {
+      const names = await Promise.all(cuellos.map(c => {
+        const cr = credById(c.credential_id);
+        return cr ? plainOf(cr).then(p => p.companyName || '(sin nombre)').catch(() => '(sin nombre)') : Promise.resolve('(empresa eliminada)');
+      }));
+      cuellosHtml = `<div class="table-wrap"><table class="dx-table"><tr><th>Empresa</th><th>Portal</th><th>Rechazos</th><th>Último</th></tr>
+        ${cuellos.map((c, i) => `<tr><td><b>${esc(names[i])}</b></td><td>${esc(instName(c.institution))}</td><td><span class="dx-chip dx-chip-bad">${c.n}</span></td><td class="dx-mono dx-sm">${esc(fmtWhen(c.last))}</td></tr>`).join('')}</table></div>`;
+    }
+
     root.innerHTML = `${kpis}
-      <p class="dx-muted dx-sm" style="margin:-8px 0 16px">El historial registra desde que se activó esta función; la actividad anterior no quedó guardada. Los nombres de empresa van cifrados.</p>
+      <p class="dx-muted dx-sm" style="margin:-8px 0 16px">El historial registra desde que se activó esta función; la actividad anterior no quedó guardada. Los nombres de empresa van cifrados y se resuelven solo en tu navegador.</p>
       <div class="dx-u-grid">
         <div class="dx-card span"><div class="dx-h">Actividad por día</div><div class="dx-u-days">${daysHtml}</div></div>
         <div class="dx-card"><div class="dx-h">Por usuario</div>${usersHtml}</div>
         <div class="dx-card"><div class="dx-h">Por portal</div>${portHtml}</div>
+        <div class="dx-card"><div class="dx-h">Módulos (herramientas)</div>${modsHtml}</div>
+        <div class="dx-card span"><div class="dx-h">A qué se dedica cada usuario</div>${actHtml}</div>
+        ${cuellosHtml ? `<div class="dx-card span"><div class="dx-h">Cuellos de botella · contraseñas rechazadas</div>${cuellosHtml}</div>` : ''}
         <div class="dx-card span"><div class="dx-h">Por hora del día <span class="dx-muted dx-sm">(hora RD)</span></div>${hoursHtml}</div>
         ${recHtml ? `<div class="dx-card span"><div class="dx-h">Entradas recientes</div>${recHtml}</div>` : ''}
       </div>`;

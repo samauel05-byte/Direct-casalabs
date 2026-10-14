@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Direct — íconos para las herramientas internas**: NALA, CAMI, IR-2, Estimación Fiscal y Clientes mostraban solo una insignia de texto. Ahora cada una tiene su **ícono** (burbuja de chat con destello para NALA, calculadora para CAMI, documento para IR-2, barras para Estimación, personas para Clientes), en blanco sobre su tile de color. Se ven en el inicio y en la cabecera del módulo.
+
 - **Direct — logo de Nexo**: Nexo mostraba solo la insignia de texto «NX» porque no tenía logo configurado. Ahora usa su logo oficial (la marca «N») servido localmente (`public/img/logo-nexo.png`), nítido en la cajita del acceso. *(Citrus sigue con su insignia «CT» porque su portal no publica un logo descargable; si tienes la imagen de Citrus, se puede agregar igual.)*
 
 - **Direct — se retiró la función de favoritos**: por pedido, se quitó por completo la estrella de «Favorito» de los cuadritos de empresa y la sección «Favoritos» del inicio. El aviso de «clave por actualizar» y el resto del inicio siguen igual.

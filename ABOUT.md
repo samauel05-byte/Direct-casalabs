@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Visual renovado — claro y cálido en todo el sistema**: el sistema ahora se ve más renovado y amigable. El **tema claro y cálido** (fondo tipo papel cálido, superficies crema, texto cálido y acentos azules) es el **predeterminado** en toda la app y en todos los módulos (NALA, CAMI, IR-2, Estimación Fiscal, el asistente de NALA, las páginas de anexos/resumen del IR-2 y la Política de Privacidad). Pantallas que antes eran oscuras (IR-2, Estimación Fiscal, anexos/resumen) pasaron a claro cálido manteniendo su estructura y legibilidad; CAMI conserva su barra lateral oscura como acento de marca sobre un contenido claro y cálido. El **tema oscuro** y el **modo automático** siguen disponibles desde el selector de apariencia (arriba a la derecha), así que quien prefiera oscuro lo activa con un toque.
+
 - **Direct — íconos para las herramientas internas**: NALA, CAMI, IR-2, Estimación Fiscal y Clientes mostraban solo una insignia de texto. Ahora cada una tiene su **ícono** (burbuja de chat con destello para NALA, calculadora para CAMI, documento para IR-2, barras para Estimación, personas para Clientes), en blanco sobre su tile de color. Se ven en el inicio y en la cabecera del módulo.
 
 - **Direct — logo de Nexo**: Nexo mostraba solo la insignia de texto «NX» porque no tenía logo configurado. Ahora usa su logo oficial (la marca «N») servido localmente (`public/img/logo-nexo.png`), nítido en la cajita del acceso. *(Citrus sigue con su insignia «CT» porque su portal no publica un logo descargable; si tienes la imagen de Citrus, se puede agregar igual.)*

@@ -4,11 +4,11 @@
   --secondary: #0e9f6e;
   --danger: #f05252;
   --warning: #ff8800;
-  --bg: #f4f7fb;
-  --surface: #ffffff;
-  --border: #dde3ec;
-  --text: #1a2236;
-  --text-muted: #64748b;
+  --bg: #f6f2ea;
+  --surface: #fffdf9;
+  --border: #e7ded0;
+  --text: #1e1810;
+  --text-muted: #6a5c4b;
   --shadow: 0 2px 12px rgba(26,86,219,.08);
   --radius: 12px;
 }

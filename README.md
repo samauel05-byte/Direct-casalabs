@@ -97,7 +97,7 @@ Contraseña del usuario (solo en memoria del navegador)
 
 | Módulo | Descripción |
 |--------|-------------|
-| **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos de contraseña, favoritos, historial de entradas y permisos por empresa |
+| **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos de contraseña, historial de entradas y permisos por empresa |
 | **CAMI** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 e IT-1 |
 | **NALA** | Flujo fiscal 606 y 607: carga masiva, extracción OCR/IA, validación, auditoría, aprobación y exportación DGII; chat IA e IR-17 (ver `docs/nala/README.md`) |
 | **IR-2** | Declaración de renta |
@@ -129,7 +129,6 @@ El admin puede:
 ## Características de Direct
 
 - **Auto-login**: un clic envía automáticamente las credenciales al portal en una nueva pestaña
-- **Favoritos**: acceso rápido a las empresas marcadas (la estrella en cada cuadrito de empresa se retiró por pedido; la sección de favoritos del inicio sigue mostrando las ya marcadas)
 - **Aviso de contraseña vencida**: si un portal rechaza la clave, la empresa se marca para actualizarla
 - **Revisión de tarjetas de códigos DGII**: revisa/corrige la tarjeta y avisa si faltan códigos o hay repetidos
 - **Historial de entradas**: registro de quién entró a qué portal y cuándo (solo admin)
@@ -213,7 +212,7 @@ SERP/
 ├── lib/                   — Núcleo: auth, tenant, db/supabase y librerías NALA (formats, dgii-template, …)
 ├── public/
 │   ├── index.html         — App Direct (HTML + CSS + JS)
-│   ├── js/                — direct-extras (inicio, favoritos, historial, tarjetas, permisos)
+│   ├── js/                — direct-extras (inicio, historial, tarjetas, permisos)
 │   └── nala/              — App NALA (módulos + asistente)
 ├── worker.js              — Relay Cloudflare Worker de los portales
 ├── supabase/migrations/   — Migraciones SQL (tenants, sesión única, NALA, eventos Direct, …)

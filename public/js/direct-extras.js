@@ -19,16 +19,7 @@
   window.DX = DX;
   DX.esc = esc; DX.plainOf = plainOf; DX.instName = instName; DX.credById = credById;
 
-  // Favoritos: guardados en este navegador, por usuario.
-  const favKey = () => 'direct_favs_' + ((window.currentUser && currentUser.username) || 'default');
-  DX.favs = () => { try { return JSON.parse(localStorage.getItem(favKey()) || '[]'); } catch (e) { return []; } };
-  DX.isFav = id => DX.favs().includes(id);
-  DX.toggleFav = id => {
-    const f = DX.favs(); const i = f.indexOf(id);
-    if (i >= 0) f.splice(i, 1); else f.unshift(id);
-    try { localStorage.setItem(favKey(), JSON.stringify(f.slice(0, 24))); } catch (e) {}
-    return i < 0;
-  };
+  // (La función de favoritos se retiró por completo por pedido del usuario.)
 
   // Estado de contraseñas y entradas recientes (servidor).
   DX.refresh = async () => {
@@ -71,14 +62,7 @@
 (function () {
   const { esc, plainOf, instName, credById } = window.DX;
 
-  function tile(cred, name, extra) {
-    const inst = INST[cred.institution] || { name: cred.institution, grad: '#334155', abbr: '?' };
-    return `<button type="button" class="dx-tile" data-enter="${esc(cred.id)}" title="${esc(name)} · ${esc(inst.name)}">
-      ${logoMarkup(cred.institution, inst, 'dx-logo', '3px', ['8px', '9px', '10px'])}
-      <span class="dx-tile-txt"><b>${esc(name)}</b><small>${esc(inst.name)}${extra || ''}</small></span></button>`;
-  }
-
-  // Inicio: avisos de contraseña, favoritos, recientes y calendario.
+  // Inicio: avisos de contraseña por actualizar (los favoritos se retiraron).
   DX.renderHome = async function () {
     const main = document.getElementById('portals-main');
     if (!main || !masterKey) return;
@@ -89,7 +73,6 @@
     if (!DX.loaded) await DX.refresh();
 
     const pending = credentials.filter(c => DX.needsUpdate(c));
-    const fav = DX.favs().map(credById).filter(Boolean);
     const nameOf = async c => esc(((await plainOf(c)).companyName) || 'Sin nombre');
     let html = '';
 
@@ -97,7 +80,6 @@
       const rows = await Promise.all(pending.map(async c => `<div class="dx-alert-row"><span>⚠️ ${await nameOf(c)} · ${esc(instName(c.institution))}</span><button class="btn btn-ghost dx-sm" data-fix="${esc(c.id)}">Actualizar clave</button></div>`));
       html += `<div class="dx-card dx-alert"><div class="dx-h">Contraseñas por actualizar (${pending.length})</div>${rows.join('')}</div>`;
     }
-    if (fav.length) html += `<div class="dx-card"><div class="dx-h">★ Favoritos</div><div class="dx-row">${(await Promise.all(fav.map(async c => tile(c, await nameOf(c))))).join('')}</div></div>`;
     box.innerHTML = html;
 
     box.querySelectorAll('[data-enter]').forEach(b => b.addEventListener('click', () => enterCompany(b.dataset.enter)));
@@ -131,7 +113,6 @@
   DX.decorateCompanies = function () {
     document.querySelectorAll('#company-list .company-card[data-cred]').forEach(card => {
       const id = card.dataset.cred; const cred = credById(id); if (!cred) return;
-      const oldStar = card.querySelector('.dx-star'); if (oldStar) oldStar.remove();
       card.classList.toggle('dx-needs-pw', DX.needsUpdate(cred));
       if (DX.needsUpdate(cred) && !card.querySelector('.dx-pw-flag')) {
         const flag = document.createElement('div'); flag.className = 'dx-pw-flag'; flag.textContent = 'Clave por actualizar';

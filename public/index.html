@@ -2055,7 +2055,7 @@ async function prefetchViewState(credId) {
 async function enterCompany(credId) {
   const cred=credentials.find(c=>c.id===credId);
   if (!cred) { toast('Credencial no encontrada','err'); return; }
-  // Favoritos, recientes, historial y aviso de contraseña (public/js/direct-extras.js).
+  // Inicio, historial, tarjetas y aviso de contraseña (public/js/direct-extras.js).
   window.__serpEnteringCred = cred;
   window.DX?.onEnter(cred);
 

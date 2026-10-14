@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="/css/mobile-base.css">
+<title>Monitor DGII</title>
+<style>
+:root{
+  --bg:#f6f2ea;--bg2:#fffdf9;--surf:#fffdf9;--surf2:#f1ebe0;
+  --bdr:rgba(60,44,26,.12);--bdr2:rgba(10,95,212,.28);
+  --fg:#1e1810;--fg2:#6a5c4b;--fg3:#a39580;
+  --acc:#0a5fd4;--acc2:#0a4fb0;
+  --ok:#15924a;--ok-bg:rgba(21,146,74,.1);
+  --warn:#c2710c;--warn-bg:rgba(194,113,12,.1);
+  --down:#dc2626;--down-bg:rgba(220,38,38,.1);
+  --muted:#8a7a66;--muted-bg:rgba(120,100,70,.1);
+  --hdr-h:56px;--r:14px;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
+  --bdr:rgba(30,90,200,.28);--bdr2:rgba(50,130,255,.32);
+  --fg:#e8f0ff;--fg2:#7a9bc0;--fg3:#3a5878;--acc:#3d8bff;--acc2:#80b8ff;
+  --ok:#20BD5A;--ok-bg:rgba(32,189,90,.14);--warn:#f59e0b;--warn-bg:rgba(245,158,11,.14);
+  --down:#ef4444;--down-bg:rgba(239,68,68,.14);--muted:#7a9bc0;--muted-bg:rgba(122,155,192,.12);
+}}
+:root[data-theme="dark"]{
+  --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
+  --bdr:rgba(30,90,200,.28);--bdr2:rgba(50,130,255,.32);
+  --fg:#e8f0ff;--fg2:#7a9bc0;--fg3:#3a5878;--acc:#3d8bff;--acc2:#80b8ff;
+  --ok:#20BD5A;--ok-bg:rgba(32,189,90,.14);--warn:#f59e0b;--warn-bg:rgba(245,158,11,.14);
+  --down:#ef4444;--down-bg:rgba(239,68,68,.14);--muted:#7a9bc0;--muted-bg:rgba(122,155,192,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);font-size:14px;min-height:100dvh;-webkit-font-smoothing:antialiased}
+.hdr{display:flex;align-items:center;gap:12px;padding:0 16px;height:var(--hdr-h);background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;flex-wrap:wrap}
+.hdr h1{font-size:16px;font-weight:800;letter-spacing:-.2px;margin-right:auto}
+.hdr .sub{font-size:11px;color:var(--fg2);font-weight:500}
+.back{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:9px;border:1px solid var(--bdr2);background:transparent;color:var(--acc);font:inherit;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--fg2);background:var(--surf2);border:1px solid var(--bdr);border-radius:100px;padding:4px 11px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.wrap{max-width:1040px;margin:0 auto;padding:16px 16px 56px}
+.disclaimer{font-size:12px;color:var(--fg2);background:var(--surf2);border:1px solid var(--bdr);border-left:3px solid var(--acc);border-radius:8px;padding:10px 13px;margin-bottom:16px;line-height:1.5}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.filters select,.filters input{background:var(--surf);border:1px solid var(--bdr);border-radius:9px;color:var(--fg);padding:7px 10px;font:inherit;font-size:13px;outline:none}
+.filters select:focus,.filters input:focus{border-color:var(--acc)}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(60,44,24,.04)}
+.card.pausedc{opacity:.72}
+.svc-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.svc-title{flex:1;min-width:180px}
+.svc-title b{font-size:15px;font-weight:700;display:block}
+.svc-title .desc{font-size:12px;color:var(--fg2);margin-top:3px;line-height:1.45}
+.svc-title .amb{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--acc);background:var(--muted-bg);border-radius:5px;padding:2px 7px;margin-top:6px}
+.status{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;padding:7px 13px;border-radius:100px;white-space:nowrap}
+.s-ok{color:var(--ok);background:var(--ok-bg)} .s-degraded{color:var(--warn);background:var(--warn-bg)}
+.s-down,.s-invalid{color:var(--down);background:var(--down-bg)} .s-nodata,.s-stale,.s-paused{color:var(--muted);background:var(--muted-bg)}
+.status svg{width:15px;height:15px;flex-shrink:0}
+.meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--fg2)}
+.meta b{color:var(--fg);font-weight:600}
+.periods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+@media(max-width:560px){.periods{grid-template-columns:repeat(2,1fr)}}
+.per{background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;padding:9px 11px}
+.per .lab{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--fg3)}
+.per .val{font-size:19px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.per .cov{font-size:10.5px;color:var(--fg2);margin-top:2px}
+.per.nodata .val{color:var(--muted);font-size:14px}
+.sec-lab{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--fg3);margin:16px 0 8px}
+.bars{display:flex;gap:2px;align-items:flex-end;height:46px;flex-wrap:nowrap;overflow:hidden}
+.bar{flex:1 1 0;min-width:2px;height:100%;border-radius:2px;cursor:pointer;background:var(--muted-bg);position:relative}
+.bar.b-ok{background:var(--ok)} .bar.b-degraded{background:var(--warn)} .bar.b-down,.bar.b-invalid{background:var(--down)}
+.bar.b-none{background:repeating-linear-gradient(45deg,var(--muted-bg),var(--muted-bg) 2px,transparent 2px,transparent 4px)}
+.bars-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--fg2);margin-top:7px}
+.bars-legend span{display:inline-flex;align-items:center;gap:5px}
+.chart{width:100%;height:90px;margin-top:6px}
+.inc{border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:12.5px}
+.inc.open{border-left:3px solid var(--down)} .inc.resolved{border-left:3px solid var(--ok)}
+.inc .ih{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:700}
+.inc .im{color:var(--fg2);font-weight:500;margin-top:4px;line-height:1.5}
+.tag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:5px}
+.tag.open{color:var(--down);background:var(--down-bg)} .tag.resolved{color:var(--ok);background:var(--ok-bg)}
+.btn{background:var(--acc);color:#fff;border:none;border-radius:9px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--bdr2)}
+.btn:disabled{opacity:.5;cursor:default}
+.admin{margin-top:8px;border-top:1px dashed var(--bdr);padding-top:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row label{font-size:12px;color:var(--fg2);display:flex;align-items:center;gap:5px}
+.row input[type=number]{width:84px;background:var(--surf);border:1px solid var(--bdr);border-radius:7px;color:var(--fg);padding:5px 8px;font:inherit}
+.switch{font-size:12px;font-weight:600}
+.muted{color:var(--fg2)} .small{font-size:12px}
+.notice{font-size:12px;color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 12px;margin-bottom:14px}
+.ovl{position:fixed;inset:0;background:rgba(10,20,40,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:60}
+.modal{background:var(--surf);border:1px solid var(--bdr);border-radius:16px;max-width:560px;width:100%;max-height:88vh;overflow:auto;padding:18px}
+.modal h3{font-size:16px;margin-bottom:4px}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:10px}
+.tbl th,.tbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--bdr)}
+.tbl th{color:var(--fg3);font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.loading{text-align:center;color:var(--fg2);padding:40px}
+.subs{margin-top:10px}
+.subitem{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--bdr);border-radius:9px;padding:8px 10px;margin-top:6px;font-size:12.5px}
+.subitem .em{font-weight:600}
+a.link{color:var(--acc);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <button class="back" onclick="goBack()">← Volver</button>
+  <h1>Monitor DGII</h1>
+  <span class="pill" id="mon-state"><span class="dot" style="background:var(--muted)"></span><span id="mon-state-txt">Cargando…</span></span>
+  <span class="pill" id="refresh-pill" title="La pantalla lee resultados guardados; no llama a la DGII por cada visita."><span id="next-eta">—</span></span>
+</div>
+
+<div class="wrap">
+  <div class="disclaimer" id="disclaimer">
+    <b>Monitor independiente de Direct.</b> El estado refleja las comprobaciones indicadas y no garantiza el funcionamiento de todos los servicios de la DGII.
+  </div>
+
+  <div id="alerts-notice"></div>
+
+  <div class="filters" id="filters">
+    <select id="f-service"><option value="">Todos los servicios</option></select>
+    <select id="f-env">
+      <option value="">Todos los ambientes</option>
+      <option value="testecf">Pruebas (TesteCF)</option>
+      <option value="certecf">Certificación (CerteCF)</option>
+      <option value="ecf">Producción (eCF)</option>
+    </select>
+    <select id="f-status">
+      <option value="">Cualquier estado</option>
+      <option value="ok">Operativo</option>
+      <option value="degraded">Degradado</option>
+      <option value="down">Sin respuesta</option>
+      <option value="invalid">Respuesta inválida</option>
+      <option value="nodata">Sin datos</option>
+      <option value="stale">Sin datos recientes</option>
+      <option value="paused">Pausado</option>
+    </select>
+    <input type="date" id="f-date" title="Ver el detalle de un día">
+    <button class="btn ghost" id="btn-day" onclick="openSelectedDay()">Ver día</button>
+  </div>
+
+  <div id="list"><div class="loading">Cargando estado…</div></div>
+
+  <div id="admin-alerts"></div>
+</div>
+
+<script>
+let TOKEN='', SESSION_ID='', ROLE='user', USERNAME='', IS_ADMIN=false, SNAP=null, ADMIN=null, refreshTimer=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sid=()=>SESSION_ID||localStorage.getItem('direct_session_id')||'';
+
+function headers(json){const h={Authorization:'Bearer '+TOKEN};if(sid())h['X-Direct-Session']=sid();if(json)h['Content-Type']='application/json';return h;}
+async function api(route,opts={}){
+  const r=await fetch('/api/monitor?route='+encodeURIComponent(route),{headers:headers(opts.body?true:false),method:opts.method||'GET',body:opts.body?JSON.stringify(opts.body):undefined});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+  return d;
+}
+function goBack(){ try{ window.parent.postMessage({action:'showPortals'},'*'); }catch(e){} }
+
+// Fecha/hora en America/Santo_Domingo (las fechas llegan en UTC).
+const RDFMT=new Intl.DateTimeFormat('es-DO',{timeZone:'America/Santo_Domingo',dateStyle:'medium',timeStyle:'short'});
+const RDTIME=new Intl.DateTimeFormat('es-DO',{timeZone:'America/Santo_Domingo',timeStyle:'medium'});
+function rd(iso){ return iso?RDFMT.format(new Date(iso)):'—'; }
+function ago(iso){ if(!iso) return '—'; const s=Math.round((Date.now()-new Date(iso).getTime())/1000); if(s<60)return 'hace '+s+'s'; if(s<3600)return 'hace '+Math.round(s/60)+' min'; if(s<86400)return 'hace '+Math.round(s/3600)+' h'; return 'hace '+Math.round(s/86400)+' d'; }
+
+const ICON={
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  degraded:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  invalid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 8v5"/><circle cx="12" cy="16.5" r=".6" fill="currentColor"/><path d="M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+  nodata:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  stale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  paused:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 5v14M16 5v14"/></svg>',
+};
+const LABEL={ok:'Operativo',degraded:'Degradado',down:'Sin respuesta',invalid:'Respuesta inválida',nodata:'Sin datos',stale:'Sin datos recientes',paused:'Pausado'};
+const ENVNAME={testecf:'Pruebas (TesteCF)',certecf:'Certificación (CerteCF)',ecf:'Producción (eCF)'};
+function statusHtml(st){ return `<span class="status s-${st}">${ICON[st]||''} ${LABEL[st]||st}</span>`; }
+
+function pctHtml(p){ return p==null?'<span class="muted">Sin datos</span>':(p.toFixed(2)+'%'); }
+
+function periodBox(lab,p){
+  if(!p||!p.hasData) return `<div class="per nodata"><div class="lab">${lab}</div><div class="val">Sin datos</div><div class="cov">—</div></div>`;
+  return `<div class="per"><div class="lab">${lab}</div><div class="val">${p.availability!=null?p.availability.toFixed(2)+'%':'—'}</div><div class="cov">Cobertura ${p.coverage!=null?p.coverage.toFixed(0)+'%':'—'}</div></div>`;
+}
+
+function barsHtml(svc){
+  return svc.bars.map(b=>{
+    let cls='b-none', tip;
+    if(!b.run){ cls='b-none'; tip=`${b.day} · Sin datos`; }
+    else{ cls='b-'+(b.worst||'ok'); tip=`${b.day} · ${b.availability!=null?b.availability.toFixed(1)+'% disp.':''} · ${b.run} comprobaciones${b.coverage!=null?' · cobertura '+b.coverage.toFixed(0)+'%':''}`; }
+    return `<div class="bar ${cls}" title="${esc(tip)}" data-day="${b.day}" data-check="${svc.id}"></div>`;
+  }).join('');
+}
+
+function chartHtml(svc){
+  const pts=svc.series.filter(r=>r.response_ms!=null);
+  if(pts.length<2) return '<div class="small muted">Aún no hay suficientes datos para el gráfico de tiempos.</div>';
+  const W=600,H=90,pad=6;
+  const ms=pts.map(p=>p.response_ms); const max=Math.max(svc.degraded_ms,...ms)*1.1; const min=0;
+  const x=i=>pad+(i*(W-2*pad)/(pts.length-1));
+  const y=v=>H-pad-((v-min)/(max-min))*(H-2*pad);
+  const d=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p.response_ms).toFixed(1)).join(' ');
+  const thrY=y(svc.degraded_ms).toFixed(1);
+  const dots=pts.map((p,i)=>{const c=p.ok?(p.degraded?'var(--warn)':'var(--ok)'):'var(--down)';return `<circle cx="${x(i).toFixed(1)}" cy="${y(p.response_ms).toFixed(1)}" r="1.7" fill="${c}"/>`;}).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Tiempos de respuesta">
+    <line x1="${pad}" y1="${thrY}" x2="${W-pad}" y2="${thrY}" stroke="var(--warn)" stroke-dasharray="4 4" stroke-width="1" opacity=".7"/>
+    <path d="${d}" fill="none" stroke="var(--acc)" stroke-width="1.5"/>${dots}
+  </svg>
+  <div class="small muted">Línea discontinua = umbral de lentitud (${svc.degraded_ms} ms). Puntos: verde ok · ámbar degradado · rojo fallo.</div>`;
+}
+
+function incidentHtml(inc){
+  const dur=inc.status==='open'?('abierto · '+ago(inc.confirmed_at)):(inc.resolved_at&&inc.confirmed_at?Math.max(1,Math.round((new Date(inc.resolved_at)-new Date(inc.confirmed_at))/60000))+' min':'—');
+  return `<div class="inc ${inc.status}">
+    <div class="ih"><span>${inc.status==='open'?'Incidente activo':'Incidente resuelto'}</span><span class="tag ${inc.status}">${inc.status==='open'?'ABIERTO':'RESUELTO'}</span></div>
+    <div class="im">
+      Primer fallo: ${rd(inc.first_failure_at)} · Confirmado: ${rd(inc.confirmed_at)}<br>
+      ${inc.resolved_at?('Recuperado: '+rd(inc.resolved_at)+'<br>'):''}
+      Duración: ${dur} (desde la confirmación hasta la recuperación) · Fallos: ${inc.fail_count}<br>
+      ${inc.error_type?('Tipo de error: '+esc(inc.error_type)+(inc.error_detail?' — '+esc(inc.error_detail):'')):''}
+      ${inc.notes?('<br>Nota: '+esc(inc.notes)):''}
+    </div>
+  </div>`;
+}
+
+function svcCard(svc){
+  const st=svc.presented;
+  const last=svc.last;
+  const adminBlock = IS_ADMIN ? adminControls(svc) : '';
+  const active=svc.incidents.filter(i=>i.status==='open');
+  const recent=svc.incidents.filter(i=>i.status!=='open').slice(0,3);
+  return `<div class="card ${st==='paused'?'pausedc':''}" data-svc="${svc.id}" data-env="${svc.environment}" data-status="${st}">
+    <div class="svc-head">
+      <div class="svc-title">
+        <b>${esc(svc.name.replace(/ — .*/,''))}</b>
+        <span class="amb">${ENVNAME[svc.environment]||svc.environment}</span>
+        <div class="desc">${esc(svc.description)}</div>
+      </div>
+      ${statusHtml(st)}
+    </div>
+    <div class="meta">
+      <span>Última verificación: <b>${last?rd(last.ts):'—'}</b>${last?` (${ago(last.ts)})`:''}</span>
+      <span>Tiempo de respuesta: <b>${last&&last.response_ms!=null?last.response_ms+' ms':'—'}</b></span>
+      <span>Próxima comprobación: <b>${svc.next_eta?rd(svc.next_eta):'—'}</b></span>
+      ${last&&!last.ok&&last.error_detail?`<span class="muted">Detalle: ${esc(last.error_detail)}</span>`:''}
+    </div>
+    <div class="periods">
+      ${periodBox('24 horas',svc.periods.h24)}
+      ${periodBox('7 días',svc.periods.d7)}
+      ${periodBox('30 días',svc.periods.d30)}
+      ${periodBox('90 días',svc.periods.d90)}
+    </div>
+    <div class="sec-lab">Disponibilidad diaria — últimos 90 días</div>
+    <div class="bars">${barsHtml(svc)}</div>
+    <div class="bars-legend">
+      <span><span class="dot" style="background:var(--ok)"></span>Operativo</span>
+      <span><span class="dot" style="background:var(--warn)"></span>Degradado</span>
+      <span><span class="dot" style="background:var(--down)"></span>Fallo</span>
+      <span><span class="dot" style="background:var(--muted-bg)"></span>Sin datos</span>
+    </div>
+    <div class="sec-lab">Tiempos de respuesta (últimas comprobaciones)</div>
+    ${chartHtml(svc)}
+    ${active.length?`<div class="sec-lab">Incidente activo</div>${active.map(incidentHtml).join('')}`:''}
+    ${recent.length?`<div class="sec-lab">Incidentes recientes</div>${recent.map(incidentHtml).join('')}`:''}
+    ${adminBlock}
+  </div>`;
+}
+
+function adminControls(svc){
+  return `<div class="admin" data-admin="${svc.id}">
+    <div class="row">
+      <span class="switch">${svc.enabled?'Activa':'Pausada'}</span>
+      <button class="btn ghost" onclick="togglePause('${svc.id}',${!svc.enabled})">${svc.enabled?'Pausar':'Reanudar'}</button>
+      <button class="btn ghost" onclick="manualCheck('${svc.id}',this)">Verificar ahora</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label>Lentitud (ms)<input type="number" id="dg-${svc.id}" value="${svc.degraded_ms}" min="1"></label>
+      <label>Timeout (ms)<input type="number" id="to-${svc.id}" value="${svc.timeout_ms}" min="1"></label>
+      <label>Abrir tras<input type="number" id="ft-${svc.id}" value="${svc.fail_threshold}" min="1"></label>
+      <label>Cerrar tras<input type="number" id="rt-${svc.id}" value="${svc.recover_threshold}" min="1"></label>
+      <button class="btn" onclick="saveCfg('${svc.id}')">Guardar</button>
+    </div>
+  </div>`;
+}
+
+function render(){
+  if(!SNAP) return;
+  // Estado del propio proceso
+  const m=SNAP.monitor;
+  const stale=m.stale;
+  $('mon-state').innerHTML=`<span class="dot" style="background:${stale?'var(--down)':'var(--ok)'}"></span><span id="mon-state-txt">${stale?'Monitor detenido':'Monitor activo'}</span>`;
+  $('mon-state').title=m.last_cron_at?('Última corrida del proceso: '+rd(m.last_cron_at)):'El proceso aún no ha reportado';
+  $('next-eta').textContent=m.last_cron_at?('Actualizado '+ago(m.last_cron_at)):'Sin corridas';
+
+  // Aviso de alertas
+  let notice='';
+  if(SNAP.alertsProvider===false) notice+=`<div class="notice">Las alertas por correo están <b>pendientes de configurar</b> (falta el proveedor de envío). Se registran los cambios de estado, pero no se envían correos hasta configurarlo.</div>`;
+  if(stale) notice+=`<div class="notice">El monitor no reporta comprobaciones recientes. Si no hay un heartbeat externo configurado, la alerta de “monitor detenido” aún no está disponible.</div>`;
+  $('alerts-notice').innerHTML=notice;
+
+  // Filtro de servicios (poblar una vez)
+  const fs=$('f-service');
+  if(fs.options.length<=1){ const names=[...new Set(SNAP.services.map(s=>s.name.replace(/ — .*/,'')))]; for(const n of names){ const o=document.createElement('option'); o.value=n; o.textContent=n; fs.appendChild(o);} }
+
+  applyFilters();
+  if(IS_ADMIN) renderAdminAlerts();
+}
+
+function applyFilters(){
+  const fServ=$('f-service').value, fEnv=$('f-env').value, fSt=$('f-status').value;
+  const list=SNAP.services.filter(s=>{
+    if(fServ && s.name.replace(/ — .*/,'')!==fServ) return false;
+    if(fEnv && s.environment!==fEnv) return false;
+    if(fSt && s.presented!==fSt) return false;
+    return true;
+  });
+  $('list').innerHTML = list.length ? list.map(svcCard).join('') : '<div class="loading">No hay servicios para ese filtro.</div>';
+  document.querySelectorAll('.bar').forEach(b=>b.addEventListener('click',()=>openDay(b.dataset.check,b.dataset.day)));
+}
+
+// ── Detalle de un día ───────────────────────────────────────────────────────
+async function openDay(checkId,day){
+  const ovl=document.createElement('div'); ovl.className='ovl'; ovl.onclick=e=>{if(e.target===ovl)ovl.remove();};
+  ovl.innerHTML=`<div class="modal"><div class="loading">Cargando ${esc(day)}…</div></div>`;
+  document.body.appendChild(ovl);
+  try{
+    const d=await api('day?check_id='+encodeURIComponent(checkId)+'&date='+encodeURIComponent(day));
+    const svc=SNAP.services.find(s=>s.id===checkId);
+    const run=d.results.length, ok=d.results.filter(r=>r.ok).length, fails=run-ok;
+    const rows=d.results.slice(0,300).map(r=>`<tr><td>${RDTIME.format(new Date(r.ts))}</td><td>${statusHtml(r.status)}</td><td>${r.response_ms!=null?r.response_ms+' ms':'—'}</td><td>${r.http_code||'—'}</td><td>${r.ok?'':esc(r.error_detail||r.error_type||'')}</td></tr>`).join('');
+    ovl.querySelector('.modal').innerHTML=`
+      <h3>${esc(svc?svc.name.replace(/ — .*/,''):'')} — ${esc(day)}</h3>
+      <div class="muted small">${ENVNAME[svc?.environment]||''} · ${run} comprobaciones · ${ok} válidas · ${fails} fallidas</div>
+      ${d.incidents.length?('<div class="sec-lab">Incidentes del día</div>'+d.incidents.map(incidentHtml).join('')):''}
+      <div class="sec-lab">Verificaciones</div>
+      ${run?`<table class="tbl"><thead><tr><th>Hora RD</th><th>Estado</th><th>Resp.</th><th>HTTP</th><th>Detalle</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="muted small">Sin datos ese día.</div>'}
+      <div class="row" style="margin-top:14px"><button class="btn" onclick="this.closest('.ovl').remove()">Cerrar</button></div>`;
+  }catch(e){ ovl.querySelector('.modal').innerHTML=`<div class="loading">Error: ${esc(e.message)}</div><div class="row"><button class="btn" onclick="this.closest('.ovl').remove()">Cerrar</button></div>`; }
+}
+function openSelectedDay(){
+  const day=$('f-date').value; if(!day){ alert('Elige una fecha'); return; }
+  const fServ=$('f-service').value, fEnv=$('f-env').value;
+  const svc=SNAP.services.find(s=>(!fServ||s.name.replace(/ — .*/,'')===fServ)&&(!fEnv||s.environment===fEnv))||SNAP.services[0];
+  if(svc) openDay(svc.id,day);
+}
+
+// ── Admin: config, pausa, verificación manual, alertas ──────────────────────
+async function togglePause(id,enabled){ try{ await api('config',{method:'POST',body:{id,enabled}}); await load(); }catch(e){ alert(e.message);} }
+async function saveCfg(id){
+  const body={id,degraded_ms:+$('dg-'+id).value,timeout_ms:+$('to-'+id).value,fail_threshold:+$('ft-'+id).value,recover_threshold:+$('rt-'+id).value};
+  try{ await api('config',{method:'POST',body}); await load(); }catch(e){ alert(e.message);} }
+async function manualCheck(id,btn){ btn.disabled=true; btn.textContent='Verificando…'; try{ await api('check',{method:'POST',body:{id}}); await load(); }catch(e){ alert(e.message); btn.disabled=false; btn.textContent='Verificar ahora'; } }
+
+async function renderAdminAlerts(){
+  try{ ADMIN=await api('admin'); }catch(e){ return; }
+  const subs=ADMIN.subscriptions||[];
+  const opts=['<option value="">Todos los servicios/ambientes</option>'].concat((ADMIN.checks||[]).map(c=>`<option value="${c.id}">${esc(c.name)}</option>`)).join('');
+  const subList=subs.length?subs.map(s=>{
+    const scope=s.check_id?(ADMIN.checks.find(c=>c.id===s.check_id)?.name||'—'):'Todos';
+    return `<div class="subitem"><span class="em">${esc(s.email)}</span><span class="muted small">${esc(scope)}</span>
+      <span class="muted small">${[s.on_incident?'incidentes':'',s.on_recovery?'recuperación':'',s.on_stale?'monitor detenido':''].filter(Boolean).join(' · ')}</span>
+      <span class="muted small">${s.enabled?'activa':'pausada'}</span>
+      <button class="btn ghost" style="margin-left:auto;padding:4px 10px" onclick="delSub('${s.id}')">Quitar</button></div>`;
+  }).join(''):'<div class="muted small">Sin destinatarios aún.</div>';
+  $('admin-alerts').innerHTML=`<div class="card"><div class="sec-lab" style="margin-top:0">Alertas por correo (administrador)</div>
+    ${ADMIN.alertsProvider?'':'<div class="notice" style="margin-bottom:10px">Proveedor de correo no configurado: los avisos quedan registrados pero no se envían hasta configurar las variables del proveedor.</div>'}
+    <div class="muted small" style="margin-bottom:10px">Un solo aviso por cambio de estado (incidente confirmado, recuperación, monitor detenido). Hora de República Dominicana. Los destinatarios son privados de tu empresa.</div>
+    <div class="subs">${subList}</div>
+    <div class="row" style="margin-top:12px">
+      <input type="email" id="sub-email" placeholder="correo@empresa.com" style="flex:1;min-width:180px;background:var(--surf);border:1px solid var(--bdr);border-radius:8px;color:var(--fg);padding:8px 10px;font:inherit">
+      <select id="sub-check" style="background:var(--surf);border:1px solid var(--bdr);border-radius:8px;color:var(--fg);padding:8px 10px;font:inherit">${opts}</select>
+      <button class="btn" onclick="addSub()">Agregar</button>
+    </div>
+    <div class="row small muted" style="margin-top:8px">
+      <label><input type="checkbox" id="sub-inc" checked> Incidente</label>
+      <label><input type="checkbox" id="sub-rec" checked> Recuperación</label>
+      <label><input type="checkbox" id="sub-stale" checked> Monitor detenido</label>
+    </div>
+  </div>`;
+}
+async function addSub(){
+  const email=$('sub-email').value.trim(); if(!email){ alert('Escribe un correo'); return; }
+  const body={email,check_id:$('sub-check').value||null,on_incident:$('sub-inc').checked,on_recovery:$('sub-rec').checked,on_stale:$('sub-stale').checked};
+  try{ await api('subscriptions',{method:'POST',body}); await renderAdminAlerts(); }catch(e){ alert(e.message);} }
+async function delSub(id){ try{ await api('subscriptions',{method:'POST',body:{delete:true,id}}); await renderAdminAlerts(); }catch(e){ alert(e.message);} }
+
+// ── Carga y auto-refresco (lee datos guardados; no llama a la DGII) ─────────
+async function load(){
+  try{ const d=await api('status'); SNAP=d; IS_ADMIN=!!d.isAdmin; render(); }
+  catch(e){ $('list').innerHTML='<div class="loading">No se pudo cargar el estado: '+esc(e.message)+'</div>'; }
+}
+['f-service','f-env','f-status'].forEach(id=>$(id).addEventListener('change',applyFilters));
+
+function start(){
+  load();
+  if(refreshTimer) clearInterval(refreshTimer);
+  refreshTimer=setInterval(load,20000); // refresco de pantalla desde lo almacenado
+}
+
+window.addEventListener('message',e=>{
+  if(!e.data) return;
+  if(e.data.action==='monitor-init'){
+    TOKEN=e.data.token||''; SESSION_ID=e.data.sessionId||''; ROLE=e.data.role||'user'; USERNAME=e.data.username||'';
+    if(e.data.sessionId){ try{ localStorage.setItem('direct_session_id',e.data.sessionId); }catch(_){} }
+    start();
+  }
+});
+// Pide el token al contenedor (Direct).
+try{ window.parent.postMessage({action:'monitor-ready'},'*'); }catch(e){}
+</script>
+</body>
+</html>

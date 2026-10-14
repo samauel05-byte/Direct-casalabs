@@ -1,3 +1,9 @@
 name = "portal-rd-relay"
 main = "worker.js"
 compatibility_date = "2024-01-01"
+
+# Monitor DGII — comprobaciones cada minuto (independiente del navegador).
+# Requiere los secretos MONITOR_CRON_SECRET y MONITOR_APP_URL en el Worker
+# (wrangler secret put MONITOR_CRON_SECRET / ... MONITOR_APP_URL).
+[triggers]
+crons = ["* * * * *"]

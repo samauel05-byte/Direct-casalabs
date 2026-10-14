@@ -547,6 +547,9 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 <div id="view-dgii-modulos" class="layer" hidden style="padding:0">
   <iframe id="dgii-modulos-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
 </div>
+<div id="view-monitor" class="layer" hidden style="padding:0">
+  <iframe id="monitor-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
+</div>
 
 <!-- CAMI -->
 <div id="view-cami" class="layer" hidden>
@@ -869,6 +872,8 @@ const TOOL_ICONS = {
   'dgii-modulos': _ico('<path d="M4 20.3h16"/><g fill="#fff" stroke="none"><rect x="5.5" y="13" width="3" height="5.6" rx="0.7"/><rect x="10.5" y="10" width="3" height="8.6" rx="0.7"/><rect x="15.5" y="6.6" width="3" height="12" rx="0.7"/></g><path d="M5.5 12.5l4-3 3 1.8 5.3-4.6" stroke-width="1.7"/><path d="M15.4 6h3v3" stroke-width="1.7"/>', '62%'),
   // Clientes — personas.
   clients: _ico('<circle cx="9" cy="8" r="3.1"/><path d="M3.6 19c0-3 2.5-5 5.4-5s5.4 2 5.4 5"/><path d="M16 6.6a3 3 0 0 1 0 6"/><path d="M15.6 14.2c2.5.3 4.4 2.3 4.4 4.8"/>', '62%'),
+  // Monitor DGII — pulso de monitoreo.
+  monitor: _ico('<path d="M3 12h3.5l2-6 3 12 2.5-7 1.5 3H21"/>', '66%'),
 };
 
 const INST = {
@@ -925,6 +930,7 @@ const INST = {
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
   'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
   clients: { name:'Clientes', desc:'Gestión de clientes por empresa', grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'CLI', tool:true },
+  monitor: { name:'Monitor DGII', desc:'Disponibilidad de los servicios de facturación electrónica (e-CF)', grad:'linear-gradient(135deg,#be123c 0%,#f43f5e 100%)', abbr:'MON', tool:true },
 };
 
 let masterKey = null, credentials = [], clients = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
@@ -1297,7 +1303,7 @@ function confirmLogout() {
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos','view-monitor','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 let _sessionTracked=false;
@@ -1556,9 +1562,22 @@ function openDgiiModulos() {
   show('view-dgii-modulos');
 }
 
+function openMonitor() {
+  const frame = document.getElementById('monitor-frame');
+  if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('monitor')) {
+    frame.src = '/monitor/index.html';
+  }
+  show('view-monitor');
+}
+
 window.addEventListener('message', e => {
   if (!e.data) return;
   if (e.data.action === 'showPortals') showPortals();
+  // Monitor DGII pide el token al cargar; se le envía al iframe de este origen.
+  if (e.data.action === 'monitor-ready') {
+    const fr = document.getElementById('monitor-frame');
+    if (fr && fr.contentWindow) fr.contentWindow.postMessage({ action:'monitor-init', token: sessionToken, sessionId: activeSessionId, role: currentUser?.role || 'user', username: currentUser?.username || '' }, location.origin);
+  }
   // «Jalar de DGII» (Estimación Fiscal): abre la Oficina Virtual de esa empresa
   // por el relay (auto-login), para ir a «Consulta de Envíos». El jalado de la
   // tabla se hará desde ahí. Solo se acepta desde el iframe de este origen.
@@ -1711,16 +1730,19 @@ function renderPortalGrid() {
   if (currentUser?.access_ir2) allowed.push('ir2');
   if (currentUser?.access_estimacion) allowed.push('dgii-modulos');
   allowed.push('clients');
+  // Monitor DGII: estado público del servicio, visible para cualquier usuario
+  // autorizado; la configuración y las alertas quedan limitadas a admin (API).
+  allowed.push('monitor');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Otros accesos',            keys:['digisign','gdmail','nexo'] },
-    { label:'Herramientas contables',   keys:['nala','cami','ir2','dgii-modulos','clients'] },
+    { label:'Herramientas contables',   keys:['nala','cami','ir2','dgii-modulos','clients','monitor'] },
   ];
 
   const PLAY='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
-  const TOOL_OPEN={nala:openNala, ir2:openIr2, 'dgii-modulos':openDgiiModulos, clients:openClients, cami:openCami};
+  const TOOL_OPEN={nala:openNala, ir2:openIr2, 'dgii-modulos':openDgiiModulos, clients:openClients, cami:openCami, monitor:openMonitor};
   function makeCard(key,inst){
     const isTool=!!inst.tool||!!inst.openRelay||!!inst.openDirect;
     const cos=isTool?[]:getCompanies(key);
@@ -1734,7 +1756,7 @@ function renderPortalGrid() {
       inst.openDirect?openDirectPortal(key):inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key);
     });
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
-    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
+    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='monitor'?'Estado DGII':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
     const countHtml=isTool
       ?`<div class="p-count">${toolLabel}</div>`
       :`<div class="p-count${cos.length?'':' empty'}">${cos.length?`${cos.length} empresa${cos.length>1?'s':''}`:'Sin empresas'}</div>`;

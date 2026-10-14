@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Direct — logo de Nexo**: Nexo mostraba solo la insignia de texto «NX» porque no tenía logo configurado. Ahora usa su logo oficial (la marca «N») servido localmente (`public/img/logo-nexo.png`), nítido en la cajita del acceso. *(Citrus sigue con su insignia «CT» porque su portal no publica un logo descargable; si tienes la imagen de Citrus, se puede agregar igual.)*
+
 - **Direct — se retiró la función de favoritos**: por pedido, se quitó por completo la estrella de «Favorito» de los cuadritos de empresa y la sección «Favoritos» del inicio. El aviso de «clave por actualizar» y el resto del inicio siguen igual.
 
 - **Política de Privacidad y datos para Play Store**: se publicó la Política de Privacidad en `app.casalabs.com.do/privacidad.html` (enlazada desde el login), que describe de forma clara qué datos trata la app, el cifrado de extremo a extremo de la bóveda, la analítica de uso por usuario y los proveedores (Supabase, Vercel, Cloudflare, OpenAI). Se agregó además una guía para llenar la sección «Seguridad de los datos» de Play Console (`docs/play-store-datos-seguridad.md`). *(Falta confirmar el nombre legal y el correo de contacto, marcados «por confirmar».)*

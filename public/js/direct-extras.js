@@ -126,19 +126,12 @@
     return `<div class="dx-card"><div class="dx-h">Vencimientos de ${now.toLocaleDateString('es-DO', { month: 'long' })}</div>${rows.join('')}<div class="dx-cal-note">Fechas de referencia. Si el día cae en fin de semana o feriado, el plazo pasa al siguiente día laborable.</div></div>`;
   };
 
-  // Estrella de favorito y aviso rojo en cada cuadrito de empresa.
+  // Aviso rojo de "clave por actualizar" en cada cuadrito de empresa.
+  // (La estrella de favorito se quitó de las tarjetas por pedido del usuario.)
   DX.decorateCompanies = function () {
     document.querySelectorAll('#company-list .company-card[data-cred]').forEach(card => {
       const id = card.dataset.cred; const cred = credById(id); if (!cred) return;
-      let star = card.querySelector('.dx-star');
-      if (!star) {
-        star = document.createElement('button');
-        star.type = 'button'; star.className = 'dx-star'; star.title = 'Favorito';
-        star.addEventListener('click', e => { e.stopPropagation(); const on = DX.toggleFav(id); star.classList.toggle('on', on); });
-        card.appendChild(star);
-      }
-      star.textContent = DX.isFav(id) ? '★' : '☆';
-      star.classList.toggle('on', DX.isFav(id));
+      const oldStar = card.querySelector('.dx-star'); if (oldStar) oldStar.remove();
       card.classList.toggle('dx-needs-pw', DX.needsUpdate(cred));
       if (DX.needsUpdate(cred) && !card.querySelector('.dx-pw-flag')) {
         const flag = document.createElement('div'); flag.className = 'dx-pw-flag'; flag.textContent = 'Clave por actualizar';

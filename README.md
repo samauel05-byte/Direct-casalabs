@@ -129,7 +129,7 @@ El admin puede:
 ## Características de Direct
 
 - **Auto-login**: un clic envía automáticamente las credenciales al portal en una nueva pestaña
-- **Favoritos**: acceso rápido a las empresas marcadas
+- **Favoritos**: acceso rápido a las empresas marcadas (la estrella en cada cuadrito de empresa se retiró por pedido; la sección de favoritos del inicio sigue mostrando las ya marcadas)
 - **Aviso de contraseña vencida**: si un portal rechaza la clave, la empresa se marca para actualizarla
 - **Revisión de tarjetas de códigos DGII**: revisa/corrige la tarjeta y avisa si faltan códigos o hay repetidos
 - **Historial de entradas**: registro de quién entró a qué portal y cuándo (solo admin)

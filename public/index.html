@@ -851,6 +851,10 @@ const LOGOS = {
 // para que siempre carguen nítidos sin depender del raspado del sitio.
 const LOGO_IMG = { carnet: '/img/logo-cardnet.png', onapi: '/img/logo-onapi.png', idoppril: '/img/logo-idoppril.png', nexo: '/img/logo-nexo.png' };
 
+// Logos de marca (imagen de ícono de app) para las herramientas internas que
+// tienen su propio logo. Se muestran llenando el tile, en vez del ícono genérico.
+const TOOL_LOGOS = { nala: '/img/logo-nala.png', cami: '/img/logo-cami.png' };
+
 // Íconos de línea (blancos) para las herramientas internas de SERP. Se dibujan
 // sobre el tile de color (el gradiente de cada herramienta), en vez del texto.
 const _ico = (p, s = '60%') => `<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`;
@@ -1680,6 +1684,7 @@ function logoMarkup(key,inst,cls,pad,sizes){
   const inner=imgSrc?`<img class="official-logo" src="${imgSrc}" alt="">`:LOGOS[key==='sirla'?'sisaril':key];
   const official=OFFICIAL_LOGOS.has(key)?` data-logo-key="${key}" data-logo-pad="${pad}"`:'';
   if (inner) return `<div class="${cls}"${official} style="background:#fff;padding:${pad}">${inner}</div>`;
+  if (TOOL_LOGOS[key]) return `<div class="${cls}" style="overflow:hidden"><img src="${TOOL_LOGOS[key]}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></div>`;
   if (TOOL_ICONS[key]) return `<div class="${cls}" style="background:${inst.grad}">${TOOL_ICONS[key]}</div>`;
   return `<div class="${cls}"${official} style="background:${inst.grad};font-size:${inst.abbr.length>4?sizes[0]:inst.abbr.length>3?sizes[1]:sizes[2]}">${inst.abbr}</div>`;
 }

@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Direct — logos reales de NALA y CAMI, y limpieza de la marca vieja «SAVE»**: en el inicio, NALA y CAMI ahora muestran su **logo de marca** (NALA: cuadro morado con la «N»; CAMI: ícono con la «C» y el gráfico) como ícono de app, en vez del ícono genérico. Además se quitó el rótulo heredado **«SAVE»** que aún aparecía en el encabezado de **Estimación Fiscal** y en los títulos de pestaña de Estimación Fiscal y de los Anexos del IR-2 (el indicador «✓ Guardado» no cambia).
+
 - **Visual renovado — claro y cálido en todo el sistema**: el sistema ahora se ve más renovado y amigable. El **tema claro y cálido** (fondo tipo papel cálido, superficies crema, texto cálido y acentos azules) es el **predeterminado** en toda la app y en todos los módulos (NALA, CAMI, IR-2, Estimación Fiscal, el asistente de NALA, las páginas de anexos/resumen del IR-2 y la Política de Privacidad). Pantallas que antes eran oscuras (IR-2, Estimación Fiscal, anexos/resumen) pasaron a claro cálido manteniendo su estructura y legibilidad; CAMI conserva su barra lateral oscura como acento de marca sobre un contenido claro y cálido. El **tema oscuro** y el **modo automático** siguen disponibles desde el selector de apariencia (arriba a la derecha), así que quien prefiera oscuro lo activa con un toque.
 
 - **Direct — íconos para las herramientas internas**: NALA, CAMI, IR-2, Estimación Fiscal y Clientes mostraban solo una insignia de texto. Ahora cada una tiene su **ícono** (burbuja de chat con destello para NALA, calculadora para CAMI, documento para IR-2, barras para Estimación, personas para Clientes), en blanco sobre su tile de color. Se ven en el inicio y en la cabecera del módulo.

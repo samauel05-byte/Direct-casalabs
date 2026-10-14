@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Direct — se retiró la función de favoritos**: por pedido, se quitó por completo la estrella de «Favorito» de los cuadritos de empresa y la sección «Favoritos» del inicio. El aviso de «clave por actualizar» y el resto del inicio siguen igual.
+
 - **Política de Privacidad y datos para Play Store**: se publicó la Política de Privacidad en `app.casalabs.com.do/privacidad.html` (enlazada desde el login), que describe de forma clara qué datos trata la app, el cifrado de extremo a extremo de la bóveda, la analítica de uso por usuario y los proveedores (Supabase, Vercel, Cloudflare, OpenAI). Se agregó además una guía para llenar la sección «Seguridad de los datos» de Play Console (`docs/play-store-datos-seguridad.md`). *(Falta confirmar el nombre legal y el correo de contacto, marcados «por confirmar».)*
 
 - **Panel de inteligencia del admin (Etapa 2)**: el panel de uso ahora, además de los KPIs y la actividad por día/portal/hora, muestra **inteligencia** sobre cómo se usa el sistema: **uso de cada módulo** (NALA, CAMI, IR-2, Estimación, Clientes) con aviso de los que **nadie usa**; **a qué se dedica cada usuario** (su módulo y portal principal, sesiones y búsquedas); y **cuellos de botella** = empresas con más «contraseña rechazada» (el nombre se resuelve en tu navegador, el servidor no lo ve). Todo se va llenando con el uso real. Es la base para el reporte de recomendaciones (Etapa 3).

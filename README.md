@@ -137,7 +137,7 @@ El admin puede:
 - **Carga de clientes por Excel** con validación de estructura, formatos y duplicados
 - **Sesión exclusiva**: al abrir el mismo usuario en otro equipo se bloquea la sesión anterior
 - **Sincronización en tiempo real** — cualquier cambio se refleja al instante
-- **Tema claro / oscuro** según preferencia del sistema o manual
+- **Tema claro y cálido por defecto**, renovado y amigable (fondo tipo papel cálido, acentos azules); con tema oscuro y modo automático disponibles desde el selector de apariencia. La calidez es consistente en toda la app y en los módulos (NALA, CAMI, IR-2, Estimación Fiscal, páginas de anexos/resumen y la política de privacidad)
 - **Experiencia móvil** pulida para uso en celular (ver abajo)
 
 ---

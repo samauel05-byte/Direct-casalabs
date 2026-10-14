@@ -1,5 +1,5 @@
 :root {
-  --bg: #f8f9fc; --surface: #ffffff; --surface-2: #f3f4f8; --border: #e4e7ef; --text: #111827; --muted: #6b7280;
+  --bg: #f6f2ea; --surface: #fffdf9; --surface-2: #f1ebe0; --border: #e7ded0; --text: #1e1810; --muted: #6a5c4b;
   --accent: #7c3aed; --accent-dark: #5b21b6; --accent-light: rgba(124,58,237,.08);
   --ok: #047857; --ok-bg: #ecfdf5; --warn: #b45309; --warn-bg: #fffbeb; --crit: #b91c1c; --crit-bg: #fef2f2; --info: #1d4ed8; --info-bg: #eff6ff;
   --series-1: #6d28d9; --series-2: #1baf7a;

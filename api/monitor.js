@@ -70,6 +70,28 @@ module.exports = async (req, res) => {
       return sendJson(res, 200, { ok: true, ...detail });
     }
 
+    // Registro de verificaciones (programadas y manuales) — paginado y filtrable.
+    if (req.method === 'GET' && route === 'checks-log') {
+      const q = req.query || {};
+      const page = Math.max(0, parseInt(q.page, 10) || 0);
+      const pageSize = Math.min(100, Math.max(10, parseInt(q.pageSize, 10) || 50));
+      const log = await store.getChecksLog({
+        checkId: q.check_id || null, environment: q.environment || null, source: q.source || null,
+        status: q.status || null, from: q.from || null, to: q.to || null, page, pageSize,
+      });
+      return sendJson(res, 200, { ok: true, ...log });
+    }
+
+    // Historial de incidentes (todos los servicios) con filtros.
+    if (req.method === 'GET' && route === 'incidents') {
+      const q = req.query || {};
+      const incidents = await store.getIncidentsList({
+        checkId: q.check_id || null, environment: q.environment || null, status: q.status || null,
+        from: q.from || null, to: q.to || null,
+      });
+      return sendJson(res, 200, { ok: true, incidents });
+    }
+
     // ── Administración (rol admin + firma) ──────────────────────────────────
     if (!isAdmin) return sendJson(res, 403, { error: 'Solo administradores' });
     if (!requireTenant(res, session.tenantId)) return;
@@ -79,7 +101,36 @@ module.exports = async (req, res) => {
       const settings = await store.getSettings();
       const { data: subs } = await supabase.from(store.T.subs).select('*').eq('tenant_id', session.tenantId).order('created_at');
       const { data: notifs } = await supabase.from(store.T.notif).select('*').eq('tenant_id', session.tenantId).order('created_at', { ascending: false }).limit(50);
-      return sendJson(res, 200, { ok: true, checks, settings, subscriptions: subs || [], notifications: notifs || [], alertsProvider: alerts.providerConfigured() });
+      const audit = await store.listAudit(50);
+      return sendJson(res, 200, { ok: true, checks, settings, subscriptions: subs || [], notifications: notifs || [], audit, alertsProvider: alerts.providerConfigured() });
+    }
+
+    const actor = { actorId: session.userId, actorName: session.username };
+
+    // Ajustes globales del monitoreo (retención, umbral de suficiencia, etc.).
+    if (req.method === 'POST' && route === 'settings') {
+      const b = req.body || {};
+      const allowed = { retention_days: [1, 400], min_observations: [1, 1000], manual_min_interval_s: [5, 3600], stale_after_s: [60, 3600] };
+      const changed = {};
+      for (const k of Object.keys(allowed)) {
+        if (b[k] !== undefined) { const v = Math.max(allowed[k][0], Math.min(allowed[k][1], parseInt(b[k], 10) || allowed[k][0])); await store.setSetting(k, v); changed[k] = v; }
+      }
+      if (!Object.keys(changed).length) return sendJson(res, 400, { error: 'Sin cambios' });
+      await store.recordAudit({ ...actor, action: 'settings', target: 'global', detail: changed });
+      return sendJson(res, 200, { ok: true });
+    }
+
+    // Envío de prueba de correo a un destinatario configurado expresamente.
+    if (req.method === 'POST' && route === 'alert-test') {
+      const ok = await allow(req, 'monitor_alert_test', 3, 5 * 60 * 1000, session.userId);
+      if (!ok) return sendJson(res, 429, { error: 'Espera antes de enviar otra prueba' });
+      const to = String((req.body && req.body.email) || '').trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return sendJson(res, 400, { error: 'Correo de prueba no válido' });
+      await store.setSetting('alert_test_recipient', to);
+      const r = await alerts.sendTest(to);
+      await store.recordAudit({ ...actor, action: 'alert_test', target: to, detail: { ok: r.ok, error: r.error || null } });
+      if (!r.ok) return sendJson(res, 200, { ok: false, error: r.error });
+      return sendJson(res, 200, { ok: true });
     }
 
     // Configurar / pausar una comprobación.
@@ -94,6 +145,8 @@ module.exports = async (req, res) => {
       upd.updated_at = new Date().toISOString();
       const { error } = await supabase.from(store.T.checks).update(upd).eq('id', b.id);
       if (error) throw error;
+      const action = ('enabled' in upd && Object.keys(upd).length === 2) ? (upd.enabled ? 'resume' : 'pause') : 'config';
+      await store.recordAudit({ ...actor, action, target: b.id, detail: upd });
       return sendJson(res, 200, { ok: true });
     }
 
@@ -108,6 +161,7 @@ module.exports = async (req, res) => {
       const changes = [];
       for (const c of targets) { try { const { change } = await store.performCheck(c, { source: 'manual' }); if (change) changes.push(change); } catch (e) { console.error(e.message); } }
       await alerts.processChanges(changes);
+      await store.recordAudit({ ...actor, action: 'manual_check', target: id || 'todas', detail: { ran: targets.length } });
       return sendJson(res, 200, { ok: true, ran: targets.length });
     }
 
@@ -117,6 +171,7 @@ module.exports = async (req, res) => {
       if (b.delete && b.id) {
         const { error } = await supabase.from(store.T.subs).delete().eq('id', b.id).eq('tenant_id', session.tenantId);
         if (error) throw error;
+        await store.recordAudit({ ...actor, action: 'subscription', target: 'delete', detail: { id: b.id } });
         return sendJson(res, 200, { ok: true });
       }
       const email = String(b.email || '').trim().toLowerCase();
@@ -143,6 +198,7 @@ module.exports = async (req, res) => {
           if (error) throw error;
         }
       }
+      await store.recordAudit({ ...actor, action: 'subscription', target: email, detail: { check_id: row.check_id, enabled: row.enabled } });
       return sendJson(res, 200, { ok: true });
     }
 

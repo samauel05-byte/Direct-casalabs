@@ -56,10 +56,15 @@ no se puedan apuntar comprobaciones a redes internas ni a terceros.
 - **API** (`api/monitor.js`, reescrita por `vercel.json`):
   `GET /api/monitor/status`, `GET /api/monitor/day`, `GET /api/monitor/admin`,
   `POST /api/monitor/config|check|subscriptions`, `POST /api/monitor/cron`.
-- **Panel** (`public/monitor/index.html`): estado por servicio y ambiente,
-  disponibilidad 24h/7d/30d/90d + cobertura, barras diarias de 90 días, gráfico de
-  tiempos, incidentes, filtros, detalle por día, indicador de actualización y
-  próxima comprobación. Lee solo datos guardados (no llama a la DGII por visita).
+- **Panel** (`public/monitor/index.html`) con **4 vistas**: **Resumen** (selector
+  de ambiente, resumen general que no se pinta verde si hay servicios sin
+  comprobar/sin datos recientes/con incidentes, tarjetas de estado/última
+  comprobación/tiempo/disponibilidad 24h/incidentes activos, y por servicio:
+  disponibilidad+cobertura 24h/7d/30d/90d, barras diarias de 90 días, gráfico de
+  tiempos, incidentes); **Incidentes** (tabla filtrable, clic → cronología del
+  día); **Verificaciones** (registro paginado y filtrable, distingue Programada /
+  Manual); **Configuración** (solo admin). Lee solo datos guardados (no llama a la
+  DGII por visita). Color + icono + texto.
 - **Scheduler** (`worker.js` + `wrangler.toml`): el Cloudflare Worker ejecuta un
   cron `* * * * *` (1 minuto) que llama a `/api/monitor/cron` con un secreto.
   Independiente del navegador.
@@ -84,7 +89,15 @@ Fechas en **UTC** en la base; se muestran en **America/Santo_Domingo**.
 - **Cobertura** = ejecutadas / esperadas durante el período activo (desde la
   puesta en marcha). Los períodos sin monitoreo aparecen como **“Sin datos”**; no
   cuentan como disponibilidad ni como caída. No se muestra historial anterior a la
-  puesta en marcha.
+  puesta en marcha. Con pocas comprobaciones se muestra **“Sin datos suficientes”**
+  (umbral configurable `min_observations`) en vez de un porcentaje engañoso.
+- **Una sola observación por intervalo programado**: las métricas y los incidentes
+  usan únicamente las comprobaciones **programadas** (`source='auto'`). Las
+  **manuales** del administrador y los **reintentos** quedan en el registro de
+  verificaciones para diagnóstico, pero **no alteran** los porcentajes ni abren
+  incidentes. En una comprobación programada que falla por un error transitorio
+  (timeout/DNS/TLS/red) se hace **un reintento controlado** y se guarda solo el
+  resultado final (una observación por intervalo).
 
 ## 5. Permisos y aislamiento
 
@@ -94,6 +107,9 @@ Fechas en **UTC** en la base; se muestran en **America/Santo_Domingo**.
   frecuencia) y administrar alertas.
 - **Privado por firma (tenant)**: destinatarios de alertas y registro de
   notificaciones. Errores y respuestas se **sanean** antes de guardar/mostrar.
+- **Auditoría**: cada cambio de configuración (pausar/reanudar, umbrales, ajustes
+  globales, suscripciones, verificación manual, prueba de correo) se registra con
+  **quién y cuándo** (`dgii_monitor_audit`), visible en la vista de Configuración.
 
 ## 6. Variables de entorno
 

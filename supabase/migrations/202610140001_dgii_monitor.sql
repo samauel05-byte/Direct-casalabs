@@ -147,8 +147,22 @@ create table if not exists public.dgii_monitor_settings (
 insert into public.dgii_monitor_settings (key, value) values
   ('retention_days', '14'::jsonb),
   ('manual_min_interval_s', '30'::jsonb),
-  ('stale_after_s', '180'::jsonb)
+  ('stale_after_s', '180'::jsonb),
+  ('min_observations', '10'::jsonb),
+  ('alert_test_recipient', '""'::jsonb)
 on conflict (key) do nothing;
+
+-- ── Auditoría de configuración (quién cambió qué y cuándo) ───────────────────
+create table if not exists public.dgii_monitor_audit (
+  id         bigserial primary key,
+  actor_id   uuid,
+  actor_name text,
+  action     text not null,         -- 'config'|'pause'|'resume'|'settings'|'subscription'|'manual_check'|'alert_test'
+  target     text,                  -- servicio/ambiente o clave afectada
+  detail     jsonb,                 -- cambios (saneados)
+  created_at timestamptz not null default now()
+);
+create index if not exists dgii_monitor_audit_created_idx on public.dgii_monitor_audit (created_at desc);
 
 -- ── Comprobaciones por defecto: semilla de autenticación en los 3 ambientes ──
 insert into public.dgii_monitor_checks (service_key, environment, name, description, endpoint_key)
@@ -185,7 +199,7 @@ begin
   foreach t in array array[
     'dgii_monitor_checks','dgii_monitor_results','dgii_monitor_incidents',
     'dgii_monitor_daily','dgii_monitor_subscriptions','dgii_monitor_notifications',
-    'dgii_monitor_runner','dgii_monitor_settings'
+    'dgii_monitor_runner','dgii_monitor_settings','dgii_monitor_audit'
   ] loop
     execute format('alter table public.%I enable row level security', t);
     execute format('drop policy if exists "deny_jwt" on public.%I', t);

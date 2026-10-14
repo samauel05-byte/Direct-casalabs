@@ -161,6 +161,12 @@ allowlist a `https://ecf.dgii.gov.do`.
 - **Métricas reales**: disponibilidad (válidas/ejecutadas) y cobertura
   (ejecutadas/esperadas) por 24h/7d/30d/90d; barras diarias de 90 días; gráfico de
   tiempos. Fechas en UTC, se muestran en America/Santo_Domingo.
+- **Cuatro vistas**: Resumen (con resumen general que no se pinta verde si hay
+  servicios sin comprobar, sin datos recientes o con incidentes), Incidentes,
+  Registro de verificaciones (paginado; distingue programadas de manuales) y
+  Configuración (solo admin, con auditoría de quién cambia qué y cuándo).
+- **Métricas limpias**: una sola observación por intervalo programado; las
+  verificaciones manuales y los reintentos no alteran los porcentajes.
 - **Permisos**: todos los usuarios autorizados consultan; solo admin configura,
   pausa, verifica manualmente y administra alertas. Destinatarios de alertas
   privados por firma.

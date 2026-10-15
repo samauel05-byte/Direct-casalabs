@@ -236,9 +236,29 @@
         try { const res = await NALA.api('POST', `batches/${b.id}/discard-duplicates`); NALA.toast(`${res.discarded} copia(s) descartadas`, 'ok'); NALA.route(); } catch (e) { NALA.fail(e); }
       });
     }).catch(() => {});
-    NALA.api('GET', `events?batch_id=${b.id}&limit=100`).then(r => {
+    NALA.api('GET', `events?batch_id=${b.id}&limit=200`).then(r => {
       const el = root.querySelector('#tl'); if (!el) return;
-      el.innerHTML = r.events.map(e => `<div><b>${esc(NALA.actionLabel(e.action))}</b> · ${NALA.dateTime(e.created_at)}${e.reason ? ` · ${esc(e.reason)}` : ''}</div>`).join('') || '<span class="muted">Sin eventos.</span>';
+      // Agrupa tandas consecutivas de la misma acción en una sola línea con su
+      // conteo y el rango de hora, para que el historial no repita la misma
+      // acción decenas de veces (p. ej. "Aprobado · 82" en vez de 82 líneas).
+      // Los eventos vienen del más nuevo al más viejo.
+      const groups = [];
+      for (const e of r.events) {
+        const last = groups[groups.length - 1];
+        if (last && last.action === e.action) { last.count++; last.from = e.created_at; if (e.reason) last.reasons.push(e.reason); }
+        else groups.push({ action: e.action, count: 1, to: e.created_at, from: e.created_at, reasons: e.reason ? [e.reason] : [] });
+      }
+      const noteOf = reasons => {
+        if (!reasons.length) return '';
+        const head = reasons[0].length > 70 ? `${reasons[0].slice(0, 70)}…` : reasons[0];
+        return ` · ${esc(head)}${reasons.length > 1 ? ` (y ${reasons.length - 1} más)` : ''}`;
+      };
+      el.innerHTML = groups.map(g => {
+        const label = esc(NALA.actionLabel(g.action));
+        if (g.count === 1) return `<div><b>${label}</b> · ${NALA.dateTime(g.to)}${g.reasons[0] ? ` · ${esc(g.reasons[0])}` : ''}</div>`;
+        const when = g.from === g.to ? NALA.dateTime(g.to) : `${NALA.dateTime(g.from)} – ${NALA.dateTime(g.to)}`;
+        return `<div title="${g.count} eventos agrupados"><b>${label}</b> <span class="badge">${g.count}</span> · ${when}${noteOf(g.reasons)}</div>`;
+      }).join('') || '<span class="muted">Sin eventos.</span>';
     }).catch(() => {});
     if (active) {
       NALA.pump();

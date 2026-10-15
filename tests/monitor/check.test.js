@@ -2,6 +2,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert');
 const { runCheck } = require('../../lib/monitor/check');
+const { urlForEndpointKey, isAllowedUrl } = require('../../lib/monitor/endpoints');
 
 // URL oficial permitida (allowlist). Se inyecta fetch para controlar la respuesta.
 const URL_OK = 'https://ecf.dgii.gov.do/testecf/autenticacion/api/autenticacion/semilla';
@@ -53,4 +54,24 @@ test('runCheck: endpoint NO permitido se rechaza sin salir a la red', async () =
 test('runCheck: http no permitido (solo https DGII)', async () => {
   const r = await runCheck({ url: 'http://ecf.dgii.gov.do/testecf/autenticacion/api/autenticacion/semilla' }, async () => fakeResponse(200, '<valor>x</valor>'));
   assert.equal(r.status, 'invalid');
+});
+
+// ── Subsistema de estatus e-CF (statusecf): clave y host oficial permitidos ──
+test('urlForEndpointKey: statusecf_subsistema apunta al host oficial statusecf', () => {
+  const url = urlForEndpointKey('statusecf_subsistema');
+  assert.equal(url, 'https://statusecf.dgii.gov.do/api-docs/v1/definition.json');
+  assert.equal(isAllowedUrl(url), true);
+});
+
+test('runCheck: check_type http → cualquier 2xx es ok (no exige semilla)', async () => {
+  const url = urlForEndpointKey('statusecf_subsistema');
+  const r = await runCheck({ url, expect: 'http', degradedMs: 3000, timeoutMs: 5000 },
+    async () => fakeResponse(200, '{"openapi":"3.0.0"}'));
+  assert.equal(r.status, 'ok'); assert.equal(r.ok, true);
+});
+
+test('runCheck: check_type http → no-2xx sigue siendo down', async () => {
+  const url = urlForEndpointKey('statusecf_subsistema');
+  const r = await runCheck({ url, expect: 'http' }, async () => fakeResponse(503, 'Service Unavailable'));
+  assert.equal(r.status, 'down'); assert.equal(r.error_type, 'http');
 });

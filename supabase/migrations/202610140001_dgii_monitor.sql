@@ -181,6 +181,17 @@ values
    'ecf')
 on conflict (service_key, environment) do nothing;
 
+-- ── Comprobación adicional: subsistema oficial de estatus e-CF (statusecf) ──
+-- GET de solo lectura, sin credenciales. Confirma que el subsistema de estatus
+-- de la DGII esté en línea (el estado detallado requiere ApiKey de la DGII).
+insert into public.dgii_monitor_checks (service_key, environment, name, description, endpoint_key, check_type)
+values
+  ('statusecf_subsistema', 'statusecf',
+   'Subsistema de estatus e-CF — statusecf.dgii.gov.do',
+   'Comprueba que el subsistema oficial de estatus e-CF de la DGII esté en línea (GET de solo lectura, sin credenciales). No consulta el estado detallado por servicio, que requiere una ApiKey emitida por la DGII.',
+   'statusecf_subsistema', 'http')
+on conflict (service_key, environment) do nothing;
+
 -- ── Retención configurable: borra resultados crudos antiguos ────────────────
 create or replace function public.dgii_monitor_prune(p_days int)
 returns bigint language plpgsql as $$

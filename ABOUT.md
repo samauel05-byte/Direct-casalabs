@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — lectura en alta resolución para PDFs escaneados**: los PDFs de facturas suelen ser **escaneos** (cada página es una imagen). Antes se enviaba el PDF al lector y OpenAI lo procesaba a baja resolución, por eso fallaba en texto pequeño (NCF/e-CF, RNC, fecha, forma de pago). Ahora NALA **extrae la imagen de cada página a su resolución original** y la lee como imagen nítida (detalle alto), lo que mejora mucho la precisión. Es automático y sin dependencias nuevas; para PDFs que no son escaneos (vectoriales con texto) se mantiene el método anterior. Un lote ya cargado se puede **reprocesar** para releerlo así.
+
 - **Direct — ícono de app correcto al añadir a la pantalla de inicio**: al agregar Direct a la pantalla de inicio (o como acceso directo del navegador), ahora muestra su **logo** (nube con llave) en vez del ícono genérico. Se añadió `apple-touch-icon` y un **manifiesto web** (nombre “Direct”, íconos 180/192/512 y arranque a pantalla completa).
 
 - **NALA — moneda por defecto y botón “Revalidar”**: cuando un comprobante no imprime la moneda (típico en recibos de combustible), NALA puede asumir una **moneda por defecto por empresa** (p. ej. DOP) en vez de marcarlo como error; se configura en los ajustes del cliente (`default_moneda`). Además, el detalle del lote tiene un botón **“Revalidar”** que vuelve a validar todos los comprobantes del lote con las reglas y la configuración actuales **sin volver a escanear** (útil tras cambiar un valor por defecto o corregir datos): refresca errores y advertencias al instante, respetando lo ya aprobado o corregido a mano.

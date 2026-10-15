@@ -338,9 +338,21 @@
       const ext = cents(f.total);
       const diff = calc !== null && ext !== null ? ext - calc : null;
       const pays = inv.format === '607' ? sumC([f.pago_efectivo, f.pago_cheque, f.pago_tarjeta, f.pago_credito, f.pago_bonos, f.pago_permuta, f.pago_otros]) : null;
-      return `<div><small>Subtotal</small><b>${fmtC(sub)}</b></div><div><small>Impuestos</small><b>${fmtC(taxes)}</b></div><div><small>Total calculado</small><b>${fmtC(calc)}</b></div><div><small>Total extraído</small><b>${fmtC(ext)}</b></div>
+      return `<div><small>Subtotal</small><b>${fmtC(sub)}</b></div><div><small>Impuestos</small><b>${fmtC(taxes)}</b></div><div><small>Total calculado</small><b>${fmtC(calc)}</b></div><div><small>Total</small><b>${fmtC(ext)}</b></div>
         <div class="${diff !== null && diff !== 0n ? 'bad' : ''}"><small>Diferencia</small><b>${fmtC(diff)}</b></div>${inv.format === '607' ? `<div class="${pays !== null && calc !== null && pays !== calc ? 'bad' : ''}"><small>Formas de pago</small><b>${fmtC(pays)}</b></div>` : ''}
         ${f.moneda && f.moneda !== 'DOP' ? `<div><small>Total en DOP</small><b>${money(inv.total_dop)}</b></div>` : ''}<div><small>Moneda</small><b>${esc(f.moneda || '¿?')}</b></div>`;
+    }
+
+    // "Total" se calcula solo: suma de las casillas de Montos (base + impuestos).
+    const TOTAL_PARTS = inv.format === '606'
+      ? ['monto_servicios', 'monto_bienes', 'itbis', 'isc', 'otros_impuestos', 'propina']
+      : ['monto_facturado', 'itbis', 'isc', 'otros_impuestos', 'propina'];
+    const centsToStr = c => { if (c === null) return null; const neg = c < 0n; const a = neg ? -c : c; return `${neg ? '-' : ''}${a / 100n}.${String(a % 100n).padStart(2, '0')}`; };
+    function syncTotal() {
+      values.total = centsToStr(sumC(TOTAL_PARTS.map(k => values[k])));
+      const el = root.querySelector('#fieldsbox [data-k="total"]');
+      if (el) { el.value = values.total ?? ''; el.closest('[data-field]')?.classList.toggle('changed', (inv.fields.total ?? null) !== (values.total ?? null)); }
+      const rec = root.querySelector('#recon'); if (rec) rec.innerHTML = recon();
     }
 
     const groups = GROUPS[inv.format];
@@ -396,8 +408,13 @@
         if ((values[k] ?? null) === v) return;
         undo.push([k, values[k] ?? null]); values[k] = v; NALA.dirty = true;
         el.closest('[data-field]')?.classList.toggle('changed', (inv.fields[k] ?? null) !== v);
-        root.querySelector('#recon').innerHTML = recon(); refreshButtons();
+        if (TOTAL_PARTS.includes(k)) syncTotal(); else root.querySelector('#recon').innerHTML = recon();
+        refreshButtons();
       }));
+      // El Total no se teclea: se calcula solo con la suma de las casillas.
+      const tot = root.querySelector('#fieldsbox [data-k="total"]');
+      if (tot && editable) { tot.readOnly = true; tot.classList.add('auto'); tot.title = 'Se calcula solo: suma de las casillas de Montos'; }
+      syncTotal();
       // Spreadsheet-like keyboard navigation in the sheet view.
       root.querySelectorAll('.sheet [data-k]').forEach((el, i, all) => el.addEventListener('keydown', e => {
         if (e.key === 'ArrowDown' || e.key === 'Enter') { e.preventDefault(); el.dispatchEvent(new Event('change')); all[i + 1]?.focus(); }

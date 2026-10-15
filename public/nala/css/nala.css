@@ -135,6 +135,7 @@ tr.selected td { background: var(--accent-light); }
 .fields label.f.changed input, .fields label.f.changed select { border-color: var(--accent); background: var(--accent-light); }
 .fields label.f.has-crit input, .fields label.f.has-crit select { border-color: var(--crit); }
 .fields label.f.has-warn input, .fields label.f.has-warn select { border-color: var(--warn); }
+.fields input.auto, .sheet input.auto { background: var(--surface-2); font-weight: 700; }
 .fields .full { grid-column: 1 / -1; }
 .recon { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 10px 0; }
 .recon div { background: var(--surface-2); border-radius: 8px; padding: 6px 8px; }

@@ -31,6 +31,13 @@ async function handleCron(req, res) {
   const okOwn = secret && given === secret;
   const okVercel = cronSecret && auth === `Bearer ${cronSecret}`;
   if (!okOwn && !okVercel) return sendJson(res, 401, { error: 'No autorizado' });
+  // Envío de prueba controlado para operaciones (protegido por el mismo secreto):
+  // POST /api/monitor/cron?test=<correo> manda un correo de prueba por SMTP y responde.
+  if (req.query && req.query.test) {
+    const to = String(req.query.test).trim().toLowerCase();
+    const r = await alerts.sendTest(to);
+    return sendJson(res, 200, { ok: r.ok, test: to, error: r.error || null });
+  }
   try {
     const { ran, changes } = await store.runDueChecks({});
     const alertResult = await alerts.processChanges(changes);

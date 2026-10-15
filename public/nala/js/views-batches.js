@@ -185,7 +185,8 @@
         <button class="btn" id="refresh" title="Actualizar">↻ Actualizar</button>
         ${NALA.can('upload') ? `<button class="btn" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
         ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn" id="reproc">Reprocesar fallidos</button>' : ''}
-        <button class="btn primary" data-href="#/auditoria?batch=${b.id}">Auditar lote</button></h2>
+        <button class="btn primary" data-href="#/auditoria?batch=${b.id}">Auditar lote</button>
+        ${NALA.can('reprocess') ? '<button class="btn danger" id="del-batch">Eliminar lote</button>' : ''}</h2>
         <div class="muted">${esc(b.client_name)} · ${b.format} · ${period(b.period)} · creado ${NALA.dateTime(b.created_at)}</div>
         <div style="margin-top:10px" class="progress"><div style="width:${p.percent}%"></div></div>
         <div class="row muted" style="margin-top:6px;gap:16px"><span>${p.percent}% · ${p.jobs_done}/${p.jobs_total} trabajos</span><span>${p.jobs_running} en ejecución · ${p.jobs_queued} en cola · ${p.jobs_failed} fallidos</span>
@@ -209,6 +210,15 @@
     root.querySelector('#refresh')?.addEventListener('click', () => NALA.route());
     root.querySelector('#reproc')?.addEventListener('click', async () => {
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: true }); NALA.toast(`${r.requeued} documento(s) en cola de nuevo`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
+    });
+    root.querySelector('#del-batch')?.addEventListener('click', async () => {
+      const ok = await NALA.modal({ title: 'Eliminar lote', okText: 'Eliminar definitivamente', okClass: 'danger',
+        body: `<p>Se eliminará el lote <b>${esc(b.name)}</b> con sus <b>${int(st.invoices)}</b> comprobante(s), sus documentos y los archivos originales. Esta acción no se puede deshacer.</p>
+          <p class="muted" style="margin-top:6px">Si algún comprobante ya está en una exportación generada, primero debe anularla.</p>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="confirm-del"> Entiendo que se borra todo el lote</label>`,
+        onOk: m => { if (!m.querySelector('#confirm-del').checked) throw new Error('Marque la casilla para confirmar.'); return true; } });
+      if (!ok) return;
+      try { await NALA.api('DELETE', `batches/${b.id}`); NALA.toast('Lote eliminado', 'ok'); NALA.go('#/lotes'); } catch (e) { NALA.fail(e); }
     });
     if (st.duplicates) NALA.api('GET', `invoices?batch_id=${b.id}&has=duplicates`).then(r => {
       const el = root.querySelector('#dups'); if (!el) return;

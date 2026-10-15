@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — botón “Eliminar lote”**: en el detalle de un lote hay un botón **Eliminar lote** (para quien puede reprocesar) que borra por completo el lote con sus comprobantes, documentos, trabajos y archivos originales, tras una confirmación con casilla. Protege los registros fiscales: no permite eliminar un lote cuyos comprobantes ya estén incluidos en una exportación generada (primero hay que anularla). Útil para descartar un lote de prueba o mal cargado y volver a empezar limpio.
+
 - **NALA — facturas en el orden del archivo y aviso de repetidas más claro**: en auditoría, los comprobantes ahora se listan **en el mismo orden en que aparecen en el documento** (por página), no por fecha, para que cuadren con el PDF que subiste. Además, el aviso de comprobante repetido se reescribió en lenguaje más claro: empieza con **“Comprobante repetido.”**, dice dónde ya está cargado y termina con la acción exacta (**“Pulse «Descartar esta copia» para quitarla.”**).
 
 - **NALA — auditoría: “Siguiente/Anterior” salta solo a las facturas incompletas**: en el espacio de trabajo de auditoría, al revisar una factura, los botones **◀ Anterior** y **Siguiente ▶** ahora saltan únicamente a los comprobantes que **tienen algo por llenar o revisar** (con error crítico o advertencia) y omiten los que ya están limpios (✓), para no perder tiempo pasando una por una. Un interruptor **“Solo incompletas”** (activado por defecto) permite volver a recorrer todas cuando se quiera; el contador muestra cuántas quedan por revisar.

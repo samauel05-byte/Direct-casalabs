@@ -30,6 +30,7 @@ const ROUTES = [
   ['GET', /^batches$/, (ctx, q) => batches.list(ctx, q)],
   ['POST', /^batches$/, (ctx, q, b) => batches.create(ctx, b)],
   ['GET', /^batches\/([^/]+)$/, (ctx, q, b, m) => batches.detail(ctx, m[1])],
+  ['DELETE', /^batches\/([^/]+)$/, (ctx, q, b, m) => batches.remove(ctx, m[1])],
   ['POST', /^batches\/([^/]+)\/files$/, (ctx, q, b, m) => batches.registerFiles(ctx, m[1], b)],
   ['POST', /^batches\/([^/]+)\/files\/([^/]+)\/complete$/, (ctx, q, b, m) => batches.completeFile(ctx, m[1], m[2])],
   ['POST', /^batches\/([^/]+)\/start$/, (ctx, q, b, m) => batches.start(ctx, m[1])],

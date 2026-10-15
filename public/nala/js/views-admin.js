@@ -111,7 +111,7 @@
           ${integ(integrations.worker.scheduled_secret_configured || integrations.worker.cron_secret_configured, 'Procesamiento en segundo plano', `${integrations.worker.scheduled_secret_configured ? 'Worker programado con <span class="mono">NALA_WORKER_SECRET</span>.' : 'Sin <span class="mono">NALA_WORKER_SECRET</span>: los lotes avanzan mientras haya una pestaña de NALA abierta y con la recuperación diaria (Vercel Cron + <span class="mono">CRON_SECRET</span>).'} Ver docs/nala/README.md.`)}
         </div></div>
         <div class="card"><h2>Límites de carga y procesamiento</h2><div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(180px,1fr))">
-          ${field('max_file_mb', 'Tamaño máx. por archivo (MB)', 1, 50)}${field('max_files_per_batch', 'Archivos por lote', 1, 2000)}${field('max_pages_per_document', 'Páginas por documento', 1, 1000)}
+          ${field('max_file_mb', 'Tamaño máx. por archivo (MB)', 1, 100)}${field('max_files_per_batch', 'Archivos por lote', 1, 2000)}${field('max_pages_per_document', 'Páginas por documento', 1, 1000)}
           ${field('pages_per_chunk', 'Páginas por trabajo de extracción', 1, 10)}${field('max_attempts', 'Intentos por trabajo', 1, 10)}${field('zip_max_uncompressed_mb', 'ZIP descomprimido máx. (MB)', 10, 1000)}${field('concurrent_jobs', 'Trabajos simultáneos', 1, 5)}</div></div>
         <div class="card"><h2>Reglas contables</h2><div class="fields" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
           <label class="f"><span>Tolerancia total calculado vs. documento (RD$)</span><input id="tol" value="${esc(settings.rules.total_tolerance)}" inputmode="decimal" ${dis}></label>

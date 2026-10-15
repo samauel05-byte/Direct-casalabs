@@ -131,17 +131,17 @@ Los trabajos avanzan:
      puede entrar por URL directa (se redirige al panel). El servidor valida
      igualmente cada ruta.
 
-5. **Límite de tamaño por archivo**: por defecto **50 MB** (configurable por
-   tenant entre 1 y 50 MB en *Configuración → Límites*). El tope real lo impone
-   el **límite global de subida de Supabase Storage**, que en plan **Free no
-   puede pasar de 50 MB**; el bucket `nala-documents` y la validación del API se
-   mantienen alineados a ese valor. Para permitir hasta 100 MB hay que estar en
-   plan **Pro** y subir el *Global file size limit* a 100 MB
-   (Project Settings → Storage); luego se elevan en el código el default/bounds,
-   el tope del API (`lib/nala/api/batches.js`) y el `fileSizeLimit` del bucket.
-   La subida es directa a Supabase con URL firmada, así que un archivo que supere
-   el límite global es rechazado por el almacenamiento (el navegador lo muestra
-   como “Error de red”).
+5. **Límite de tamaño por archivo**: por defecto **100 MB** (configurable por
+   tenant entre 1 y 100 MB en *Configuración → Límites*). Requiere que el
+   **Global file size limit** de Supabase Storage (Project Settings → Storage)
+   sea ≥ 100 MB (ya configurado a 150 MB en plan **Pro**); el bucket
+   `nala-documents` (`fileSizeLimit` 100 MB) y la validación del API se mantienen
+   alineados. La subida es directa a Supabase con URL firmada, así que un archivo
+   que supere el límite global es rechazado por el almacenamiento (el navegador
+   lo muestra como “Error de red”): si se vuelve a topar, subir el límite global.
+   Para pasar de 100 MB, elevar ese límite global y, en el código, el
+   default/bounds (`lib/nala/settings.js`), el tope del API
+   (`lib/nala/api/batches.js`) y el `fileSizeLimit` del bucket.
 
 ## Pruebas
 

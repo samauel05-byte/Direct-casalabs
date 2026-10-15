@@ -125,6 +125,17 @@ Los trabajos avanzan:
 4. **Permisos**: los administradores tienen acceso total. Los usuarios con la
    casilla NALA trabajan como *oficial* sobre todas las empresas hasta que se les
    asigne rol y empresas en *Equipo y oficiales*.
+   - La sección **Administración** del menú (*Equipo y oficiales* y
+     *Configuración*) sólo aparece para quien tenga los permisos `team_manage`
+     y `settings_manage` respectivamente; un rol de digitación no los ve ni
+     puede entrar por URL directa (se redirige al panel). El servidor valida
+     igualmente cada ruta.
+
+5. **Límite de tamaño por archivo**: por defecto **100 MB** (configurable por
+   tenant entre 1 y 100 MB en *Configuración → Límites*). El bucket privado
+   `nala-documents` admite hasta 100 MB; para archivos entre 50 y 100 MB, el
+   límite global de subida del proyecto Supabase debe ser ≥ 100 MB
+   (Project Settings → Storage).
 
 ## Pruebas
 

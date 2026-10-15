@@ -132,14 +132,22 @@
   }
 
   // ── Ruteo por hash ─────────────────────────────────────────────────────
+  // 4º valor: permiso requerido para ver el ítem (null = visible para todos).
+  // 5º valor: sección; el separador sólo aparece si la sección tiene ítems visibles.
   const NAV = [
     ['panel', '📊', 'Panel de control'], ['empresa', '🏢', 'Dashboard por empresa'], ['clientes', '🗂️', 'Empresas clientes'], ['rnc', '🔎', 'Consulta RNC'],
     ['lotes', '📥', 'Carga masiva y lotes'], ['auditoria', '🧾', 'Auditoría fiscal'], ['exportar', '📤', 'Exportar DGII 606/607'],
-    ['equipo', '👥', 'Equipo y oficiales'], ['config', '⚙️', 'Configuración'], ['asistente', '💬', 'Asistente NALA (chat, IR-17)'],
+    ['equipo', '👥', 'Equipo y oficiales', 'team_manage', 'Administración'], ['config', '⚙️', 'Configuración', 'settings_manage', 'Administración'],
+    ['asistente', '💬', 'Asistente NALA (chat, IR-17)', null, 'Herramientas'],
   ];
+  // Permiso requerido por vista (para ocultar del menú y bloquear el acceso directo por URL).
+  NALA.navPerm = key => (NAV.find(n => n[0] === key) || [])[3] || null;
   function renderNav(active) {
-    document.getElementById('nav').innerHTML = NAV.map(([key, icon, label], i) => `${i === 7 ? '<div class="sep">Administración</div>' : ''}${i === 9 ? '<div class="sep">Herramientas</div>' : ''}
-      <button class="${key === active ? 'active' : ''}" data-nav="${key}"><span>${icon}</span>${esc(label)}</button>`).join('');
+    let section = '';
+    document.getElementById('nav').innerHTML = NAV.filter(([, , , perm]) => !perm || NALA.can(perm)).map(([key, icon, label, , sec]) => {
+      const sep = sec && sec !== section ? ((section = sec), `<div class="sep">${esc(sec)}</div>`) : '';
+      return `${sep}<button class="${key === active ? 'active' : ''}" data-nav="${key}"><span>${icon}</span>${esc(label)}</button>`;
+    }).join('');
   }
   NALA.go = hash => { if (location.hash === hash) route(); else location.hash = hash; };
   NALA.parseHash = () => {
@@ -150,6 +158,9 @@
   let routeToken = 0;
   async function route() {
     const { view, id, params } = NALA.parseHash();
+    // Vistas de administración: si el usuario no tiene el permiso, lo mandamos al panel.
+    const needed = NALA.navPerm(view);
+    if (needed && !NALA.can(needed)) { NALA.go('#/panel'); return; }
     const def = NALA.views[view] || NALA.views.panel;
     if (NALA.beforeLeave && !(await NALA.beforeLeave())) return;
     NALA.beforeLeave = null;

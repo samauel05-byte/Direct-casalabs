@@ -94,24 +94,37 @@
     drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); add(e.dataTransfer.files); });
     input.addEventListener('change', () => add(input.files));
     root.querySelector('#cancel').addEventListener('click', () => NALA.go(batch ? `#/lotes/${batch.id}` : '#/lotes'));
+    // Se conserva el lote creado entre reintentos (no se crea uno nuevo cada vez).
+    let currentBatch = batch;
+    const RECEIVED = '✓ Recibido';
     root.querySelector('#go').addEventListener('click', async () => {
       const btn = root.querySelector('#go'); btn.disabled = true;
       try {
-        let target = batch;
-        if (!target) {
+        if (!currentBatch) {
           const clientId = root.querySelector('#b-client').value;
           if (!clientId) throw new Error('Elija la empresa del lote.');
           const p = `${root.querySelector('#b-year').value}${root.querySelector('#b-month').value}`;
           const name = root.querySelector('#b-name').value.trim() || `${root.querySelector('#b-format').value} ${period(p)}`;
-          target = (await NALA.api('POST', 'batches', { client_id: clientId, period: p, format: root.querySelector('#b-format').value, name, idempotency_key: idem })).batch;
+          currentBatch = (await NALA.api('POST', 'batches', { client_id: clientId, period: p, format: root.querySelector('#b-format').value, name, idempotency_key: idem })).batch;
         }
+        const target = currentBatch;
         const files = selected.filter(f => !/\.rar$/i.test(f.name));
-        const uploaded = await uploadFiles(target.id, files, (name, msg, cls) => { status[name] = [msg, cls]; draw(); });
-        if (!uploaded) { btn.disabled = false; return; }
+        // Reintenta solo los que aún no se recibieron; los ya subidos se saltan.
+        const pending = files.filter(f => (status[f.name] || [])[0] !== RECEIVED);
+        await uploadFiles(target.id, pending, (name, msg, cls) => { status[name] = [msg, cls]; draw(); });
+        const anyFailed = files.some(f => (status[f.name] || [])[1] === 'crit');
+        if (anyFailed) {
+          btn.disabled = false;
+          btn.textContent = 'Reintentar subida';
+          NALA.toast('Algún archivo no subió. Pulsa «Reintentar subida» para intentarlo de nuevo sin volver a elegirlo.', 'err');
+          return;
+        }
+        const totalOk = files.filter(f => (status[f.name] || [])[0] === RECEIVED).length;
+        if (!totalOk) { btn.disabled = false; return; }
         await NALA.api('POST', `batches/${target.id}/start`);
-        NALA.toast(`${uploaded} archivo(s) recibidos; procesamiento en segundo plano.`, 'ok');
+        NALA.toast(`${totalOk} archivo(s) recibidos; procesamiento en segundo plano.`, 'ok');
         NALA.pump();
-        setTimeout(() => NALA.go(`#/lotes/${target.id}`), Object.values(status).some(x => x[1] === 'crit') ? 4000 : 600);
+        setTimeout(() => NALA.go(`#/lotes/${target.id}`), 600);
       } catch (e) { NALA.fail(e); btn.disabled = false; }
     });
   }

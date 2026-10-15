@@ -116,44 +116,56 @@ Fechas en **UTC** en la base; se muestran en **America/Santo_Domingo**.
 | Variable | Dónde | Necesaria para | Estado |
 |---|---|---|---|
 | `MONITOR_CRON_SECRET` | Vercel **y** Cloudflare Worker | Autorizar al scheduler a llamar `/api/monitor/cron` | **Configurada en Vercel** (falta ponerla igual en el Worker) |
-| `MONITOR_APP_URL` | Cloudflare Worker | URL base de Direct que llama el cron (por defecto `https://app.casalabs.com.do`) | Opcional |
-| `MONITOR_RESEND_API_KEY` + `MONITOR_ALERT_FROM` | Vercel | Enviar alertas por correo (proveedor Resend, vía HTTPS) | **Pendiente** (sin esto, los avisos se registran pero no se envían) |
+| `MONITOR_APP_URL` | Cloudflare Worker | URL base de Direct que llama el cron (por defecto `https://app.casalabs.com.do`) | Falta en el Worker |
+| `MONITOR_SMTP_HOST`, `MONITOR_SMTP_PORT`, `MONITOR_SMTP_USER`, `MONITOR_SMTP_PASS`, `MONITOR_ALERT_FROM` | Vercel | **Enviar alertas por SMTP desde tu buzón** (recomendado). Puerto 465 (SSL) o 587 (STARTTLS). | **Pendiente** (sin esto, los avisos se registran pero no se envían) |
+| `MONITOR_RESEND_API_KEY` + `MONITOR_ALERT_FROM` | Vercel | Alternativa de envío por Resend (HTTPS) si no se usa SMTP | Opcional |
 | `MONITOR_HEARTBEAT_URL` | Vercel | Dead-man switch externo para detectar que el monitor se detuvo | **Pendiente** (sin esto, la alerta “monitor detenido” no está disponible) |
+| `CRON_SECRET` | Vercel | Solo si además se quiere activar un cron de Vercel (plan Pro); el endpoint también acepta `Authorization: Bearer CRON_SECRET` | Opcional |
+
+> **IMAP vs SMTP:** IMAP sirve para *leer* correo; para *enviar* las alertas se usa
+> **SMTP** del mismo buzón. Casi todos los proveedores ofrecen ambos (p. ej. Gmail:
+> `smtp.gmail.com:465` con una *contraseña de aplicación*; Outlook/Office365:
+> `smtp.office365.com:587`). La contraseña del buzón se guarda **cifrada** en
+> Vercel (nunca en el navegador ni en el repo).
 
 > `MONITOR_CRON_SECRET` ya quedó en Vercel: `lBFWpzJDAnIAXW4e-qkZaRJmaJkgMw0o`.
 > Toma efecto en el próximo despliegue de producción.
 
 ## 7. Activar el proceso programado (pendiente de tu lado)
 
-El código del scheduler está listo; para activarlo hay que **desplegar el
-Cloudflare Worker** con el cron y el secreto (no se puede hacer desde aquí porque
-requiere tus credenciales de Cloudflare):
+Tu **Cloudflare Worker `portal-rd-relay` ya se despliega solo desde Git** (Workers
+Builds): cada push lo redepliega, y el cron `* * * * *` de `wrangler.toml` se
+aplicará al fusionar a `main`. Solo falta ponerle **2 variables** en el panel de
+Cloudflare (no hay acceso a tu cuenta desde aquí):
 
-```bash
-# en la raíz del repo, con wrangler autenticado en tu cuenta Cloudflare
-wrangler secret put MONITOR_CRON_SECRET   # pega: lBFWpzJDAnIAXW4e-qkZaRJmaJkgMw0o
-wrangler secret put MONITOR_APP_URL       # pega: https://app.casalabs.com.do
-wrangler deploy                           # publica el Worker con el cron "* * * * *"
-```
+1. Cloudflare dashboard → **Workers & Pages** → `portal-rd-relay` → **Settings** →
+   **Variables and Secrets**:
+   - Secret `MONITOR_CRON_SECRET` = `lBFWpzJDAnIAXW4e-qkZaRJmaJkgMw0o`
+   - Variable `MONITOR_APP_URL` = `https://app.casalabs.com.do`
+2. Guardar. En la próxima corrida del cron (cada minuto) el Worker llamará a
+   `/api/monitor/cron` y empezarán las comprobaciones.
 
-**Alternativa compatible** si no se usa Cloudflare cron: un cron externo (p. ej.
+**Alternativa** si prefieres no tocar el Worker: un cron externo (p. ej.
 cron-job.org) que haga `POST https://app.casalabs.com.do/api/monitor/cron` cada
-minuto con la cabecera `x-monitor-secret: <MONITOR_CRON_SECRET>`.
+minuto con la cabecera `x-monitor-secret: lBFWpzJDAnIAXW4e-qkZaRJmaJkgMw0o`.
+(También se dejó soporte para el cron de Vercel vía `Authorization: Bearer
+CRON_SECRET`, pero no se añadió el cron a `vercel.json` para no arriesgar el
+despliegue de producción si la cuenta estuviera en plan Hobby, que no ejecuta
+crons por minuto.)
 
-**Limitación identificada:** Vercel (plan actual) no ejecuta crons por minuto
-—su cron de este repo es diario—, por eso el scheduler de 1 minuto va en el
-Cloudflare Worker (que sí admite granularidad de 1 minuto) o en un cron externo.
-Hasta activar uno de los dos, el panel mostrará **“Sin datos / Monitor detenido”**
-(no se simula actividad).
+Hasta activar uno de los anteriores, el panel mostrará **“Sin datos / Monitor
+detenido”** (no se simula actividad).
 
 ## 8. Alertas por correo
 
 Un solo aviso por cambio de estado (incidente confirmado, recuperación, monitor
 detenido), sin duplicados (índice único `incident_id,email,kind`) y con reintentos
 controlados. Incluye servicio, ambiente, hora RD, descripción y enlace al módulo.
-IMAP no se usa para enviar. Mientras no se configure `MONITOR_RESEND_API_KEY` +
-`MONITOR_ALERT_FROM`, los cambios de estado se **registran** pero no se envían
-correos, y el panel lo indica.
+El envío usa **SMTP** de tu buzón (nodemailer) si defines `MONITOR_SMTP_*`;
+**IMAP no se usa para enviar** (solo serviría para leer). Como alternativa acepta
+Resend. Mientras no haya proveedor configurado, los cambios de estado se
+**registran** pero no se envían correos, y el panel lo indica. La vista de
+Configuración incluye un **envío de prueba** a un destinatario configurado.
 
 ## 9. Pruebas realizadas
 

@@ -21,9 +21,16 @@ function sendJson(res, code, obj) { res.status(code).json(obj); }
 // ── Cron: ejecuta las comprobaciones pendientes y procesa alertas ───────────
 async function handleCron(req, res) {
   const secret = process.env.MONITOR_CRON_SECRET || '';
-  if (!secret) return sendJson(res, 503, { error: 'MONITOR_CRON_SECRET no configurado' });
+  const cronSecret = process.env.CRON_SECRET || '';
+  if (!secret && !cronSecret) return sendJson(res, 503, { error: 'MONITOR_CRON_SECRET no configurado' });
+  // Acepta: (a) el scheduler propio (Cloudflare Worker / cron externo) con el
+  // secreto en cabecera; (b) el cron de Vercel, que envía Authorization: Bearer
+  // CRON_SECRET. Cualquiera de los dos autoriza la corrida.
   const given = req.headers['x-monitor-secret'] || (req.query && req.query.key) || '';
-  if (given !== secret) return sendJson(res, 401, { error: 'No autorizado' });
+  const auth = String(req.headers['authorization'] || '');
+  const okOwn = secret && given === secret;
+  const okVercel = cronSecret && auth === `Bearer ${cronSecret}`;
+  if (!okOwn && !okVercel) return sendJson(res, 401, { error: 'No autorizado' });
   try {
     const { ran, changes } = await store.runDueChecks({});
     const alertResult = await alerts.processChanges(changes);

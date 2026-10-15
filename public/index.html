@@ -2537,8 +2537,8 @@ async function savePortalCfg() {
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 
-/* ── Session timeout (20 min inactivity) ── */
-const SESSION_TIMEOUT_MS = 20 * 60 * 1000;  // 20 minutes
+/* ── Session timeout (60 min inactivity) ── */
+const SESSION_TIMEOUT_MS = 60 * 60 * 1000;  // 60 minutes
 const SESSION_WARN_MS    = 60 * 1000;        // warn 60 s before close
 let _sessionTimer = null, _sessionWarnTimer = null, _countdownTimer = null;
 

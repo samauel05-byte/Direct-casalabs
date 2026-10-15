@@ -121,7 +121,12 @@
     try { localStorage.setItem(prefKey(), JSON.stringify({ client: NALA.state.client, period: NALA.state.period, format: NALA.state.format })); } catch (_) { /* opcional */ }
   }
   NALA.setScope = patch => {
-    Object.assign(NALA.state, patch); savePrefs(); renderScope(); route();
+    Object.assign(NALA.state, patch); savePrefs(); renderScope();
+    // Si estabas viendo un registro puntual (un lote o una factura), al cambiar
+    // el filtro vuelve a su lista para que el nuevo filtro se vea aplicado.
+    const { view, id } = NALA.parseHash();
+    const listOf = { lotes: '#/lotes', auditoria: '#/auditoria' };
+    if (id && listOf[view]) NALA.go(listOf[view]); else route();
   };
   function renderScope() {
     const s = NALA.state;

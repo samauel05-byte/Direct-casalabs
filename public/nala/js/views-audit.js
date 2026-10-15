@@ -101,7 +101,16 @@
         img.style.transform = `rotate(${st.rot}deg)`;
         img.style.margin = sideways ? `${(st.base - st.baseH) * st.zoom / 2}px auto` : '0 auto';
       } else {
-        if (!st.pdf) { st.pdf = await pdfjsLib.getDocument({ url: info.url }).promise; st.pages = st.pdf.numPages; }
+        if (!st.pdf) {
+          // Descargar el documento una sola vez y reusarlo al navegar entre
+          // comprobantes del mismo archivo (evita bajar un PDF grande por factura).
+          const key = `${documentId}:${doc.sha256 || ''}`;
+          if (NALA.cache.viewerPdf?.key !== key) {
+            const data = await (await fetch(info.url)).arrayBuffer();
+            NALA.cache.viewerPdf = { key, pdf: await pdfjsLib.getDocument({ data }).promise };
+          }
+          st.pdf = NALA.cache.viewerPdf.pdf; st.pages = st.pdf.numPages;
+        }
         const page = await st.pdf.getPage(st.page);
         const natural = page.getViewport({ scale: 1, rotation: st.rot });
         if (st.fit) st.zoom = Math.min(4, avail / natural.width / 1.5);

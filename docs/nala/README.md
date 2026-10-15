@@ -105,7 +105,7 @@ Los trabajos avanzan:
    | `OPENAI_API_KEY` | extracción (la misma que usa el asistente) | existente |
    | `NALA_WORKER_SECRET` | autoriza el worker programado (≥ 16 caracteres) | **nueva, opcional pero recomendada** |
    | `CRON_SECRET` | autoriza la recuperación diaria de Vercel Cron | **nueva, opcional** |
-   | `NALA_OPENAI_MODEL` | modelo de extracción (por defecto `gpt-4.1`) | opcional |
+   | `NALA_OPENAI_MODEL` | modelo de extracción (por defecto `gpt-4o`) | opcional |
    | `NALA_STORAGE_BUCKET` | bucket privado (por defecto `nala-documents`) | opcional |
 
 3. **Worker cada minuto (recomendado)** — en Supabase, con las extensiones

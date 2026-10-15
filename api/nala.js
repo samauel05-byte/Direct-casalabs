@@ -43,6 +43,7 @@ const ROUTES = [
   ['PATCH', /^invoices\/([^/]+)$/, (ctx, q, b, m) => invoices.save(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/lock$/, (ctx, q, b, m) => invoices.lock(ctx, m[1], false)],
   ['DELETE', /^invoices\/([^/]+)\/lock$/, (ctx, q, b, m) => invoices.lock(ctx, m[1], true)],
+  ['POST', /^invoices\/approve-bulk$/, (ctx, q, b) => invoices.approveBulk(ctx, b)],
   ['POST', /^invoices\/([^/]+)\/approve$/, (ctx, q, b, m) => invoices.approve(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/revert$/, (ctx, q, b, m) => invoices.revert(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/relocate$/, (ctx, q, b, m) => invoices.relocate(ctx, m[1], b)],

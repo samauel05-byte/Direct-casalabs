@@ -51,6 +51,11 @@
     ]);
     NALA.cache.auditList = { qs, ids: invoices.map(i => i.id), incomplete: invoices.filter(isIncomplete).map(i => i.id) };
     const set = (k, v) => { const p = { ...params, [k]: v }; if (!v) delete p[k]; NALA.go(`#/auditoria?${new URLSearchParams(p)}`); };
+    // Aprobación masiva: sólo las de "cotejo verde" (sin errores ni avisos) que
+    // aún estén pendientes de aprobar. El resto no se puede marcar.
+    const isGreen = i => !i.critical_count && !i.warning_count && ['pending_review', 'reviewed'].includes(i.status);
+    const canBulk = NALA.can('approve');
+    const approvable = invoices.filter(isGreen);
     root.innerHTML = `<div class="stack">
       <div class="tabs"><button class="${mode === 'batch' ? 'active' : ''}" id="t-batch">Vista por lotes</button><button class="${mode === 'unified' ? 'active' : ''}" id="t-uni">Vista unificada (empresa y período)</button></div>
       ${mode === 'batch' ? `<div class="row"><label class="f" style="min-width:320px"><span>Lote</span><select id="pick-batch">${batchList.batches.map(b => `<option value="${b.id}" ${b.id === params.batch ? 'selected' : ''}>${esc(b.name)} · ${esc(NALA.clientName(b.client_id))} · ${b.format} ${period(b.period)}</option>`).join('')}
@@ -62,8 +67,12 @@
         <label class="f"><span>Observaciones</span><select id="f-has"><option value="">Todas</option><option value="errors" ${params.has === 'errors' ? 'selected' : ''}>Con errores críticos</option><option value="warnings" ${params.has === 'warnings' ? 'selected' : ''}>Con advertencias</option><option value="duplicates" ${params.has === 'duplicates' ? 'selected' : ''}>Duplicados</option><option value="foreign" ${params.has === 'foreign' ? 'selected' : ''}>Moneda extranjera</option></select></label>
         <label class="f" style="flex:1;min-width:200px"><span>Buscar</span><input id="f-q" value="${esc(params.q || '')}" placeholder="NCF, RNC o nombre"></label>
         <span class="muted">${int(total)} comprobante(s)</span></div>
-      ${invoices.length ? `<div class="table-wrap"><table><tr><th>#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${mode === 'unified' && !s.client ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Total DOP</th><th>Estado</th><th>Revisión</th></tr>
-        ${invoices.map((i, n) => `<tr class="clickable" data-id="${i.id}"><td class="muted">${n + 1}</td><td class="mono">${esc(i.ncf || '—')}</td><td>${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div></td>
+      ${canBulk && approvable.length ? `<div class="row" id="bulkbar" style="align-items:center;gap:12px">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer" title="Marca todas las que tienen cotejo verde (sin errores ni avisos)"><input type="checkbox" id="sel-all"> Todas las de cotejo verde (${approvable.length})</label>
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn ok" id="bulk-approve" disabled>✓ Aprobar seleccionadas (<span id="sel-count">0</span>)</button></div>` : ''}
+      ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th>#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${mode === 'unified' && !s.client ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Total DOP</th><th>Estado</th><th>Revisión</th></tr>
+        ${invoices.map((i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted">${n + 1}</td><td class="mono">${esc(i.ncf || '—')}</td><td>${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div></td>
           <td>${esc(i.invoice_date || '—')}</td>${mode === 'unified' && !s.client ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>${esc(i.currency || '?')}</td><td class="num">${money(i.total_dop)}</td><td>${NALA.badge(i.status)}</td><td>${NALA.issueBadges(i)}</td></tr>`).join('')}</table></div>`
         : '<div class="card empty">No hay comprobantes con estos filtros.</div>'}</div>`;
     root.querySelector('#t-batch').addEventListener('click', () => NALA.go(`#/auditoria?batch=${batchList.batches[0]?.id || ''}`));
@@ -72,7 +81,33 @@
     root.querySelector('#f-status').addEventListener('change', e => set('status', e.target.value));
     root.querySelector('#f-has').addEventListener('change', e => set('has', e.target.value));
     root.querySelector('#f-q').addEventListener('change', e => set('q', e.target.value.trim()));
-    root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', () => NALA.go(`#/auditoria/${tr.dataset.id}?${new URLSearchParams(params)}`)));
+    root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('.chk')) return; NALA.go(`#/auditoria/${tr.dataset.id}?${new URLSearchParams(params)}`); }));
+
+    // Aprobación masiva (sólo cotejo verde).
+    if (canBulk && approvable.length) {
+      const rowChks = () => Array.from(root.querySelectorAll('.row-chk'));
+      const selAll = root.querySelector('#sel-all');
+      const btn = root.querySelector('#bulk-approve');
+      const refreshSel = () => { const n = rowChks().filter(c => c.checked).length; root.querySelector('#sel-count').textContent = n; btn.disabled = !n;
+        if (selAll) selAll.checked = n > 0 && n === rowChks().length; };
+      root.querySelectorAll('.chk').forEach(td => td.addEventListener('click', e => e.stopPropagation()));
+      rowChks().forEach(c => c.addEventListener('change', refreshSel));
+      selAll?.addEventListener('change', () => { rowChks().forEach(c => { c.checked = selAll.checked; }); refreshSel(); });
+      btn.addEventListener('click', async () => {
+        const ids = rowChks().filter(c => c.checked).map(c => c.dataset.cid);
+        if (!ids.length) return;
+        const ok = await NALA.modal({ title: 'Aprobar en lote', okText: 'Aprobar', okClass: 'ok',
+          body: `<p>Se aprobarán <b>${ids.length}</b> comprobante(s) de cotejo verde (sin errores ni avisos). Los que tengan errores o advertencias se omiten y se aprueban uno por uno.</p>` });
+        if (!ok) return;
+        btn.disabled = true; btn.textContent = 'Aprobando…';
+        try {
+          const r = await NALA.api('POST', 'invoices/approve-bulk', { ids });
+          const extra = r.skipped_count ? `, ${r.skipped_count} omitida(s)` : '';
+          NALA.toast(`${r.approved_count} aprobada(s)${extra}.`, r.approved_count ? 'ok' : 'err');
+          NALA.route();
+        } catch (e) { NALA.fail(e); btn.disabled = false; btn.textContent = '✓ Aprobar seleccionadas'; }
+      });
+    }
   }
 
   // ── Visor del original ──────────────────────────────────────────────────
@@ -102,12 +137,14 @@
         img.style.margin = sideways ? `${(st.base - st.baseH) * st.zoom / 2}px auto` : '0 auto';
       } else {
         if (!st.pdf) {
-          // Descargar el documento una sola vez y reusarlo al navegar entre
-          // comprobantes del mismo archivo (evita bajar un PDF grande por factura).
+          // Cargar el documento una vez y reusarlo al navegar entre comprobantes
+          // del mismo archivo, pero dejando que pdf.js lo pida por rangos: así la
+          // página que se mira aparece enseguida sin esperar a descargar todo el
+          // PDF (que puede pesar decenas de MB en escaneos de muchas páginas).
           const key = `${documentId}:${doc.sha256 || ''}`;
           if (NALA.cache.viewerPdf?.key !== key) {
-            const data = await (await fetch(info.url)).arrayBuffer();
-            NALA.cache.viewerPdf = { key, pdf: await pdfjsLib.getDocument({ data }).promise };
+            if (!canvasBox.querySelector('canvas')) canvasBox.innerHTML = '<div class="muted" style="padding:16px">Cargando documento…</div>';
+            NALA.cache.viewerPdf = { key, pdf: await pdfjsLib.getDocument({ url: info.url, disableAutoFetch: true, rangeChunkSize: 262144 }).promise };
           }
           st.pdf = NALA.cache.viewerPdf.pdf; st.pages = st.pdf.numPages;
         }

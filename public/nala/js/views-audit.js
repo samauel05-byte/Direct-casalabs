@@ -28,6 +28,9 @@
     ],
   };
   const READONLY = new Set(['moneda_simbolo']);
+  // "Incompleta": aún tiene algo que atender (error crítico o advertencia),
+  // es decir, datos por llenar o revisar. Una factura limpia (✓) se salta.
+  const isIncomplete = inv => (inv.critical_count || 0) > 0 || (inv.warning_count || 0) > 0;
 
   function listQuery(params) {
     const s = NALA.state;
@@ -46,7 +49,7 @@
       params.batch ? NALA.api('GET', `batches/${params.batch}`) : Promise.resolve(null),
       NALA.api('GET', `batches?${new URLSearchParams(Object.entries({ client_id: s.client, period: s.period, format: s.format }).filter(([, v]) => v))}`),
     ]);
-    NALA.cache.auditList = { qs, ids: invoices.map(i => i.id) };
+    NALA.cache.auditList = { qs, ids: invoices.map(i => i.id), incomplete: invoices.filter(isIncomplete).map(i => i.id) };
     const set = (k, v) => { const p = { ...params, [k]: v }; if (!v) delete p[k]; NALA.go(`#/auditoria?${new URLSearchParams(p)}`); };
     root.innerHTML = `<div class="stack">
       <div class="tabs"><button class="${mode === 'batch' ? 'active' : ''}" id="t-batch">Vista por lotes</button><button class="${mode === 'unified' ? 'active' : ''}" id="t-uni">Vista unificada (empresa y período)</button></div>
@@ -133,11 +136,22 @@
     let mode = 'form';
     NALA.dirty = false;
     // Neighbors from the list the user came from.
-    let ids = NALA.cache.auditList?.qs === listQuery(params) ? NALA.cache.auditList.ids : null;
-    if (!ids) { ids = (await NALA.api('GET', `invoices?${listQuery(params)}`)).invoices.map(i => i.id); NALA.cache.auditList = { qs: listQuery(params), ids }; }
+    let cached = NALA.cache.auditList?.qs === listQuery(params) ? NALA.cache.auditList : null;
+    if (!cached) { const r = await NALA.api('GET', `invoices?${listQuery(params)}`); cached = { qs: listQuery(params), ids: r.invoices.map(i => i.id), incomplete: r.invoices.filter(isIncomplete).map(i => i.id) }; NALA.cache.auditList = cached; }
+    const ids = cached.ids;
+    const incompleteSet = new Set(cached.incomplete || []);
     const pos = ids.indexOf(inv.id);
     const back = `#/auditoria?${new URLSearchParams(params)}`;
-    const navTo = offset => { const next = ids[pos + offset]; if (next) NALA.go(`#/auditoria/${next}?${new URLSearchParams(params)}`); };
+    // Con "Solo incompletas" activo, Anterior/Siguiente saltan las ya limpias.
+    const skipComplete = () => root.querySelector('#skip-complete')?.checked ?? false;
+    const seekIndex = dir => { for (let k = pos + dir; k >= 0 && k < ids.length; k += dir) { if (!skipComplete() || incompleteSet.has(ids[k])) return k; } return -1; };
+    const navTo = dir => { const k = seekIndex(dir); if (k >= 0) NALA.go(`#/auditoria/${ids[k]}?${new URLSearchParams(params)}`); };
+    const refreshNav = () => {
+      const p = root.querySelector('#prev'); const n = root.querySelector('#next'); const c = root.querySelector('#nav-count');
+      if (p) p.disabled = seekIndex(-1) < 0;
+      if (n) n.disabled = seekIndex(1) < 0;
+      if (c) c.textContent = skipComplete() ? `${incompleteSet.size} por revisar` : (pos >= 0 ? `${pos + 1} de ${ids.length}` : '');
+    };
 
     const issuesByField = {};
     for (const i of inv.issues) if (i.field) (issuesByField[i.field] ||= []).push(i);
@@ -179,7 +193,8 @@
       ${i.ref ? `<button class="btn sm" data-open="${i.ref}">Ver otro</button>` : ''}${i.field ? `<button class="btn sm" data-focus="${i.field}">Ir al campo</button>` : ''}</div>`).join('') : '<div class="issue info"><span class="ico">✓</span>Sin observaciones.</div>';
 
     root.innerHTML = `<div class="stack">
-      <div class="row"><button class="btn" data-href="${back}">← Volver a la lista</button><button class="btn" id="prev" ${pos <= 0 ? 'disabled' : ''}>◀ Anterior</button><span class="muted">${pos >= 0 ? `${pos + 1} de ${ids.length}` : ''}</span><button class="btn" id="next" ${pos < 0 || pos >= ids.length - 1 ? 'disabled' : ''}>Siguiente ▶</button>
+      <div class="row"><button class="btn" data-href="${back}">← Volver a la lista</button><button class="btn" id="prev">◀ Anterior</button><span class="muted" id="nav-count"></span><button class="btn" id="next">Siguiente ▶</button>
+        <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer" title="Salta las facturas que ya están completas (sin errores ni avisos)"><input type="checkbox" id="skip-complete" checked> Solo incompletas</label>
         <span class="spacer" style="flex:1"></span>${NALA.badge(inv.status)} <span class="badge">${inv.format}</span> <span class="muted">${esc(d.client.legal_name)} · ${period(inv.period)}${d.batch ? ` · lote <a href="#/lotes/${d.batch.id}">${esc(d.batch.name)}</a>` : ''}${d.reallocated ? ' · <span class="badge info">Reubicada</span>' : ''}</span></div>
       ${inv.issues.some(i => i.code === 'DUPLICADO') && inv.status !== 'excluded' ? `<div class="issue critical" style="font-size:14px;padding:12px"><span class="ico">⛔</span><span><b>Factura repetida.</b> ${esc(inv.issues.find(i => i.code === 'DUPLICADO').message)}</span>
         <a class="btn sm" href="#/auditoria/${inv.issues.find(i => i.code === 'DUPLICADO').ref}">Ver la original</a>${NALA.can('exclude') && inv.status !== 'approved' ? '<button class="btn sm danger" id="discard-copy">Descartar esta copia</button>' : ''}</div>` : ''}
@@ -210,6 +225,8 @@
     root.querySelectorAll('[data-href]').forEach(el => el.addEventListener('click', () => NALA.go(el.dataset.href)));
     root.querySelector('#prev').addEventListener('click', () => navTo(-1));
     root.querySelector('#next').addEventListener('click', () => navTo(1));
+    root.querySelector('#skip-complete')?.addEventListener('change', refreshNav);
+    refreshNav();
     root.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => {
       root.querySelectorAll('[data-tab]').forEach(x => x.classList.toggle('active', x === b));
       root.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== b.dataset.tab; });

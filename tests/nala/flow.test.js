@@ -147,7 +147,7 @@ test('procesamiento en segundo plano con reintentos, ZIP, PDF de varias facturas
   state.copy = copies.find(i => codes(i).includes('DUPLICADO'));
   state.inv.alfa = copies.find(i => i !== state.copy);
   assert.ok(state.copy, 'la copia posterior queda marcada');
-  assert.match(state.copy.issues.find(i => i.code === 'DUPLICADO').message, /^Esta factura ya fue procesada: el NCF B0100000101 de 131999999 está en revisión desde el .* en el lote «Compras agosto»/);
+  assert.match(state.copy.issues.find(i => i.code === 'DUPLICADO').message, /^Comprobante repetido\. El NCF B0100000101 \(131999999\) ya está en revisión desde el .* en el lote «Compras agosto»/);
   assert.ok(codes(state.inv.alfa).includes('COPIA_POSTERIOR'));
   assert.equal(state.inv.alfa.critical_count === 0 || !codes(state.inv.alfa).includes('DUPLICADO'), true);
   const pdfInvoices = list.invoices.filter(i => i.document_id === d.documents.find(x => x.original_name === 'lote-varias.pdf').id);

@@ -92,7 +92,7 @@ test('validate: a repeated invoice is blocked with a clear message; the original
     duplicates: [{ id: 'other', status: 'approved', previous: true, where: 'el lote «Compras agosto» (08/2026)', state: 'aprobada el 05/08/2026', export: 'DGII_F_606_101010632_202608.TXT (enviado a la DGII)' }] });
   const dup = copy.issues.find(i => i.code === 'DUPLICADO');
   assert.equal(dup.severity, 'critical'); assert.equal(dup.ref, 'other');
-  assert.match(dup.message, /^Esta factura ya fue procesada: el NCF B0100000123 de 130000001 está aprobada el 05\/08\/2026 en el lote «Compras agosto» \(08\/2026\) y exportada en DGII_F_606_101010632_202608\.TXT \(enviado a la DGII\)/);
+  assert.match(dup.message, /^Comprobante repetido\. El NCF B0100000123 \(130000001\) ya está aprobada el 05\/08\/2026 en el lote «Compras agosto» \(08\/2026\) y ya se exportó en DGII_F_606_101010632_202608\.TXT \(enviado a la DGII\)/);
   const original = validate({ format: '606', period: '202608', client, fields: base606, correctedFields: Object.keys(base606), duplicates: [{ id: 'later', status: 'pending_review', previous: false, where: 'el lote «Repetido»' }] });
   assert.equal(original.critical_count, 0);
   assert.equal(original.issues.find(i => i.code === 'COPIA_POSTERIOR').severity, 'info');

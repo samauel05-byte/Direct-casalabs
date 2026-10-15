@@ -28,9 +28,23 @@
     ],
   };
   const READONLY = new Set(['moneda_simbolo']);
+  const CURRENCIES = ['DOP', 'USD', 'EUR', 'CAD', 'GBP'];
   // "Incompleta": aún tiene algo que atender (error crítico o advertencia),
   // es decir, datos por llenar o revisar. Una factura limpia (✓) se salta.
   const isIncomplete = inv => (inv.critical_count || 0) > 0 || (inv.warning_count || 0) > 0;
+
+  // Constructor de un control de edición de un campo, compartido por el espacio
+  // de trabajo (detalle) y por la edición en línea de la lista.
+  function fieldInput(key, defs, values, cat, editable) {
+    const def = defs[key] || { label: key, type: 'text' }; const v = values[key] ?? '';
+    const dis = !editable || READONLY.has(key) ? 'disabled' : '';
+    const catalog = { tipo_bienes_servicios: cat.tipoBienesServicios, forma_pago: cat.formaPago, isr_tipo_retencion: cat.tipoRetencionIsr, tipo_ingreso: cat.tipoIngreso, tipo_id: cat.tipoId }[key];
+    if (key === 'tipo_id') return `<select data-k="${key}" ${dis}><option value="">Automático (según RNC/cédula)</option>${NALA.catalogOptions(catalog, v, { blank: false })}</select>`;
+    if (catalog) return `<select data-k="${key}" ${dis}>${NALA.catalogOptions(catalog, v)}</select>`;
+    if (key === 'moneda') return `<select data-k="${key}" ${dis}><option value="">— Sin confirmar —</option>${CURRENCIES.map(c => `<option ${v === c ? 'selected' : ''}>${c}</option>`).join('')}${v && !CURRENCIES.includes(v) ? `<option selected>${esc(v)}</option>` : ''}</select>`;
+    if (def.type === 'date') return `<input type="date" data-k="${key}" value="${esc(v)}" ${dis}>`;
+    return `<input data-k="${key}" value="${esc(v)}" ${def.type === 'amount' || def.type === 'rate' ? 'inputmode="decimal" class="num"' : ''} ${dis} autocomplete="off">`;
+  }
 
   function listQuery(params) {
     const s = NALA.state;
@@ -55,7 +69,27 @@
     // aún estén pendientes de aprobar. El resto no se puede marcar.
     const isGreen = i => !i.critical_count && !i.warning_count && ['pending_review', 'reviewed'].includes(i.status);
     const canBulk = NALA.can('approve');
+    const canEdit = NALA.can('edit');
+    const canApprove = NALA.can('approve');
+    const canExclude = NALA.can('exclude');
+    const cat = s.me.catalogs || {};
+    const defs = s.me.field_defs || {};
+    const orderFor = fmt => (s.me.format_fields && s.me.format_fields[fmt]) || [];
     const approvable = invoices.filter(isGreen);
+    const byId = Object.fromEntries(invoices.map(i => [i.id, i]));
+    const editableInv = i => canEdit && ['pending_review', 'reviewed'].includes(i.status);
+    const hasFixables = i => isIncomplete(i) || i.issues.some(x => x.code === 'DUPLICADO');
+    const showFix = i => editableInv(i) && hasFixables(i);
+    const unifiedCol = mode === 'unified' && !s.client;
+    const cols = (canBulk ? 1 : 0) + 9 + (unifiedCol ? 1 : 0);
+    let bulkRefresh = null;
+    // Celdas que la edición en línea refresca sin recargar toda la tabla.
+    const fixBtn = i => showFix(i) ? ` <button class="btn sm fix-btn" data-fix="${i.id}" title="Corregir aquí, sin abrir el detalle">✎ Corregir</button>` : '';
+    const reviewCell = i => `${NALA.issueBadges(i)}${fixBtn(i)}`;
+    const cpCell = i => `${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div>`;
+    const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted">${n + 1}</td><td class="mono" data-c="ncf">${esc(i.ncf || '—')}</td><td data-c="cp">${cpCell(i)}</td>
+      <td data-c="date">${esc(i.invoice_date || '—')}</td>${unifiedCol ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>${esc(i.currency || '?')}</td><td class="num" data-c="total">${money(i.total_dop)}</td><td data-c="status">${NALA.badge(i.status)}</td><td data-c="review">${reviewCell(i)}</td></tr>
+      <tr class="inline-edit" data-edit="${i.id}" hidden><td colspan="${cols}"></td></tr>`;
     root.innerHTML = `<div class="stack">
       <div class="tabs"><button class="${mode === 'batch' ? 'active' : ''}" id="t-batch">Vista por lotes</button><button class="${mode === 'unified' ? 'active' : ''}" id="t-uni">Vista unificada (empresa y período)</button></div>
       ${mode === 'batch' ? `<div class="row"><label class="f" style="min-width:320px"><span>Lote</span><select id="pick-batch">${batchList.batches.map(b => `<option value="${b.id}" ${b.id === params.batch ? 'selected' : ''}>${esc(b.name)} · ${esc(NALA.clientName(b.client_id))} · ${b.format} ${period(b.period)}</option>`).join('')}
@@ -67,13 +101,13 @@
         <label class="f"><span>Observaciones</span><select id="f-has"><option value="">Todas</option><option value="errors" ${params.has === 'errors' ? 'selected' : ''}>Con errores críticos</option><option value="warnings" ${params.has === 'warnings' ? 'selected' : ''}>Con advertencias</option><option value="duplicates" ${params.has === 'duplicates' ? 'selected' : ''}>Duplicados</option><option value="foreign" ${params.has === 'foreign' ? 'selected' : ''}>Moneda extranjera</option></select></label>
         <label class="f" style="flex:1;min-width:200px"><span>Buscar</span><input id="f-q" value="${esc(params.q || '')}" placeholder="NCF, RNC o nombre"></label>
         <span class="muted">${int(total)} comprobante(s)</span></div>
+      ${invoices.some(showFix) ? '<div class="muted" style="font-size:12px">💡 Pulse <b>✎ Corregir</b> para arreglar lo señalado sin salir de la lista. Abra el detalle sólo si necesita ver el documento.</div>' : ''}
       ${canBulk && approvable.length ? `<div class="row" id="bulkbar" style="align-items:center;gap:12px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer" title="Marca todas las que tienen cotejo verde (sin errores ni avisos)"><input type="checkbox" id="sel-all"> Todas las de cotejo verde (${approvable.length})</label>
         <span class="spacer" style="flex:1"></span>
         <button class="btn ok" id="bulk-approve" disabled>✓ Aprobar seleccionadas (<span id="sel-count">0</span>)</button></div>` : ''}
-      ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th>#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${mode === 'unified' && !s.client ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Total DOP</th><th>Estado</th><th>Revisión</th></tr>
-        ${invoices.map((i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted">${n + 1}</td><td class="mono">${esc(i.ncf || '—')}</td><td>${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div></td>
-          <td>${esc(i.invoice_date || '—')}</td>${mode === 'unified' && !s.client ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>${esc(i.currency || '?')}</td><td class="num">${money(i.total_dop)}</td><td>${NALA.badge(i.status)}</td><td>${NALA.issueBadges(i)}</td></tr>`).join('')}</table></div>`
+      ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th>#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${unifiedCol ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Total DOP</th><th>Estado</th><th>Revisión</th></tr>
+        ${invoices.map((i, n) => rowHtml(i, n)).join('')}</table></div>`
         : '<div class="card empty">No hay comprobantes con estos filtros.</div>'}</div>`;
     root.querySelector('#t-batch').addEventListener('click', () => NALA.go(`#/auditoria?batch=${batchList.batches[0]?.id || ''}`));
     root.querySelector('#t-uni').addEventListener('click', () => NALA.go('#/auditoria'));
@@ -81,15 +115,101 @@
     root.querySelector('#f-status').addEventListener('change', e => set('status', e.target.value));
     root.querySelector('#f-has').addEventListener('change', e => set('has', e.target.value));
     root.querySelector('#f-q').addEventListener('change', e => set('q', e.target.value.trim()));
-    root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('.chk')) return; NALA.go(`#/auditoria/${tr.dataset.id}?${new URLSearchParams(params)}`); }));
+    root.querySelectorAll('tr.clickable[data-id]').forEach(tr => tr.addEventListener('click', e => {
+      if (e.target.closest('.chk') || e.target.closest('.fix-btn') || e.target.closest('[data-act]')) return;
+      NALA.go(`#/auditoria/${tr.dataset.id}?${new URLSearchParams(params)}`);
+    }));
+
+    // ── Edición en línea: corregir lo señalado sin abrir el detalle ─────────
+    const editorRow = id => root.querySelector(`tr.inline-edit[data-edit="${id}"]`);
+    const collapse = id => { const er = editorRow(id); if (er) { er.hidden = true; er.querySelector('td').innerHTML = ''; } root.querySelector(`[data-fix="${id}"]`)?.classList.remove('active'); };
+    const readFields = td => { const out = {}; td.querySelectorAll('[data-k]').forEach(el => { out[el.dataset.k] = el.value.trim() === '' ? null : el.value.trim(); }); return out; };
+
+    function buildEditor(td, inv) {
+      const order = orderFor(inv.format);
+      const sevOf = k => { const is = inv.issues.filter(x => x.field === k); return is.some(x => x.severity === 'critical') ? 'has-crit' : (is.some(x => x.severity === 'warning') ? 'has-warn' : ''); };
+      const flagged = [...new Set(inv.issues.filter(x => x.field && x.severity !== 'info').map(x => x.field))].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+      const notes = inv.issues.filter(x => x.severity !== 'info');
+      const dup = inv.issues.find(x => x.code === 'DUPLICADO');
+      const green = !inv.critical_count && !inv.warning_count;
+      const values = { ...inv.fields };
+      const notesHtml = notes.length ? notes.map(x => `<div class="issue ${x.severity}"><span class="ico">${x.severity === 'critical' ? '✕' : '!'}</span><span>${esc(x.message)}</span></div>`).join('') : '<div class="issue info"><span class="ico">✓</span>Sin observaciones. Puede aprobar.</div>';
+      const hasFields = flagged.length > 0;
+      const fieldsHtml = hasFields ? `<div class="fields" style="margin-top:8px">${flagged.map(k => `<label class="f ${sevOf(k)}" data-field="${k}"><span>${esc((defs[k] || {}).label || k)}</span>${fieldInput(k, defs, values, cat, true)}</label>`).join('')}</div>`
+        : (green ? '' : '<p class="muted" style="margin-top:8px">Esta observación no se corrige con un solo campo: abra el detalle para revisarla.</p>');
+      const detailLink = `#/auditoria/${inv.id}?${new URLSearchParams(params)}`;
+      td.innerHTML = `<div class="inline-editor">
+        <div class="stack" style="gap:4px">${dup ? `<div class="issue critical"><span class="ico">⛔</span><span><b>Factura repetida.</b> ${esc(dup.message)}</span>${dup.ref ? `<a class="btn sm" href="#/auditoria/${dup.ref}">Ver la original</a>` : ''}</div>` : notesHtml}</div>
+        ${dup ? '' : fieldsHtml}
+        <div class="row" style="margin-top:10px;gap:8px;align-items:center">
+          ${dup && canExclude ? '<button class="btn sm danger" data-act="discard">Descartar esta copia</button>' : ''}
+          ${!dup && hasFields ? '<button class="btn sm primary" data-act="save">Guardar</button>' : ''}
+          ${!dup && canApprove ? `<button class="btn sm ok" data-act="approve" ${green ? '' : 'disabled'} title="${green ? 'Aprobar este comprobante' : 'Primero corrija lo señalado'}">✓ Aprobar</button>` : ''}
+          <a class="btn sm" href="${detailLink}">Abrir detalle ▸</a>
+          <span class="spacer" style="flex:1"></span>
+          <button class="btn sm" data-act="close">Cerrar</button></div></div>`;
+      td.querySelector('[data-act="close"]')?.addEventListener('click', () => collapse(inv.id));
+      td.querySelector('[data-act="save"]')?.addEventListener('click', e => doSave(e.target, td, inv));
+      td.querySelector('[data-act="approve"]')?.addEventListener('click', e => doApprove(e.target, inv));
+      td.querySelector('[data-act="discard"]')?.addEventListener('click', e => doDiscard(e.target, inv));
+      td.querySelectorAll('[data-k]').forEach(el => el.addEventListener('keydown', ev => { if (ev.key === 'Enter' && el.tagName !== 'SELECT') { ev.preventDefault(); td.querySelector('[data-act="save"]')?.click(); } }));
+    }
+    const expand = id => { const er = editorRow(id); if (!er) return; buildEditor(er.querySelector('td'), byId[id]); er.hidden = false; root.querySelector(`[data-fix="${id}"]`)?.classList.add('active'); er.querySelector('[data-k]')?.focus(); };
+    const toggle = id => { const er = editorRow(id); if (er && !er.hidden) collapse(id); else expand(id); };
+    const wireFix = scope => scope.querySelectorAll('[data-fix]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); toggle(b.dataset.fix); }));
+
+    function handleInlineError(e) {
+      if (e.status === 422 && e.data?.issues) { NALA.toast(`No se puede aprobar: ${e.data.issues.map(i => i.message).join(' · ')}`, 'err'); NALA.route(); return; }
+      if ([409, 423].includes(e.status)) { NALA.toast(e.message, 'err'); NALA.route(); return; }
+      NALA.fail(e);
+    }
+    function applyUpdate(upd) {
+      byId[upd.id] = upd;
+      const tr = root.querySelector(`tr.clickable[data-id="${upd.id}"]`);
+      if (tr) {
+        const set2 = (c, html) => { const el = tr.querySelector(`[data-c="${c}"]`); if (el) el.innerHTML = html; };
+        set2('ncf', esc(upd.ncf || '—')); set2('cp', cpCell(upd)); set2('date', esc(upd.invoice_date || '—'));
+        set2('total', money(upd.total_dop)); set2('status', NALA.badge(upd.status)); set2('review', reviewCell(upd));
+        const chk = tr.querySelector('[data-c="chk"]');
+        if (chk) { chk.innerHTML = isGreen(upd) && bulkRefresh ? `<input type="checkbox" class="row-chk" data-cid="${upd.id}">` : '';
+          const nc = chk.querySelector('.row-chk'); if (nc && bulkRefresh) { nc.addEventListener('change', bulkRefresh); chk.addEventListener('click', e => e.stopPropagation()); } }
+        wireFix(tr);
+      }
+      const er = editorRow(upd.id);
+      // Si el editor está abierto se reconstruye con la versión nueva; se mantiene
+      // abierto aunque ya quede verde, para poder «Aprobar» ahí mismo. Sólo se
+      // cierra cuando el comprobante sale de edición (aprobado o excluido).
+      if (er && !er.hidden) { if (editableInv(upd)) buildEditor(er.querySelector('td'), upd); else collapse(upd.id); }
+      if (bulkRefresh) bulkRefresh();
+    }
+    async function doSave(btn, td, inv) {
+      const current = readFields(td);
+      const changed = {}; for (const [k, v] of Object.entries(current)) if ((inv.fields[k] ?? null) !== v) changed[k] = v;
+      const confirmations = Object.fromEntries((inv.issues || []).filter(x => x.code === 'CLASIFICACION_SUGERIDA' && x.field).map(x => [x.field, x.field in current ? current[x.field] : (inv.fields[x.field] ?? null)]));
+      const fields = { ...confirmations, ...changed };
+      if (!Object.keys(fields).length) { NALA.toast('No hay cambios que guardar.', 'err'); return; }
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      try { const r = await NALA.api('PATCH', `invoices/${inv.id}`, { version: inv.version, fields }); applyUpdate(r.invoice);
+        NALA.toast(isIncomplete(r.invoice) ? 'Guardado. Aún quedan observaciones.' : 'Guardado. Cotejo verde ✓', 'ok'); } catch (e) { handleInlineError(e); }
+    }
+    async function doApprove(btn, inv) {
+      btn.disabled = true; btn.textContent = 'Aprobando…';
+      try { const r = await NALA.api('POST', `invoices/${inv.id}/approve`, { version: inv.version }); applyUpdate(r.invoice); NALA.toast('Comprobante aprobado ✓', 'ok'); collapse(inv.id); } catch (e) { handleInlineError(e); }
+    }
+    async function doDiscard(btn, inv) {
+      const dup = inv.issues.find(x => x.code === 'DUPLICADO');
+      btn.disabled = true;
+      try { const r = await NALA.api('POST', `invoices/${inv.id}/exclude`, { reason: `Factura repetida. ${dup?.message || ''}`.slice(0, 500) }); applyUpdate(r.invoice); NALA.toast('Copia descartada', 'ok'); collapse(inv.id); } catch (e) { handleInlineError(e); }
+    }
 
     // Aprobación masiva (sólo cotejo verde).
     if (canBulk && approvable.length) {
       const rowChks = () => Array.from(root.querySelectorAll('.row-chk'));
       const selAll = root.querySelector('#sel-all');
       const btn = root.querySelector('#bulk-approve');
-      const refreshSel = () => { const n = rowChks().filter(c => c.checked).length; root.querySelector('#sel-count').textContent = n; btn.disabled = !n;
+      const refreshSel = () => { const n = rowChks().filter(c => c.checked).length; const cnt = root.querySelector('#sel-count'); if (cnt) cnt.textContent = n; if (btn) btn.disabled = !n;
         if (selAll) selAll.checked = n > 0 && n === rowChks().length; };
+      bulkRefresh = refreshSel;
       root.querySelectorAll('.chk').forEach(td => td.addEventListener('click', e => e.stopPropagation()));
       rowChks().forEach(c => c.addEventListener('change', refreshSel));
       selAll?.addEventListener('change', () => { rowChks().forEach(c => { c.checked = selAll.checked; }); refreshSel(); });
@@ -108,6 +228,7 @@
         } catch (e) { NALA.fail(e); btn.disabled = false; btn.textContent = '✓ Aprobar seleccionadas'; }
       });
     }
+    wireFix(root);
   }
 
   // ── Visor del original ──────────────────────────────────────────────────
@@ -202,16 +323,7 @@
     const issuesByField = {};
     for (const i of inv.issues) if (i.field) (issuesByField[i.field] ||= []).push(i);
 
-    const input = key => {
-      const def = defs[key] || { label: key, type: 'text' }; const v = values[key] ?? '';
-      const dis = !editable || READONLY.has(key) ? 'disabled' : '';
-      const catalog = { tipo_bienes_servicios: cat.tipoBienesServicios, forma_pago: cat.formaPago, isr_tipo_retencion: cat.tipoRetencionIsr, tipo_ingreso: cat.tipoIngreso, tipo_id: cat.tipoId }[key];
-      if (key === 'tipo_id') return `<select data-k="${key}" ${dis}><option value="">Automático (según RNC/cédula)</option>${NALA.catalogOptions(catalog, v, { blank: false })}</select>`;
-      if (catalog) return `<select data-k="${key}" ${dis}>${NALA.catalogOptions(catalog, v)}</select>`;
-      if (key === 'moneda') return `<select data-k="${key}" ${dis}><option value="">— Sin confirmar —</option>${['DOP', 'USD', 'EUR', 'CAD', 'GBP'].map(c => `<option ${v === c ? 'selected' : ''}>${c}</option>`).join('')}${v && !['DOP', 'USD', 'EUR', 'CAD', 'GBP'].includes(v) ? `<option selected>${esc(v)}</option>` : ''}</select>`;
-      if (def.type === 'date') return `<input type="date" data-k="${key}" value="${esc(v)}" ${dis}>`;
-      return `<input data-k="${key}" value="${esc(v)}" ${def.type === 'amount' || def.type === 'rate' ? 'inputmode="decimal" class="num"' : ''} ${dis} autocomplete="off">`;
-    };
+    const input = key => fieldInput(key, defs, values, cat, editable);
     const fieldLabel = key => {
       const sev = (issuesByField[key] || []).some(i => i.severity === 'critical') ? 'has-crit' : ((issuesByField[key] || []).some(i => i.severity === 'warning') ? 'has-warn' : '');
       const changed = (values[key] ?? null) !== (inv.fields[key] ?? null) ? 'changed' : '';

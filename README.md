@@ -170,8 +170,9 @@ allowlist a `https://ecf.dgii.gov.do`.
 - **Permisos**: todos los usuarios autorizados consultan; solo admin configura,
   pausa, verifica manualmente y administra alertas. Destinatarios de alertas
   privados por firma.
-- **Alertas por correo** por cambio de estado (sin duplicados), vía proveedor
-  compatible; pendiente de configurar el proveedor y el heartbeat externo.
+- **Alertas por correo** por cambio de estado (sin duplicados), por **SMTP del
+  buzón del usuario** (IMAP solo lee; SMTP envía) o Resend como alternativa, con
+  envío de prueba; pendiente de configurar el proveedor y el heartbeat externo.
 
 Detalles de activación, variables de entorno, fuente oficial y pruebas en
 `docs/monitor-dgii.md`.

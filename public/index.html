@@ -752,7 +752,13 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 <!-- Modal: session timeout warning -->
 <div id="modal-session-timeout" class="modal-bg" hidden style="z-index:9999">
   <div class="modal" style="max-width:380px;text-align:center">
-    <div style="font-size:32px;margin-bottom:12px">⏱️</div>
+    <div style="width:56px;height:56px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb, var(--accent) 12%, transparent)">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9 2h6"/><path d="M12 5V2"/>
+        <circle cx="12" cy="13" r="8"/>
+        <path d="M12 9.5V13l2.5 1.6"/>
+      </svg>
+    </div>
     <div class="modal-ttl" style="margin-bottom:8px">Sesión por cerrarse</div>
     <p id="session-timeout-msg" style="margin:0 0 20px;color:var(--muted);font-size:14px;line-height:1.5">
       Tu sesión se cerrará en <strong id="session-countdown">60</strong> segundos por inactividad.<br>¿Quieres mantenerla abierta?

@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="/css/mobile-base.css">
+<title>Monitor DGII</title>
+<style>
+:root{
+  --bg:#f6f2ea;--bg2:#fffdf9;--surf:#fffdf9;--surf2:#f1ebe0;
+  --bdr:rgba(60,44,26,.12);--bdr2:rgba(10,95,212,.28);
+  --fg:#1e1810;--fg2:#6a5c4b;--fg3:#a39580;
+  --acc:#0a5fd4;--acc2:#0a4fb0;
+  --ok:#15924a;--ok-bg:rgba(21,146,74,.1);
+  --warn:#c2710c;--warn-bg:rgba(194,113,12,.1);
+  --down:#dc2626;--down-bg:rgba(220,38,38,.1);
+  --muted:#8a7a66;--muted-bg:rgba(120,100,70,.1);
+  --hdr-h:56px;--r:14px;
+}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
+  --bdr:rgba(30,90,200,.28);--bdr2:rgba(50,130,255,.32);
+  --fg:#e8f0ff;--fg2:#7a9bc0;--fg3:#3a5878;--acc:#3d8bff;--acc2:#80b8ff;
+  --ok:#20BD5A;--ok-bg:rgba(32,189,90,.14);--warn:#f59e0b;--warn-bg:rgba(245,158,11,.14);
+  --down:#ef4444;--down-bg:rgba(239,68,68,.14);--muted:#7a9bc0;--muted-bg:rgba(122,155,192,.12);
+}}
+:root[data-theme="dark"]{
+  --bg:#070d1a;--bg2:#0b1528;--surf:#0f1e38;--surf2:#162440;
+  --bdr:rgba(30,90,200,.28);--bdr2:rgba(50,130,255,.32);
+  --fg:#e8f0ff;--fg2:#7a9bc0;--fg3:#3a5878;--acc:#3d8bff;--acc2:#80b8ff;
+  --ok:#20BD5A;--ok-bg:rgba(32,189,90,.14);--warn:#f59e0b;--warn-bg:rgba(245,158,11,.14);
+  --down:#ef4444;--down-bg:rgba(239,68,68,.14);--muted:#7a9bc0;--muted-bg:rgba(122,155,192,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Outfit',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--fg);font-size:14px;min-height:100dvh;-webkit-font-smoothing:antialiased}
+.hdr{display:flex;align-items:center;gap:12px;padding:0 16px;height:var(--hdr-h);background:var(--bg2);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:30;flex-wrap:wrap}
+.hdr h1{font-size:16px;font-weight:800;letter-spacing:-.2px;margin-right:auto}
+.back{display:flex;align-items:center;gap:5px;padding:7px 12px;border-radius:9px;border:1px solid var(--bdr2);background:transparent;color:var(--acc);font:inherit;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--fg2);background:var(--surf2);border:1px solid var(--bdr);border-radius:100px;padding:4px 11px}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.tabs{display:flex;gap:4px;padding:0 10px;background:var(--bg2);border-bottom:1px solid var(--bdr);overflow-x:auto;position:sticky;top:var(--hdr-h);z-index:29}
+.tab{border:none;background:none;color:var(--fg2);font:inherit;font-weight:600;font-size:13.5px;padding:11px 14px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc)}
+.wrap{max-width:1040px;margin:0 auto;padding:16px 16px 20px}
+.desc{font-size:13px;color:var(--fg2);margin:2px 0 14px;line-height:1.5}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.toolbar label{font-size:12px;color:var(--fg2);font-weight:600}
+select,input{background:var(--surf);border:1px solid var(--bdr);border-radius:9px;color:var(--fg);padding:7px 10px;font:inherit;font-size:13px;outline:none}
+select:focus,input:focus{border-color:var(--acc)}
+.updated{font-size:12px;color:var(--fg2);margin-left:auto}
+.sumgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+@media(max-width:820px){.sumgrid{grid-template-columns:repeat(2,1fr)}}
+.sumcard{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:13px 14px;box-shadow:0 1px 2px rgba(60,44,24,.04)}
+.sumcard .lab{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--fg3)}
+.sumcard .val{font-size:18px;font-weight:800;margin-top:5px;line-height:1.15}
+.sumcard .sub{font-size:11px;color:var(--fg2);margin-top:3px}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(60,44,24,.04)}
+.card.pausedc{opacity:.72}
+.svc-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.svc-title{flex:1;min-width:180px}
+.svc-title b{font-size:15px;font-weight:700;display:block}
+.svc-title .d{font-size:12px;color:var(--fg2);margin-top:3px;line-height:1.45}
+.amb{display:inline-block;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--acc);background:var(--muted-bg);border-radius:5px;padding:2px 7px;margin-top:6px}
+.status{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;padding:7px 13px;border-radius:100px;white-space:nowrap}
+.s-ok{color:var(--ok);background:var(--ok-bg)} .s-degraded{color:var(--warn);background:var(--warn-bg)}
+.s-down,.s-invalid{color:var(--down);background:var(--down-bg)} .s-nodata,.s-stale,.s-paused{color:var(--muted);background:var(--muted-bg)}
+.status svg{width:15px;height:15px;flex-shrink:0}
+.meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;font-size:12px;color:var(--fg2)}
+.meta b{color:var(--fg);font-weight:600}
+.periods{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+@media(max-width:560px){.periods{grid-template-columns:repeat(2,1fr)}}
+.per{background:var(--surf2);border:1px solid var(--bdr);border-radius:10px;padding:9px 11px}
+.per .lab{font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--fg3)}
+.per .val{font-size:19px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.per .cov{font-size:10.5px;color:var(--fg2);margin-top:2px}
+.per.nd .val{color:var(--muted);font-size:13px}
+.sec-lab{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--fg3);margin:16px 0 8px}
+.bars{display:flex;gap:2px;align-items:flex-end;height:46px;overflow:hidden}
+.bar{flex:1 1 0;min-width:2px;height:100%;border-radius:2px;cursor:pointer;background:var(--muted-bg)}
+.bar.b-ok{background:var(--ok)} .bar.b-degraded{background:var(--warn)} .bar.b-down,.bar.b-invalid{background:var(--down)}
+.bar.b-none{background:repeating-linear-gradient(45deg,var(--muted-bg),var(--muted-bg) 2px,transparent 2px,transparent 4px)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px;color:var(--fg2);margin-top:7px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.chart{width:100%;height:90px;margin-top:6px}
+.inc{border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:12.5px}
+.inc.open{border-left:3px solid var(--down)} .inc.resolved{border-left:3px solid var(--ok)}
+.inc .ih{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-weight:700}
+.inc .im{color:var(--fg2);font-weight:500;margin-top:4px;line-height:1.5}
+.tag{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2px 7px;border-radius:5px}
+.tag.open{color:var(--down);background:var(--down-bg)} .tag.resolved{color:var(--ok);background:var(--ok-bg)}
+.btn{background:var(--acc);color:#fff;border:none;border-radius:9px;padding:8px 14px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--acc);border:1px solid var(--bdr2)}
+.btn.sm{padding:5px 10px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row label{font-size:12px;color:var(--fg2);display:flex;align-items:center;gap:5px}
+.row input[type=number]{width:92px}
+.muted{color:var(--fg2)} .small{font-size:12px}
+.notice{font-size:12px;color:var(--warn);background:var(--warn-bg);border:1px solid var(--warn);border-radius:8px;padding:9px 12px;margin-bottom:14px}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+.tbl th,.tbl td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--bdr);vertical-align:top}
+.tbl th{color:var(--fg3);font-size:10px;text-transform:uppercase;letter-spacing:.4px}
+.tbl tr.clk{cursor:pointer} .tbl tr.clk:hover{background:var(--surf2)}
+.pager{display:flex;gap:10px;align-items:center;justify-content:flex-end;margin-top:10px;font-size:12px;color:var(--fg2)}
+.ovl{position:fixed;inset:0;background:rgba(10,20,40,.5);display:flex;align-items:center;justify-content:center;padding:16px;z-index:60}
+.modal{background:var(--surf);border:1px solid var(--bdr);border-radius:16px;max-width:600px;width:100%;max-height:88vh;overflow:auto;padding:18px}
+.modal h3{font-size:16px;margin-bottom:4px}
+.subitem{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border:1px solid var(--bdr);border-radius:9px;padding:8px 10px;margin-top:6px;font-size:12.5px}
+.foot{font-size:12px;color:var(--fg2);background:var(--surf2);border:1px solid var(--bdr);border-left:3px solid var(--acc);border-radius:8px;padding:11px 13px;margin-top:18px;line-height:1.5}
+.loading{text-align:center;color:var(--fg2);padding:40px}
+.hidden{display:none}
+h2.t{font-size:17px;font-weight:800;margin-bottom:2px}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <button class="back" onclick="goBack()">← Volver</button>
+  <h1>Monitor DGII</h1>
+  <span class="pill" id="mon-state"><span class="dot" style="background:var(--muted)"></span><span id="mon-state-txt">Cargando…</span></span>
+</div>
+<div class="tabs" id="tabs">
+  <button class="tab active" data-tab="resumen" onclick="setTab('resumen')">Resumen</button>
+  <button class="tab" data-tab="incidentes" onclick="setTab('incidentes')">Incidentes</button>
+  <button class="tab" data-tab="verif" onclick="setTab('verif')">Verificaciones</button>
+  <button class="tab hidden" data-tab="config" id="tab-config" onclick="setTab('config')">Configuración</button>
+</div>
+
+<div class="wrap">
+  <!-- ── RESUMEN ── -->
+  <section id="v-resumen">
+    <h2 class="t">Monitor DGII</h2>
+    <div class="desc">Consulta el estado y la disponibilidad de los servicios monitoreados de facturación electrónica.</div>
+    <div class="toolbar">
+      <label>Ambiente</label>
+      <select id="f-env" onchange="renderResumen()">
+        <option value="">Todos</option>
+        <option value="testecf">Pruebas (TesteCF)</option>
+        <option value="certecf">Certificación (CerteCF)</option>
+        <option value="ecf">Producción (eCF)</option>
+      </select>
+      <button class="btn ghost sm hidden" id="btn-verify" onclick="verifyNow(this)">Verificar ahora</button>
+      <span class="updated" id="updated">—</span>
+    </div>
+    <div id="alerts-notice"></div>
+    <div class="sumgrid" id="sumgrid"></div>
+    <div id="list"><div class="loading">Cargando estado…</div></div>
+  </section>
+
+  <!-- ── INCIDENTES ── -->
+  <section id="v-incidentes" class="hidden">
+    <h2 class="t">Historial de incidentes</h2>
+    <div class="desc">Fallos consecutivos del mismo servicio y ambiente agrupados en un incidente.</div>
+    <div class="toolbar">
+      <select id="i-env"><option value="">Todos los ambientes</option><option value="testecf">Pruebas</option><option value="certecf">Certificación</option><option value="ecf">Producción</option></select>
+      <select id="i-status"><option value="">Abiertos y resueltos</option><option value="open">Abiertos</option><option value="resolved">Resueltos</option></select>
+      <input type="date" id="i-from" title="Desde"><input type="date" id="i-to" title="Hasta">
+      <button class="btn ghost sm" onclick="loadIncidents()">Filtrar</button>
+    </div>
+    <div class="card" id="inc-table"><div class="loading">—</div></div>
+  </section>
+
+  <!-- ── VERIFICACIONES ── -->
+  <section id="v-verif" class="hidden">
+    <h2 class="t">Registro de verificaciones</h2>
+    <div class="desc">Cada comprobación individual (programada o manual), con su resultado y tiempo de respuesta.</div>
+    <div class="toolbar">
+      <select id="l-env"><option value="">Todos los ambientes</option><option value="testecf">Pruebas</option><option value="certecf">Certificación</option><option value="ecf">Producción</option></select>
+      <select id="l-source"><option value="">Programadas y manuales</option><option value="auto">Programadas</option><option value="manual">Manuales</option></select>
+      <select id="l-status"><option value="">Cualquier resultado</option><option value="ok">Operativo</option><option value="degraded">Degradado</option><option value="down">Fallo</option><option value="invalid">Inválida</option></select>
+      <input type="date" id="l-from"><input type="date" id="l-to">
+      <button class="btn ghost sm" onclick="loadLog(0)">Filtrar</button>
+    </div>
+    <div class="card" id="log-table"><div class="loading">—</div></div>
+  </section>
+
+  <!-- ── CONFIGURACIÓN (admin) ── -->
+  <section id="v-config" class="hidden">
+    <h2 class="t">Configuración</h2>
+    <div class="desc">Solo administradores. Los destinos están restringidos a los endpoints oficiales de la DGII.</div>
+    <div id="config-body"><div class="loading">—</div></div>
+  </section>
+
+  <div class="foot">Monitor independiente de Direct. El estado refleja las comprobaciones indicadas y no garantiza el funcionamiento de todos los servicios de la DGII.</div>
+</div>
+
+<script>
+let TOKEN='', SESSION_ID='', ROLE='user', USERNAME='', IS_ADMIN=false, SNAP=null, ADMIN=null, refreshTimer=null, TAB='resumen';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sid=()=>SESSION_ID||localStorage.getItem('direct_session_id')||'';
+function headers(json){const h={Authorization:'Bearer '+TOKEN};if(sid())h['X-Direct-Session']=sid();if(json)h['Content-Type']='application/json';return h;}
+async function api(route,opts={}){
+  const r=await fetch('/api/monitor?route='+route,{headers:headers(!!opts.body),method:opts.method||'GET',body:opts.body?JSON.stringify(opts.body):undefined});
+  const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||('HTTP '+r.status)); return d;
+}
+function goBack(){ try{ window.parent.postMessage({action:'showPortals'},'*'); }catch(e){} }
+const RDFMT=new Intl.DateTimeFormat('es-DO',{timeZone:'America/Santo_Domingo',dateStyle:'medium',timeStyle:'short'});
+const RDT=new Intl.DateTimeFormat('es-DO',{timeZone:'America/Santo_Domingo',timeStyle:'medium'});
+function rd(iso){ return iso?RDFMT.format(new Date(iso)):'—'; }
+function ago(iso){ if(!iso)return '—'; const s=Math.round((Date.now()-new Date(iso).getTime())/1000); if(s<60)return 'hace '+s+'s'; if(s<3600)return 'hace '+Math.round(s/60)+' min'; if(s<86400)return 'hace '+Math.round(s/3600)+' h'; return 'hace '+Math.round(s/86400)+' d'; }
+
+const ICON={
+  ok:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',
+  degraded:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  invalid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 8v5"/><circle cx="12" cy="16.5" r=".6" fill="currentColor"/><path d="M10.3 3.9 2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>',
+  nodata:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/></svg>',
+  stale:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  paused:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M8 5v14M16 5v14"/></svg>',
+};
+const LABEL={ok:'Operativo',degraded:'Degradado',down:'Fallo observado',invalid:'Respuesta inválida',nodata:'Sin datos',stale:'Sin datos recientes',paused:'Pausado'};
+const ENVNAME={testecf:'Pruebas (TesteCF)',certecf:'Certificación (CerteCF)',ecf:'Producción (eCF)'};
+const cleanName=n=>String(n||'').replace(/ — .*/,'');
+function statusHtml(st){ return `<span class="status s-${st}">${ICON[st]||''} ${LABEL[st]||st}</span>`; }
+
+function periodBox(lab,p){
+  if(!p||!p.hasData) return `<div class="per nd"><div class="lab">${lab}</div><div class="val">Sin datos</div><div class="cov">—</div></div>`;
+  if(!p.sufficient) return `<div class="per nd"><div class="lab">${lab}</div><div class="val">Sin datos suficientes</div><div class="cov">${p.runs} comprob.</div></div>`;
+  return `<div class="per"><div class="lab">${lab}</div><div class="val">${p.availability!=null?p.availability.toFixed(2)+'%':'—'}</div><div class="cov">Cobertura ${p.coverage!=null?p.coverage.toFixed(0)+'%':'—'}</div></div>`;
+}
+function barsHtml(svc){
+  return svc.bars.map(b=>{let cls='b-none',tip; if(!b.run){tip=`${b.day} · Sin datos`;} else{cls='b-'+(b.worst||'ok');tip=`${b.day} · ${b.availability!=null?b.availability.toFixed(1)+'% disp.':''} · ${b.run} comprob.${b.coverage!=null?' · cobertura '+b.coverage.toFixed(0)+'%':''}`;}
+    return `<div class="bar ${cls}" title="${esc(tip)}" data-day="${b.day}" data-check="${svc.id}"></div>`;}).join('');
+}
+function chartHtml(svc){
+  const pts=svc.series.filter(r=>r.response_ms!=null);
+  if(pts.length<2) return '<div class="small muted">Aún no hay suficientes datos para el gráfico.</div>';
+  const W=600,H=90,pad=6,ms=pts.map(p=>p.response_ms),max=Math.max(svc.degraded_ms,...ms)*1.1;
+  const x=i=>pad+(i*(W-2*pad)/(pts.length-1)),y=v=>H-pad-(v/max)*(H-2*pad);
+  const d=pts.map((p,i)=>(i?'L':'M')+x(i).toFixed(1)+' '+y(p.response_ms).toFixed(1)).join(' ');
+  const dots=pts.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.response_ms).toFixed(1)}" r="1.7" fill="${p.ok?(p.degraded?'var(--warn)':'var(--ok)'):'var(--down)'}"/>`).join('');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Tiempos de respuesta"><line x1="${pad}" y1="${y(svc.degraded_ms).toFixed(1)}" x2="${W-pad}" y2="${y(svc.degraded_ms).toFixed(1)}" stroke="var(--warn)" stroke-dasharray="4 4" stroke-width="1" opacity=".7"/><path d="${d}" fill="none" stroke="var(--acc)" stroke-width="1.5"/>${dots}</svg><div class="small muted">Línea discontinua = umbral de lentitud (${svc.degraded_ms} ms). Puntos: verde ok · ámbar degradado · rojo fallo.</div>`;
+}
+function incRowHtml(inc){
+  const dur=inc.status==='open'?('abierto · '+ago(inc.confirmed_at)):(inc.resolved_at&&inc.confirmed_at?Math.max(1,Math.round((new Date(inc.resolved_at)-new Date(inc.confirmed_at))/60000))+' min':'—');
+  return `<div class="inc ${inc.status}"><div class="ih"><span>${inc.status==='open'?'Incidente activo':'Incidente resuelto'}</span><span class="tag ${inc.status}">${inc.status==='open'?'ABIERTO':'RESUELTO'}</span></div>
+    <div class="im">Primer fallo: ${rd(inc.first_failure_at)} · Confirmado: ${rd(inc.confirmed_at)}<br>${inc.resolved_at?('Recuperado: '+rd(inc.resolved_at)+'<br>'):''}Duración: ${dur} (desde la confirmación hasta la recuperación) · Fallos: ${inc.fail_count}<br>${inc.error_type?('Tipo de error: '+esc(inc.error_type)+(inc.error_detail?' — '+esc(inc.error_detail):'')):''}${inc.notes?('<br>Nota: '+esc(inc.notes)):''}</div></div>`;
+}
+
+function svcCard(svc){
+  const st=svc.presented,last=svc.last;
+  const active=svc.incidents.filter(i=>i.status==='open'),recent=svc.incidents.filter(i=>i.status!=='open').slice(0,3);
+  return `<div class="card ${st==='paused'?'pausedc':''}">
+    <div class="svc-head"><div class="svc-title"><b>${esc(cleanName(svc.name))}</b><span class="amb">${ENVNAME[svc.environment]||svc.environment}</span><div class="d">${esc(svc.description)}</div></div>${statusHtml(st)}</div>
+    <div class="meta"><span>Última comprobación: <b>${last?rd(last.ts):'—'}</b>${last?` (${ago(last.ts)})`:''}</span><span>Tiempo de respuesta: <b>${last&&last.response_ms!=null?last.response_ms+' ms':'—'}</b></span><span>Próxima: <b>${svc.next_eta?rd(svc.next_eta):'—'}</b></span>${last?`<span class="muted">Resultado: ${esc(last.ok?(last.degraded?'Respuesta válida pero lenta':'Respuesta válida'):(last.error_detail||LABEL[last.status]))}</span>`:''}</div>
+    <div class="periods">${periodBox('24 horas',svc.periods.h24)}${periodBox('7 días',svc.periods.d7)}${periodBox('30 días',svc.periods.d30)}${periodBox('90 días',svc.periods.d90)}</div>
+    <div class="sec-lab">Disponibilidad diaria — últimos 90 días</div><div class="bars">${barsHtml(svc)}</div>
+    <div class="legend"><span><span class="dot" style="background:var(--ok)"></span>Operativo</span><span><span class="dot" style="background:var(--warn)"></span>Degradado</span><span><span class="dot" style="background:var(--down)"></span>Fallo</span><span><span class="dot" style="background:var(--muted-bg)"></span>Sin datos</span></div>
+    <div class="sec-lab">Tiempos de respuesta (comprobaciones programadas)</div>${chartHtml(svc)}
+    ${active.length?`<div class="sec-lab">Incidente activo</div>${active.map(incRowHtml).join('')}`:''}
+    ${recent.length?`<div class="sec-lab">Incidentes recientes</div>${recent.map(incRowHtml).join('')}`:''}</div>`;
+}
+
+// Estado general: NO verde si hay servicios sin comprobar, sin datos recientes o con incidentes.
+function overall(list){
+  if(!list.length) return {st:'nodata',txt:'Sin servicios'};
+  const act=list.filter(s=>s.presented!=='paused');
+  const has=p=>act.some(p);
+  if(has(s=>s.presented==='down'||s.presented==='invalid')) return {st:'down',txt:'Fallo observado'};
+  if(has(s=>s.incidents.some(i=>i.status==='open'))) return {st:'down',txt:'Incidente activo'};
+  if(has(s=>s.presented==='stale')) return {st:'stale',txt:'Sin datos recientes'};
+  if(has(s=>s.presented==='nodata')) return {st:'nodata',txt:'Sin datos'};
+  if(has(s=>s.presented==='degraded')) return {st:'degraded',txt:'Degradado'};
+  if(!act.length) return {st:'paused',txt:'Todo pausado'};
+  return {st:'ok',txt:'Operativo'};
+}
+
+function renderResumen(){
+  if(!SNAP) return;
+  const env=$('f-env').value;
+  const list=SNAP.services.filter(s=>!env||s.environment===env);
+  const ov=overall(list);
+  const active=list.reduce((n,s)=>n+s.incidents.filter(i=>i.status==='open').length,0);
+  const lasts=list.map(s=>s.last).filter(Boolean).sort((a,b)=>new Date(b.ts)-new Date(a.ts));
+  const lastTs=lasts[0]?lasts[0].ts:null;
+  const avgMs=lasts.length?Math.round(lasts.reduce((a,x)=>a+(x.response_ms||0),0)/lasts.length):null;
+  const p24=list.map(s=>s.periods.h24).filter(p=>p&&p.hasData&&p.sufficient);
+  const avail24=p24.length?(p24.reduce((a,x)=>a+x.availability,0)/p24.length):null;
+  $('sumgrid').innerHTML=`
+    <div class="sumcard"><div class="lab">Estado general</div><div class="val" style="color:${({ok:'var(--ok)',degraded:'var(--warn)',down:'var(--down)'})[ov.st]||'var(--muted)'}">${ICON[ov.st]?'':''}${ov.txt}</div><div class="sub">Incluye ${list.length} servicio${list.length===1?'':'s'}${env?' · '+ENVNAME[env]:' · todos los ambientes'}</div></div>
+    <div class="sumcard"><div class="lab">Última comprobación</div><div class="val">${lastTs?ago(lastTs):'—'}</div><div class="sub">${lastTs?rd(lastTs):'Sin datos'}</div></div>
+    <div class="sumcard"><div class="lab">Tiempo de respuesta</div><div class="val">${avgMs!=null?avgMs+' ms':'—'}</div><div class="sub">promedio última comprob.</div></div>
+    <div class="sumcard"><div class="lab">Disponibilidad 24 h</div><div class="val">${avail24!=null?avail24.toFixed(2)+'%':'Sin datos'}</div><div class="sub">observada</div></div>
+    <div class="sumcard"><div class="lab">Incidentes activos</div><div class="val" style="color:${active?'var(--down)':'var(--ok)'}">${active}</div><div class="sub">${active?'requieren atención':'ninguno'}</div></div>`;
+  $('list').innerHTML=list.length?list.map(svcCard).join(''):'<div class="loading">No hay servicios para ese ambiente.</div>';
+  document.querySelectorAll('.bar').forEach(b=>b.addEventListener('click',()=>openDay(b.dataset.check,b.dataset.day)));
+}
+
+function renderTop(){
+  const m=SNAP.monitor,stale=m.stale;
+  $('mon-state').innerHTML=`<span class="dot" style="background:${stale?'var(--down)':'var(--ok)'}"></span><span>${stale?'Monitor detenido':'Monitor activo'}</span>`;
+  $('mon-state').title=m.last_cron_at?('Última corrida: '+rd(m.last_cron_at)):'El proceso aún no ha reportado';
+  $('updated').textContent='Última actualización: '+(m.last_cron_at?ago(m.last_cron_at):'sin corridas');
+  let notice='';
+  if(SNAP.alertsProvider===false) notice+=`<div class="notice">Alertas por correo <b>pendientes de configurar</b> (falta el proveedor de envío). Los cambios de estado se registran, pero no se envían correos.</div>`;
+  if(stale) notice+=`<div class="notice">El monitor no reporta comprobaciones recientes. Si no hay heartbeat externo configurado, la alerta de “monitor detenido” aún no está disponible.</div>`;
+  $('alerts-notice').innerHTML=notice;
+}
+
+// ── Detalle de un día ──
+async function openDay(checkId,day){
+  const ovl=document.createElement('div'); ovl.className='ovl'; ovl.onclick=e=>{if(e.target===ovl)ovl.remove();};
+  ovl.innerHTML=`<div class="modal"><div class="loading">Cargando ${esc(day)}…</div></div>`; document.body.appendChild(ovl);
+  try{
+    const d=await api('day&check_id='+encodeURIComponent(checkId)+'&date='+encodeURIComponent(day));
+    const svc=SNAP?SNAP.services.find(s=>s.id===checkId):null;
+    const run=d.results.length,ok=d.results.filter(r=>r.ok).length;
+    const rows=d.results.slice(0,400).map(r=>`<tr><td>${RDT.format(new Date(r.ts))}</td><td>${r.source==='manual'?'Manual':'Programada'}</td><td>${statusHtml(r.status)}</td><td>${r.response_ms!=null?r.response_ms+' ms':'—'}</td><td>${r.http_code||'—'}</td><td>${r.ok?'':esc(r.error_detail||r.error_type||'')}</td></tr>`).join('');
+    ovl.querySelector('.modal').innerHTML=`<h3>${esc(svc?cleanName(svc.name):'')} — ${esc(day)}</h3><div class="muted small">${svc?ENVNAME[svc.environment]:''} · ${run} comprobaciones · ${ok} válidas · ${run-ok} fallidas</div>${d.incidents.length?('<div class="sec-lab">Incidentes del día</div>'+d.incidents.map(incRowHtml).join('')):''}<div class="sec-lab">Cronología de verificaciones</div>${run?`<table class="tbl"><thead><tr><th>Hora RD</th><th>Tipo</th><th>Estado</th><th>Resp.</th><th>HTTP</th><th>Detalle</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="muted small">Sin datos ese día.</div>'}<div class="row" style="margin-top:14px"><button class="btn" onclick="this.closest('.ovl').remove()">Cerrar</button></div>`;
+  }catch(e){ ovl.querySelector('.modal').innerHTML=`<div class="loading">Error: ${esc(e.message)}</div><button class="btn" onclick="this.closest('.ovl').remove()">Cerrar</button>`; }
+}
+
+async function verifyNow(btn){ btn.disabled=true; btn.textContent='Verificando…'; try{ await api('check',{method:'POST',body:{}}); await load(); }catch(e){ alert(e.message); } btn.disabled=false; btn.textContent='Verificar ahora'; }
+
+// ── Incidentes ──
+async function loadIncidents(){
+  $('inc-table').innerHTML='<div class="loading">Cargando…</div>';
+  const q=['incidents']; const env=$('i-env').value,st=$('i-status').value,f=$('i-from').value,t=$('i-to').value;
+  if(env)q.push('environment='+env); if(st)q.push('status='+st); if(f)q.push('from='+new Date(f).toISOString()); if(t)q.push('to='+new Date(new Date(t).getTime()+86400000).toISOString());
+  try{ const d=await api(q.join('&'));
+    if(!d.incidents.length){ $('inc-table').innerHTML='<div class="muted small" style="padding:8px">Sin incidentes para ese filtro.</div>'; return; }
+    const rows=d.incidents.map(i=>`<tr class="clk" data-check="${i.check_id}" data-day="${(i.confirmed_at||'').slice(0,10)}"><td>${esc(cleanName(i.check_name))}</td><td>${ENVNAME[i.environment]||i.environment}</td><td>${rd(i.first_failure_at)}</td><td>${rd(i.confirmed_at)}</td><td><span class="tag ${i.status}">${i.status==='open'?'ABIERTO':'RESUELTO'}</span></td><td>${i.resolved_at?rd(i.resolved_at):'—'}</td><td>${i.status==='open'?ago(i.confirmed_at):(i.resolved_at?Math.max(1,Math.round((new Date(i.resolved_at)-new Date(i.confirmed_at))/60000))+' min':'—')}</td><td>${i.fail_count}</td><td>${esc(i.error_type||'')}</td></tr>`).join('');
+    $('inc-table').innerHTML=`<table class="tbl"><thead><tr><th>Servicio</th><th>Ambiente</th><th>Primer fallo</th><th>Confirmado</th><th>Estado</th><th>Recuperado</th><th>Duración</th><th>Fallos</th><th>Error</th></tr></thead><tbody>${rows}</tbody></table><div class="small muted" style="margin-top:8px">La duración se mide desde la confirmación hasta la recuperación observadas. Haz clic en un incidente para ver la cronología del día.</div>`;
+    document.querySelectorAll('#inc-table tr.clk').forEach(tr=>tr.addEventListener('click',()=>openDay(tr.dataset.check,tr.dataset.day)));
+  }catch(e){ $('inc-table').innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
+}
+
+// ── Verificaciones (registro paginado) ──
+let logPage=0;
+async function loadLog(page){
+  logPage=page||0; $('log-table').innerHTML='<div class="loading">Cargando…</div>';
+  const q=['checks-log','page='+logPage,'pageSize=50']; const env=$('l-env').value,src=$('l-source').value,st=$('l-status').value,f=$('l-from').value,t=$('l-to').value;
+  if(env)q.push('environment='+env); if(src)q.push('source='+src); if(st)q.push('status='+st); if(f)q.push('from='+new Date(f).toISOString()); if(t)q.push('to='+new Date(new Date(t).getTime()+86400000).toISOString());
+  try{ const d=await api(q.join('&'));
+    if(!d.rows.length){ $('log-table').innerHTML='<div class="muted small" style="padding:8px">Sin verificaciones para ese filtro.</div>'; return; }
+    const rows=d.rows.map(r=>`<tr><td>${rd(r.ts)}</td><td>${esc(cleanName(r.check_name))}</td><td>${ENVNAME[r.environment]||r.environment}</td><td>${r.source==='manual'?'Manual':'Programada'}</td><td>${statusHtml(r.status)}</td><td>${r.http_code||'—'}</td><td>${r.response_ms!=null?r.response_ms+' ms':'—'}</td><td>${esc(r.error_type||'')}</td><td>${r.ok?'':esc(r.error_detail||'')}</td></tr>`).join('');
+    const pages=Math.ceil(d.total/d.pageSize);
+    $('log-table').innerHTML=`<table class="tbl"><thead><tr><th>Fecha/hora RD</th><th>Servicio</th><th>Ambiente</th><th>Tipo</th><th>Resultado</th><th>HTTP</th><th>Resp.</th><th>Error</th><th>Detalle</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="pager"><span>${d.total} registros · página ${logPage+1} de ${pages||1}</span><button class="btn ghost sm" ${logPage<=0?'disabled':''} onclick="loadLog(${logPage-1})">Anterior</button><button class="btn ghost sm" ${logPage+1>=pages?'disabled':''} onclick="loadLog(${logPage+1})">Siguiente</button></div>`;
+  }catch(e){ $('log-table').innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
+}
+
+// ── Configuración (admin) ──
+async function loadConfig(){
+  if(!IS_ADMIN){ $('config-body').innerHTML='<div class="muted">Solo administradores.</div>'; return; }
+  try{ ADMIN=await api('admin'); }catch(e){ $('config-body').innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; return; }
+  const s=ADMIN.settings||{};
+  const checks=(ADMIN.checks||[]).map(c=>`<div class="card"><div class="svc-head"><div class="svc-title"><b>${esc(cleanName(c.name))}</b> <span class="amb">${ENVNAME[c.environment]||c.environment}</span><div class="d">${esc(c.description)}</div></div><div>${c.enabled?'<span class="tag resolved">ACTIVA</span>':'<span class="tag open">PAUSADA</span>'}</div></div>
+    <div class="row" style="margin-top:10px"><label>Intervalo (s)<input type="number" id="iv-${c.id}" value="${c.interval_s}" min="30"></label><label>Lentitud (ms)<input type="number" id="dg-${c.id}" value="${c.degraded_ms}" min="1"></label><label>Timeout (ms)<input type="number" id="to-${c.id}" value="${c.timeout_ms}" min="1"></label><label>Abrir tras<input type="number" id="ft-${c.id}" value="${c.fail_threshold}" min="1"></label><label>Cerrar tras<input type="number" id="rt-${c.id}" value="${c.recover_threshold}" min="1"></label></div>
+    <div class="row" style="margin-top:8px"><button class="btn sm" onclick="saveCfg('${c.id}')">Guardar</button><button class="btn ghost sm" onclick="togglePause('${c.id}',${!c.enabled})">${c.enabled?'Pausar':'Reanudar'}</button><button class="btn ghost sm" onclick="manualOne('${c.id}',this)">Verificar ahora</button></div></div>`).join('');
+  const subs=(ADMIN.subscriptions||[]).map(x=>{const scope=x.check_id?(cleanName(ADMIN.checks.find(c=>c.id===x.check_id)?.name)||'—'):'Todos';return `<div class="subitem"><span style="font-weight:600">${esc(x.email)}</span><span class="muted small">${esc(scope)}</span><span class="muted small">${[x.on_incident?'incidente':'',x.on_recovery?'recuperación':'',x.on_stale?'detenido':''].filter(Boolean).join(' · ')}</span><span class="muted small">${x.enabled?'activa':'pausada'}</span><button class="btn ghost sm" style="margin-left:auto" onclick="delSub('${x.id}')">Quitar</button></div>`;}).join('')||'<div class="muted small">Sin destinatarios aún.</div>';
+  const subOpts=['<option value="">Todos los servicios/ambientes</option>'].concat((ADMIN.checks||[]).map(c=>`<option value="${c.id}">${esc(cleanName(c.name))} · ${c.environment}</option>`)).join('');
+  const audit=(ADMIN.audit||[]).map(a=>`<tr><td>${rd(a.created_at)}</td><td>${esc(a.actor_name||'—')}</td><td>${esc(a.action)}</td><td>${esc(a.target||'')}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Sin cambios registrados.</td></tr>';
+  $('config-body').innerHTML=`
+    <div class="sec-lab">Servicios y comprobaciones</div>${checks}
+    <div class="card"><div class="sec-lab" style="margin-top:0">Ajustes globales</div>
+      <div class="row"><label>Retención del historial (días)<input type="number" id="set-ret" value="${s.retention_days||14}" min="1" max="400"></label><label>Mínimo de comprobaciones para % fiable<input type="number" id="set-min" value="${s.min_observations||10}" min="1"></label><label>“Sin datos recientes” tras (s)<input type="number" id="set-stale" value="${s.stale_after_s||180}" min="60"></label><label>Mín. entre verif. manuales (s)<input type="number" id="set-manual" value="${s.manual_min_interval_s||30}" min="5"></label><button class="btn sm" onclick="saveSettings()">Guardar ajustes</button></div></div>
+    <div class="card"><div class="sec-lab" style="margin-top:0">Alertas por correo</div>
+      ${ADMIN.alertsProvider?'':'<div class="notice">Proveedor de correo no configurado: los avisos se registran pero no se envían.</div>'}
+      <div class="muted small" style="margin-bottom:8px">Un aviso por cambio de estado (incidente, recuperación, monitor detenido), sin duplicados, hora RD. Destinatarios privados de tu empresa.</div>
+      <div class="subs">${subs}</div>
+      <div class="row" style="margin-top:10px"><input type="email" id="sub-email" placeholder="correo@empresa.com" style="flex:1;min-width:170px"><select id="sub-check">${subOpts}</select><button class="btn sm" onclick="addSub()">Agregar</button></div>
+      <div class="row small muted" style="margin-top:8px"><label><input type="checkbox" id="sub-inc" checked> Incidente</label><label><input type="checkbox" id="sub-rec" checked> Recuperación</label><label><input type="checkbox" id="sub-stale" checked> Monitor detenido</label></div>
+      <div class="row" style="margin-top:12px"><input type="email" id="test-email" placeholder="destinatario de prueba" value="${esc(s.alert_test_recipient||'')}" style="flex:1;min-width:170px"><button class="btn ghost sm" onclick="sendTest(this)">Enviar correo de prueba</button></div></div>
+    <div class="card"><div class="sec-lab" style="margin-top:0">Auditoría de configuración</div><table class="tbl"><thead><tr><th>Fecha RD</th><th>Usuario</th><th>Acción</th><th>Destino</th></tr></thead><tbody>${audit}</tbody></table></div>`;
+}
+async function saveCfg(id){ try{ await api('config',{method:'POST',body:{id,interval_s:+$('iv-'+id).value,degraded_ms:+$('dg-'+id).value,timeout_ms:+$('to-'+id).value,fail_threshold:+$('ft-'+id).value,recover_threshold:+$('rt-'+id).value}}); await loadConfig(); }catch(e){ alert(e.message);} }
+async function togglePause(id,enabled){ try{ await api('config',{method:'POST',body:{id,enabled}}); await loadConfig(); await load(); }catch(e){ alert(e.message);} }
+async function manualOne(id,btn){ btn.disabled=true; btn.textContent='…'; try{ await api('check',{method:'POST',body:{id}}); await load(); }catch(e){ alert(e.message);} btn.disabled=false; btn.textContent='Verificar ahora'; }
+async function saveSettings(){ try{ await api('settings',{method:'POST',body:{retention_days:+$('set-ret').value,min_observations:+$('set-min').value,stale_after_s:+$('set-stale').value,manual_min_interval_s:+$('set-manual').value}}); await loadConfig(); }catch(e){ alert(e.message);} }
+async function addSub(){ const email=$('sub-email').value.trim(); if(!email){alert('Escribe un correo');return;} try{ await api('subscriptions',{method:'POST',body:{email,check_id:$('sub-check').value||null,on_incident:$('sub-inc').checked,on_recovery:$('sub-rec').checked,on_stale:$('sub-stale').checked}}); await loadConfig(); }catch(e){ alert(e.message);} }
+async function delSub(id){ try{ await api('subscriptions',{method:'POST',body:{delete:true,id}}); await loadConfig(); }catch(e){ alert(e.message);} }
+async function sendTest(btn){ const email=$('test-email').value.trim(); if(!email){alert('Escribe un destinatario de prueba');return;} btn.disabled=true; try{ const r=await api('alert-test',{method:'POST',body:{email}}); alert(r.ok?'Correo de prueba enviado.':'No se pudo enviar: '+(r.error||'')+(r.error==='proveedor_no_configurado'?' (configura el proveedor de correo).':'')); }catch(e){ alert(e.message);} btn.disabled=false; }
+
+// ── Tabs ──
+function setTab(t){
+  TAB=t;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+  for(const [k,v] of [['resumen','v-resumen'],['incidentes','v-incidentes'],['verif','v-verif'],['config','v-config']]) $(v).classList.toggle('hidden',k!==t);
+  if(t==='incidentes'&&!$('inc-table').dataset.loaded){ $('inc-table').dataset.loaded='1'; loadIncidents(); }
+  if(t==='verif'&&!$('log-table').dataset.loaded){ $('log-table').dataset.loaded='1'; loadLog(0); }
+  if(t==='config') loadConfig();
+}
+
+async function load(){
+  try{ const d=await api('status'); SNAP=d; IS_ADMIN=!!d.isAdmin;
+    $('tab-config').classList.toggle('hidden',!IS_ADMIN); $('btn-verify').classList.toggle('hidden',!IS_ADMIN);
+    renderTop(); renderResumen();
+  }catch(e){ $('list').innerHTML='<div class="loading">No se pudo cargar: '+esc(e.message)+'</div>'; }
+}
+function start(){ load(); if(refreshTimer)clearInterval(refreshTimer); refreshTimer=setInterval(()=>{ if(TAB==='resumen') load(); },20000); }
+
+window.addEventListener('message',e=>{
+  if(!e.data) return;
+  if(e.data.action==='monitor-init'){
+    TOKEN=e.data.token||''; SESSION_ID=e.data.sessionId||''; ROLE=e.data.role||'user'; USERNAME=e.data.username||'';
+    if(e.data.sessionId){ try{ localStorage.setItem('direct_session_id',e.data.sessionId); }catch(_){} }
+    start();
+  }
+});
+try{ window.parent.postMessage({action:'monitor-ready'},'*'); }catch(e){}
+</script>
+</body>
+</html>

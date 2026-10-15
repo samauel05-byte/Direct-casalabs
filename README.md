@@ -139,6 +139,43 @@ El admin puede:
 - **Sincronización en tiempo real** — cualquier cambio se refleja al instante
 - **Tema claro y cálido por defecto**, renovado y amigable (fondo tipo papel cálido, acentos azules); con tema oscuro y modo automático disponibles desde el selector de apariencia. La calidez es consistente en toda la app y en los módulos (NALA, CAMI, IR-2, Estimación Fiscal, páginas de anexos/resumen y la política de privacidad)
 - **Experiencia móvil** pulida para uso en celular (ver abajo)
+- **Monitor DGII**: estado de los servicios de facturación electrónica (e-CF) con comprobaciones automáticas cada minuto, disponibilidad e historial de incidentes (ver abajo)
+
+---
+
+## Monitor DGII (disponibilidad de facturación electrónica e-CF)
+
+Módulo dentro de Direct para consultar el estado de los servicios de la DGII. La
+comprobación es la **“Obtención de semilla de autenticación”** e-CF: un `GET` de
+solo lectura, sin certificado ni credenciales, que **no genera transacciones
+fiscales**; valida el código HTTP y la estructura del XML `<SemillaModel>`.
+Endpoints oficiales por ambiente (`testecf`, `certecf`, `ecf`) restringidos por
+allowlist a `https://ecf.dgii.gov.do`.
+
+- **Comprobación cada minuto** desde el servidor (Cloudflare Worker cron,
+  independiente del navegador; evita duplicados entre instancias con single-flight).
+- **Estados**: Operativo · Degradado · Sin respuesta/Inválida · Sin datos · Sin
+  datos recientes · Pausado. Un fallo aislado no se presenta como caída general.
+- **Incidentes**: abre tras 3 fallos consecutivos, cierra tras 2 respuestas válidas
+  (umbrales configurables). Agrupa fallos del mismo servicio.
+- **Métricas reales**: disponibilidad (válidas/ejecutadas) y cobertura
+  (ejecutadas/esperadas) por 24h/7d/30d/90d; barras diarias de 90 días; gráfico de
+  tiempos. Fechas en UTC, se muestran en America/Santo_Domingo.
+- **Cuatro vistas**: Resumen (con resumen general que no se pinta verde si hay
+  servicios sin comprobar, sin datos recientes o con incidentes), Incidentes,
+  Registro de verificaciones (paginado; distingue programadas de manuales) y
+  Configuración (solo admin, con auditoría de quién cambia qué y cuándo).
+- **Métricas limpias**: una sola observación por intervalo programado; las
+  verificaciones manuales y los reintentos no alteran los porcentajes.
+- **Permisos**: todos los usuarios autorizados consultan; solo admin configura,
+  pausa, verifica manualmente y administra alertas. Destinatarios de alertas
+  privados por firma.
+- **Alertas por correo** por cambio de estado (sin duplicados), por **SMTP del
+  buzón del usuario** (IMAP solo lee; SMTP envía) o Resend como alternativa, con
+  envío de prueba; pendiente de configurar el proveedor y el heartbeat externo.
+
+Detalles de activación, variables de entorno, fuente oficial y pruebas en
+`docs/monitor-dgii.md`.
 
 ---
 

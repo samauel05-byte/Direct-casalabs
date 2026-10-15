@@ -134,7 +134,23 @@ const SUBMIT_HTML = `<!doctype html>
 </html>`;
 
 export default {
-  async fetch(request) {
+  // Monitor DGII — scheduler de 1 minuto. Cloudflare Workers admite cron con
+  // granularidad de 1 minuto (ver wrangler.toml [triggers] crons = ["* * * * *"]).
+  // Este proceso es independiente del navegador: corre aunque nadie tenga Direct
+  // abierto. Llama al endpoint de comprobaciones de Direct con un secreto; el
+  // propio endpoint evita comprobaciones duplicadas entre instancias.
+  async scheduled(event, env, ctx) {
+    const appUrl = (env && env.MONITOR_APP_URL) || 'https://app.casalabs.com.do';
+    const secret = (env && env.MONITOR_CRON_SECRET) || '';
+    if (!secret) { console.log('MONITOR_CRON_SECRET no configurado; se omite la corrida'); return; }
+    const run = fetch(`${appUrl}/api/monitor/cron`, {
+      method: 'POST',
+      headers: { 'x-monitor-secret': secret, 'Content-Type': 'application/json' },
+    }).then(r => r.text()).catch(e => console.log('monitor cron error', String(e)));
+    ctx.waitUntil(run);
+  },
+
+  async fetch(request, env, ctx) {
     const reqUrl = new URL(request.url);
 
     if (request.method === 'OPTIONS') {

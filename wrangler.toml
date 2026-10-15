@@ -3,7 +3,12 @@ main = "worker.js"
 compatibility_date = "2024-01-01"
 
 # Monitor DGII — comprobaciones cada minuto (independiente del navegador).
-# Requiere los secretos MONITOR_CRON_SECRET y MONITOR_APP_URL en el Worker
-# (wrangler secret put MONITOR_CRON_SECRET / ... MONITOR_APP_URL).
+# La URL de la app va como variable aquí (no es secreto) para que sobreviva a
+# los redespliegues del Worker. El secreto MONITOR_CRON_SECRET se configura
+# aparte en el Worker (wrangler secret put MONITOR_CRON_SECRET, o en el panel
+# → Variables and Secrets); los secretos sí persisten entre redespliegues.
+[vars]
+MONITOR_APP_URL = "https://app.casalabs.com.do"
+
 [triggers]
 crons = ["* * * * *"]

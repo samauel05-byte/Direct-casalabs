@@ -131,16 +131,23 @@
 
   async function listView(root, params, onCleanup) {
     const s = NALA.state;
-    if (params.nuevo) return uploadForm(root);
+    if (params.nuevo) {
+      if (!s.client) { NALA.toast('Elija primero la empresa activa (arriba) para crear un lote.', 'err'); return NALA.go('#/lotes'); }
+      return uploadForm(root);
+    }
     const qs = new URLSearchParams(Object.entries({ client_id: s.client, period: params.all ? '' : s.period, format: s.format }).filter(([, v]) => v));
     const { batches } = await NALA.api('GET', `batches?${qs}`);
     root.innerHTML = `<div class="stack"><div class="row">${NALA.can('upload') ? '<button class="btn primary" id="new">+ Nuevo lote</button>' : ''}
       <button class="btn" id="all">${params.all ? `Sólo ${period(s.period)}` : 'Todos los períodos'}</button><span class="muted" id="pumpinfo"></span></div>
+      ${NALA.can('upload') && !s.client ? '<div class="issue warning"><span class="ico">ℹ️</span><span><b>Vista consolidada (todas las empresas).</b> Para subir facturas, elija una <b>empresa activa</b> en el selector de arriba.</span></div>' : ''}
       ${batches.length ? `<div class="table-wrap"><table><tr><th>Lote</th><th>Empresa</th><th>Período</th><th>Formato</th><th>Estado</th><th class="num">Docs</th><th class="num">Comprob.</th><th class="num">Pend.</th><th class="num">Errores</th><th class="num">Aprob.</th><th>Creado</th></tr>
         ${batches.map(b => `<tr class="clickable" data-id="${b.id}"><td><b>${esc(b.name)}</b></td><td>${esc(NALA.clientName(b.client_id))}</td><td>${period(b.period)}</td><td>${b.format}</td><td>${NALA.badge(b.status)}${b.summary?.jobs_pending ? ` <span class="muted">${int(b.summary.jobs_pending)} trabajos</span>` : ''}</td>
           <td class="num">${int(b.summary?.documents)}</td><td class="num">${int(b.summary?.invoices)}</td><td class="num">${int(b.summary?.pending)}</td><td class="num">${b.summary?.with_errors ? `<span class="badge crit">${int(b.summary.with_errors)}</span>` : '0'}</td><td class="num">${int(b.summary?.approved)}</td><td>${NALA.dateTime(b.created_at)}</td></tr>`).join('')}</table></div>`
         : '<div class="card empty">No hay lotes con estos filtros.</div>'}</div>`;
-    root.querySelector('#new')?.addEventListener('click', () => NALA.go('#/lotes?nuevo=1'));
+    root.querySelector('#new')?.addEventListener('click', () => {
+      if (!s.client) { NALA.toast('Elija primero la empresa activa (arriba) para crear un lote.', 'err'); document.getElementById('scope-client')?.focus(); return; }
+      NALA.go('#/lotes?nuevo=1');
+    });
     root.querySelector('#all').addEventListener('click', () => NALA.go(params.all ? '#/lotes' : '#/lotes?all=1'));
     root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', () => NALA.go(`#/lotes/${tr.dataset.id}`)));
     if (batches.some(b => ['queued', 'processing'].includes(b.status))) {

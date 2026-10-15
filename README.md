@@ -156,7 +156,7 @@ allowlist a `https://ecf.dgii.gov.do`.
   independiente del navegador; evita duplicados entre instancias con single-flight).
 - **Estados**: Operativo · Degradado · Sin respuesta/Inválida · Sin datos · Sin
   datos recientes · Pausado. Un fallo aislado no se presenta como caída general.
-- **Incidentes**: abre tras 3 fallos consecutivos, cierra tras 2 respuestas válidas
+- **Incidentes**: abre tras 2 fallos consecutivos, cierra tras 2 respuestas válidas
   (umbrales configurables). Agrupa fallos del mismo servicio.
 - **Métricas reales**: disponibilidad (válidas/ejecutadas) y cobertura
   (ejecutadas/esperadas) por 24h/7d/30d/90d; barras diarias de 90 días; gráfico de

@@ -32,7 +32,7 @@ create table if not exists public.dgii_monitor_checks (
   timeout_ms        int  not null default 10000,
   degraded_ms       int  not null default 3000,  -- umbral de lentitud → degradado
   interval_s        int  not null default 60,
-  fail_threshold    int  not null default 3,     -- fallos seguidos para abrir incidente
+  fail_threshold    int  not null default 2,     -- fallos seguidos para abrir incidente
   recover_threshold int  not null default 2,     -- aciertos seguidos para cerrarlo
   enabled           boolean not null default true,-- false = Pausado
   last_run_claim    timestamptz,                 -- single-flight entre instancias

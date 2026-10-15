@@ -76,7 +76,7 @@ no se puedan apuntar comprobaciones a redes internas ni a terceros.
 Operativo · Degradado (supera el umbral de lentitud) · Sin respuesta/Respuesta
 inválida · Sin datos · Sin datos recientes · Pausado. Un fallo aislado **no** se
 presenta como caída general. Umbrales configurables por el administrador; por
-defecto: incidente tras **3 fallos** consecutivos, cierre tras **2 respuestas
+defecto: incidente tras **2 fallos** consecutivos, cierre tras **2 respuestas
 válidas** consecutivas, lentitud **3000 ms**, timeout **10000 ms**. Todos los
 resultados individuales se conservan aunque no se haya abierto incidente.
 
@@ -174,7 +174,7 @@ Configuración incluye un **envío de prueba** a un destinatario configurado.
 - Respuesta válida → **ok**; lenta pero válida → **degraded**; error HTTP (500) →
   **down/http**; formato incorrecto → **invalid**; timeout (abort) → **down/timeout**;
   DNS (ENOTFOUND) → **dns**; TLS → **tls**.
-- Incidentes: abre tras 3 fallos consecutivos, cierra tras 2 respuestas válidas;
+- Incidentes: abre tras 2 fallos consecutivos, cierra tras 2 respuestas válidas;
   un fallo aislado no abre incidente.
 - Métricas: disponibilidad y cobertura (incluye períodos sin datos → `null`), y
   `expectedRuns` que no cuenta antes de la puesta en marcha.

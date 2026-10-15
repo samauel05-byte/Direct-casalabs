@@ -35,10 +35,29 @@ Base por ambiente: `https://ecf.dgii.gov.do/{ambiente}/autenticacion`
 | Certificación (CerteCF) | `certecf` | `https://ecf.dgii.gov.do/certecf/autenticacion/api/autenticacion/semilla` |
 | Producción (eCF) | `ecf` | `https://ecf.dgii.gov.do/ecf/autenticacion/api/autenticacion/semilla` |
 
+Además se comprueba el **subsistema oficial de estatus e-CF** de la DGII:
+
+| Servicio | Clave | Endpoint (GET, lo que comprueba el monitor) |
+|---|---|---|
+| Estatus e-CF (statusecf) | `statusecf_subsistema` | `https://statusecf.dgii.gov.do/api-docs/v1/definition.json` |
+
+Esta comprobación (`check_type = http`) solo verifica que el subsistema esté
+**en línea** (código 2xx). El **estado detallado por servicio** lo ofrece la
+API `statusecf` (`/api/EstatusServicios/ObtenerEstatus`, `VerificarEstado`,
+`ObtenerVentanasMantenimiento`), pero esos endpoints exigen una **ApiKey emitida
+por la DGII** (`Authorization: ApiKey {key}`). Cuando se disponga de ella se
+puede añadir como secreto y activar para cubrir todos los servicios e-CF y las
+ventanas de mantenimiento.
+
+Otros portales (p. ej. `www.dgii.gov.do`) responden **403 a peticiones desde
+servidores/datacenter**, por lo que no son fuentes fiables de estado y no se
+monitorean (darían un “fallo” falso permanente).
+
 Los destinos están restringidos por una **allowlist** en el servidor
-(`lib/monitor/endpoints.js`): solo `https` al host `ecf.dgii.gov.do`. La
-configuración referencia los endpoints por clave, nunca por URL libre, para que
-no se puedan apuntar comprobaciones a redes internas ni a terceros.
+(`lib/monitor/endpoints.js`): solo `https` a los hosts oficiales
+`ecf.dgii.gov.do` y `statusecf.dgii.gov.do`. La configuración referencia los
+endpoints por clave, nunca por URL libre, para que no se puedan apuntar
+comprobaciones a redes internas ni a terceros.
 
 ## 2. Cómo está hecho
 

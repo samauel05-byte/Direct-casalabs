@@ -152,6 +152,13 @@ fiscales**; valida el código HTTP y la estructura del XML `<SemillaModel>`.
 Endpoints oficiales por ambiente (`testecf`, `certecf`, `ecf`) restringidos por
 allowlist a `https://ecf.dgii.gov.do`.
 
+Además comprueba la disponibilidad del **subsistema oficial de estatus e-CF**
+(`statusecf.dgii.gov.do`, `GET` de solo lectura, sin credenciales). El estado
+detallado por servicio de esa API requiere una **ApiKey emitida por la DGII**
+(`Authorization: ApiKey …`); si se dispone de ella puede activarse en el futuro.
+Otros portales de la DGII (p. ej. `www.dgii.gov.do`) bloquean el acceso desde
+servidores, por lo que no son fuentes fiables de estado y no se monitorean.
+
 - **Comprobación cada minuto** desde el servidor (Cloudflare Worker cron,
   independiente del navegador; evita duplicados entre instancias con single-flight).
 - **Estados**: Operativo · Degradado · Sin respuesta/Inválida · Sin datos · Sin

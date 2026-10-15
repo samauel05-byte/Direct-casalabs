@@ -169,10 +169,13 @@
       return `<tr><td>${nested ? '<span class="muted">↳</span> ' : ''}${esc(doc.original_name)}<div class="muted mono" title="SHA-256">${doc.sha256 ? doc.sha256.slice(0, 16) + '…' : ''}</div></td>
         <td>${doc.kind.toUpperCase()}</td><td class="num">${doc.page_count ?? '—'}</td><td>${NALA.badge(doc.status)}${doc.error ? `<div class="muted" style="max-width:360px">${esc(doc.error)}</div>` : ''}</td>
         <td class="num">${jobs.length ? `${jobs.filter(j => j.status === 'succeeded').length}/${jobs.length}` : '—'}${attempts > 1 ? ` <span class="badge warn" title="Intentos">${attempts} int.</span>` : ''}</td><td class="num">${dur ? ms(dur) : '—'}</td>
-        <td>${doc.kind !== 'zip' && !['unsupported', 'purged'].includes(doc.status) ? `<button class="btn sm" data-doc="${doc.id}">Ver original</button>` : ''}</td></tr>`;
+        <td>${doc.status === 'pending_upload'
+            ? (NALA.can('upload') ? `<button class="btn sm" data-href="#/lotes/${b.id}?agregar=1">Reintentar subida</button>` : '<span class="muted">Sin subir</span>')
+            : (doc.kind !== 'zip' && !['unsupported', 'purged'].includes(doc.status) ? `<button class="btn sm" data-doc="${doc.id}">Ver original</button>` : '')}</td></tr>`;
     };
     root.innerHTML = `<div class="stack">
       <div class="card"><h2>${esc(b.name)} ${NALA.badge(b.status)}<span class="spacer"></span>
+        <button class="btn" id="refresh" title="Actualizar">↻ Actualizar</button>
         ${NALA.can('upload') ? `<button class="btn" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
         ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn" id="reproc">Reprocesar fallidos</button>' : ''}
         <button class="btn primary" data-href="#/auditoria?batch=${b.id}">Auditar lote</button></h2>
@@ -196,6 +199,7 @@
     root.querySelectorAll('[data-doc]').forEach(btn => btn.addEventListener('click', async () => {
       try { const r = await NALA.api('GET', `documents/${btn.dataset.doc}/url`); window.open(r.url, '_blank', 'noopener'); } catch (e) { NALA.fail(e); }
     }));
+    root.querySelector('#refresh')?.addEventListener('click', () => NALA.route());
     root.querySelector('#reproc')?.addEventListener('click', async () => {
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: true }); NALA.toast(`${r.requeued} documento(s) en cola de nuevo`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
     });

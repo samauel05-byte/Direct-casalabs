@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — moneda por defecto y botón “Revalidar”**: cuando un comprobante no imprime la moneda (típico en recibos de combustible), NALA puede asumir una **moneda por defecto por empresa** (p. ej. DOP) en vez de marcarlo como error; se configura en los ajustes del cliente (`default_moneda`). Además, el detalle del lote tiene un botón **“Revalidar”** que vuelve a validar todos los comprobantes del lote con las reglas y la configuración actuales **sin volver a escanear** (útil tras cambiar un valor por defecto o corregir datos): refresca errores y advertencias al instante, respetando lo ya aprobado o corregido a mano.
+
 - **NALA — botón “Eliminar lote”**: en el detalle de un lote hay un botón **Eliminar lote** (para quien puede reprocesar) que borra por completo el lote con sus comprobantes, documentos, trabajos y archivos originales, tras una confirmación con casilla. Protege los registros fiscales: no permite eliminar un lote cuyos comprobantes ya estén incluidos en una exportación generada (primero hay que anularla). Útil para descartar un lote de prueba o mal cargado y volver a empezar limpio.
 
 - **NALA — facturas en el orden del archivo y aviso de repetidas más claro**: en auditoría, los comprobantes ahora se listan **en el mismo orden en que aparecen en el documento** (por página), no por fecha, para que cuadren con el PDF que subiste. Además, el aviso de comprobante repetido se reescribió en lenguaje más claro: empieza con **“Comprobante repetido.”**, dice dónde ya está cargado y termina con la acción exacta (**“Pulse «Descartar esta copia» para quitarla.”**).

@@ -35,6 +35,7 @@ const ROUTES = [
   ['POST', /^batches\/([^/]+)\/files\/([^/]+)\/complete$/, (ctx, q, b, m) => batches.completeFile(ctx, m[1], m[2])],
   ['POST', /^batches\/([^/]+)\/start$/, (ctx, q, b, m) => batches.start(ctx, m[1])],
   ['POST', /^batches\/([^/]+)\/reprocess$/, (ctx, q, b, m) => batches.reprocess(ctx, m[1], b)],
+  ['POST', /^batches\/([^/]+)\/revalidate$/, (ctx, q, b, m) => batches.revalidate(ctx, m[1])],
   ['POST', /^batches\/([^/]+)\/discard-duplicates$/, (ctx, q, b, m) => batches.discardDuplicates(ctx, m[1])],
   ['POST', /^jobs\/tick$/, ctx => batches.tick(ctx)],
   ['GET', /^invoices$/, (ctx, q) => invoices.list(ctx, q)],

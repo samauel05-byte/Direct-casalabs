@@ -185,6 +185,7 @@
         <button class="btn" id="refresh" title="Actualizar">↻ Actualizar</button>
         ${NALA.can('upload') ? `<button class="btn" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
         ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn" id="reproc">Reprocesar fallidos</button>' : ''}
+        ${NALA.can('reprocess') ? '<button class="btn" id="reval" title="Vuelve a validar los comprobantes con las reglas y la configuración actuales (sin re-escanear)">Revalidar</button>' : ''}
         <button class="btn primary" data-href="#/auditoria?batch=${b.id}">Auditar lote</button>
         ${NALA.can('reprocess') ? '<button class="btn danger" id="del-batch">Eliminar lote</button>' : ''}</h2>
         <div class="muted">${esc(b.client_name)} · ${b.format} · ${period(b.period)} · creado ${NALA.dateTime(b.created_at)}</div>
@@ -210,6 +211,9 @@
     root.querySelector('#refresh')?.addEventListener('click', () => NALA.route());
     root.querySelector('#reproc')?.addEventListener('click', async () => {
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: true }); NALA.toast(`${r.requeued} documento(s) en cola de nuevo`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
+    });
+    root.querySelector('#reval')?.addEventListener('click', async () => {
+      try { await NALA.api('POST', `batches/${b.id}/revalidate`); NALA.toast('Revalidando el lote…', 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
     });
     root.querySelector('#del-batch')?.addEventListener('click', async () => {
       const ok = await NALA.modal({ title: 'Eliminar lote', okText: 'Eliminar definitivamente', okClass: 'danger',

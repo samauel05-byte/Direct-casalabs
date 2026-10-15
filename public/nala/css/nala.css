@@ -144,6 +144,12 @@ tr.selected td { background: var(--accent-light); }
 .sheet td input { width: 100%; border: 0; background: transparent; padding: 4px; border-radius: 4px; }
 .sheet td input:focus { background: var(--surface); outline: 2px solid var(--accent); }
 .sheet td { padding: 0 4px; }
+/* Edición en línea desde la lista de auditoría */
+.fix-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+tr.inline-edit > td { background: var(--surface-2); padding: 0; border-top: 0; }
+.inline-editor { padding: 12px 14px; border-left: 3px solid var(--accent); }
+.inline-editor .fields { max-width: 760px; }
+.inline-editor .issue { max-width: 760px; }
 .timeline { display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
 .timeline div { border-left: 2px solid var(--border); padding-left: 8px; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 10px; flex-wrap: wrap; }

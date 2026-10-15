@@ -134,8 +134,8 @@ Fechas en **UTC** en la base; se muestran en **America/Santo_Domingo**.
 
 | Variable | Dónde | Necesaria para | Estado |
 |---|---|---|---|
-| `MONITOR_CRON_SECRET` | Vercel **y** Cloudflare Worker | Autorizar al scheduler a llamar `/api/monitor/cron` | **Configurada en Vercel** (falta ponerla igual en el Worker) |
-| `MONITOR_APP_URL` | Cloudflare Worker | URL base de Direct que llama el cron (por defecto `https://app.casalabs.com.do`) | Falta en el Worker |
+| `MONITOR_CRON_SECRET` | Vercel **y** Cloudflare Worker | Autorizar al scheduler a llamar `/api/monitor/cron` | Configurada en Vercel; en el Worker va como **secreto** (persiste entre redespliegues) |
+| `MONITOR_APP_URL` | Cloudflare Worker | URL base de Direct que llama el cron | **Fijada en `wrangler.toml` (`[vars]`)** = `https://app.casalabs.com.do`; así sobrevive a los redespliegues del Worker |
 | `MONITOR_SMTP_HOST`, `MONITOR_SMTP_PORT`, `MONITOR_SMTP_USER`, `MONITOR_SMTP_PASS`, `MONITOR_ALERT_FROM` | Vercel | **Enviar alertas por SMTP desde tu buzón** (recomendado). Puerto 465 (SSL) o 587 (STARTTLS). | **Pendiente** (sin esto, los avisos se registran pero no se envían) |
 | `MONITOR_RESEND_API_KEY` + `MONITOR_ALERT_FROM` | Vercel | Alternativa de envío por Resend (HTTPS) si no se usa SMTP | Opcional |
 | `MONITOR_HEARTBEAT_URL` | Vercel | Dead-man switch externo para detectar que el monitor se detuvo | **Pendiente** (sin esto, la alerta “monitor detenido” no está disponible) |
@@ -153,16 +153,23 @@ Fechas en **UTC** en la base; se muestran en **America/Santo_Domingo**.
 ## 7. Activar el proceso programado (pendiente de tu lado)
 
 Tu **Cloudflare Worker `portal-rd-relay` ya se despliega solo desde Git** (Workers
-Builds): cada push lo redepliega, y el cron `* * * * *` de `wrangler.toml` se
-aplicará al fusionar a `main`. Solo falta ponerle **2 variables** en el panel de
-Cloudflare (no hay acceso a tu cuenta desde aquí):
+Builds): cada push lo redepliega, y el cron `* * * * *` y la variable
+`MONITOR_APP_URL` vienen de `wrangler.toml`, así que se aplican solos al fusionar
+a `main` y **sobreviven a los redespliegues**. Solo falta **1 secreto** en el
+panel de Cloudflare (no hay acceso a tu cuenta desde aquí):
 
 1. Cloudflare dashboard → **Workers & Pages** → `portal-rd-relay` → **Settings** →
    **Variables and Secrets**:
    - Secret `MONITOR_CRON_SECRET` = `lBFWpzJDAnIAXW4e-qkZaRJmaJkgMw0o`
-   - Variable `MONITOR_APP_URL` = `https://app.casalabs.com.do`
 2. Guardar. En la próxima corrida del cron (cada minuto) el Worker llamará a
    `/api/monitor/cron` y empezarán las comprobaciones.
+
+> **Importante:** un redespliegue del Worker puede **borrar variables puestas a
+> mano** en el panel que no estén en `wrangler.toml`. Por eso `MONITOR_APP_URL`
+> ahora está en el código. Los **secretos** (como `MONITOR_CRON_SECRET`) sí
+> persisten entre redespliegues; si alguna vez el cron deja de correr tras un
+> despliegue, confirma que ese secreto siga presente y que el **Cron Trigger**
+> `* * * * *` siga listado en Settings → Triggers.
 
 **Alternativa** si prefieres no tocar el Worker: un cron externo (p. ej.
 cron-job.org) que haga `POST https://app.casalabs.com.do/api/monitor/cron` cada

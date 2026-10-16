@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — en la carga por lotes, el proveedor (nombre y RNC) se completa solo**: al leer cada factura, muchas veces la IA traía **sólo el nombre** del proveedor o **sólo el RNC**, no ambos. Ahora el sistema **rellena el que falte automáticamente**: si trae el **RNC** pero no el **nombre**, toma el **nombre oficial del padrón de la DGII**; si trae el **nombre** pero no el **RNC**, lo busca entre **proveedores ya vistos de esa misma empresa** (su propio historial). Nunca pisa un dato corregido a mano ni usa el RNC de la propia empresa como contraparte. Aplica a las lecturas nuevas y, para lo ya cargado, basta con pulsar **«Revalidar»** en el lote (no re-lee con IA, sólo completa). En 606 completa el **proveedor**; en 607, el **cliente**.
+
 - **NALA — el Asistente lee varias facturas a la vez (más rápido)**: antes el Asistente leía los comprobantes **uno por uno**, así que un PDF con muchas páginas se eternizaba. Ahora lee **hasta 4 en paralelo**, con reintento automático si el servidor pide esperar, y la barra muestra el avance (N/total). (Para paquetes muy grandes sigue siendo mejor cargarlos como **lote** y usar «Reprocesar», que corre en segundo plano.)
 
 - **NALA — reprocesar un lote completo y eliminar lotes desde la lista**: en la ficha del lote se agregó **«Reprocesar (re-leer)»**, que vuelve a **leer con la IA** (y el OCR si está activo) todas las facturas del lote —conservando las correcciones hechas a mano y sin tocar las aprobadas ni las excluidas—; antes solo existía «Reprocesar fallidos» (aparecía únicamente si algo había fallado). Y en la **lista de lotes** cada fila trae ahora un botón **🗑 para eliminar el lote** sin entrar al detalle (con confirmación).

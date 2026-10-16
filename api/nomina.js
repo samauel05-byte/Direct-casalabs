@@ -36,6 +36,11 @@ const ROUTES = [
   ['PATCH', /^employees\/([^/]+)$/, (ctx, q, b, m) => api.updateEmployee(ctx, m[1], b)],
   ['DELETE', /^employees\/([^/]+)$/, (ctx, q, b, m) => api.deleteEmployee(ctx, m[1])],
 
+  ['GET', /^employees\/([^/]+)\/files$/, (ctx, q, b, m) => api.listEmployeeFiles(ctx, m[1], q)],
+  ['POST', /^employees\/([^/]+)\/files$/, (ctx, q, b, m) => api.addEmployeeFile(ctx, m[1], b)],
+  ['GET', /^files\/([^/]+)\/link$/, (ctx, q, b, m) => api.employeeFileLink(ctx, m[1])],
+  ['DELETE', /^files\/([^/]+)$/, (ctx, q, b, m) => api.deleteEmployeeFile(ctx, m[1])],
+
   ['GET', /^clients\/([^/]+)\/periods$/, (ctx, q, b, m) => api.listPeriods(ctx, m[1])],
   ['POST', /^clients\/([^/]+)\/periods$/, (ctx, q, b, m) => api.createPeriod(ctx, m[1], b)],
   ['GET', /^periods\/([^/]+)$/, (ctx, q, b, m) => api.periodDetail(ctx, m[1])],

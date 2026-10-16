@@ -66,7 +66,16 @@ con totales/neto → Excel.
   −1 deducción, 0 neutro) e `include_total` definen el neto. `key` es el
   identificador usado en las fórmulas (único por empresa). FK compuesta
   `(tenant_id, client_id)` → `nomina_companies`.
-- **`nomina_employees`** — empleados manuales (nombre, cédula, **NSS**, puesto, activo).
+- **`nomina_employees`** — empleados (nombre, cédula, **NSS**, puesto, activo,
+  **fecha de entrada**, y datos de **baja**: fecha de salida, motivo, prestaciones
+  pagadas y monto). Una baja (con fecha de salida) queda inactiva y pasa a la
+  lista de **Ex-empleados**.
+- **`nomina_employee_files`** — documentos subidos por empleado (recibos
+  firmados / soportes). `period_id` nulo = **expediente general**; con `period_id`
+  = soporte de ese período. Los archivos van en **Supabase Storage** (bucket
+  privado `nomina-docs`); el navegador solo recibe **enlaces firmados** de corta
+  duración (`lib/nomina/storage.js`). Carga por el servidor (base64, máx. ~3 MB,
+  solo PDF o imágenes).
 - **`nomina_periods`** — períodos (`label`, año/mes, `status` draft/closed,
   `cycle` p. ej. `2026-10-B`, `pay_date`, `novedades_locked`).
 - **`nomina_entries`** — valores capturados por empleado y período (`values`

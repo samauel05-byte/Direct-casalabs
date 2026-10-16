@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Nómina — registro del empleado: entrada, bajas y documentos**: la ficha del empleado ahora guarda la **fecha de entrada**. Al registrar una **baja** (fecha de salida, motivo, y si se pagaron las **prestaciones** con su monto), el empleado pasa a una lista aparte de **Ex-empleados** y queda inactivo. Además se pueden **subir documentos**: el **recibo firmado / soporte de pago** de cada período (desde el historial de la ficha) y un **expediente general** del empleado (contratos, cartas, etc.). Los archivos se guardan privados y se abren con enlaces temporales.
+
 - **NALA — el Asistente es solo para administradores**: el ítem **«Asistente NALA (chat, IR-17)»** del menú (Herramientas) ahora solo lo ven los administradores; para el resto se oculta y el acceso directo por URL redirige al panel.
 
 - **Marca — tipografías y logo en el inicio de sesión**: la interfaz adopta la tipografía de marca: **Josefin Sans** para títulos y cosas importantes, **Poppins** para el texto general. Además, la pantalla de **inicio de sesión** vuelve a mostrar el **logo de Direct** (versión clara u oscura según el tema).

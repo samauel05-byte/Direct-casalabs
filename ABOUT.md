@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — reprocesar un lote completo y eliminar lotes desde la lista**: en la ficha del lote se agregó **«Reprocesar (re-leer)»**, que vuelve a **leer con la IA** (y el OCR si está activo) todas las facturas del lote —conservando las correcciones hechas a mano y sin tocar las aprobadas ni las excluidas—; antes solo existía «Reprocesar fallidos» (aparecía únicamente si algo había fallado). Y en la **lista de lotes** cada fila trae ahora un botón **🗑 para eliminar el lote** sin entrar al detalle (con confirmación).
+
 - **NALA — OCR Tesseract opcional junto al lector de IA (experimental)**: se puede activar un **OCR previo con Tesseract** (`tesseract.js`, sin instalar nada aparte) que corre antes del modelo de visión y le entrega el **texto del comprobante** como referencia, para que no deje vacíos los números difíciles (totales, ITBIS, NCF, RNC). Aplica **tanto en la carga por lotes como en el Asistente** (al soltar fotos o PDFs escaneados). No reemplaza al lector de IA: trabajan **juntos** y la imagen sigue mandando. Viene **apagado**; se enciende con la variable `NALA_OCR_TESSERACT=1` en el servidor (idiomas con `NALA_OCR_LANGS`, por defecto `spa+eng`) para probar qué tal mejora la lectura. Si el OCR falla por lo que sea, la lectura sigue igual que antes.
 
 - **NALA — el “Total” de Montos se calcula solo**: en el detalle de auditoría, la casilla **Total** ya no se teclea: se **calcula automáticamente** sumando las casillas de Montos (servicios/bienes + ITBIS + selectivo + otros impuestos + propina) y se actualiza en vivo al editar cualquiera. Así el total siempre cuadra con el desglose y la digitadora no lo escribe a mano.

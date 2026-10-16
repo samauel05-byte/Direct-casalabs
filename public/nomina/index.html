@@ -273,6 +273,7 @@
 
     const head = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Períodos</button><h2 style="margin:0">${esc(p.label)}</h2>
       ${closed?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}<span class="spacer"></span>
+      <button class="btn sm" id="volantes">🧾 Imprimir volantes</button>
       <button class="btn sm" id="export">⇩ Exportar Excel</button>
       <button class="btn sm" id="toggle">${closed?'Reabrir':'Cerrar período'}</button>
       ${closed?'':'<button class="btn primary" id="save">Guardar</button>'}</div>
@@ -283,7 +284,7 @@
     const body = `<div class="card"><div class="table-wrap"><table id="grid"><tr><th>Empleado</th>
       ${cols.map(c=>`<th class="num" title="${esc(c.key)}">${esc(c.label)}${c.type==='formula'?' <span class="pill calc">fx</span>':''}</th>`).join('')}
       <th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th></tr>
-      ${(d.rows||[]).map(r=>`<tr data-emp="${r.employee.id}"><td><b>${esc(r.employee.full_name)}</b><div class="muted mono">${esc(r.employee.identifier||'')}</div></td>
+      ${(d.rows||[]).map(r=>`<tr data-emp="${r.employee.id}"><td><button class="btn sm" data-slip="${r.employee.id}" title="Volante de pago">🧾</button> <b>${esc(r.employee.full_name)}</b><div class="muted mono">${esc(r.employee.identifier||'')}</div></td>
         ${cols.map(c=>{
           if(c.type==='formula') return `<td class="num" data-calc="${c.key}">${money(r.cells[c.key])}</td>`;
           const v = vals[r.employee.id][c.key];
@@ -316,6 +317,9 @@
     view.querySelectorAll('input[data-k]').forEach(inp=> inp.addEventListener('input', recompute));
     recompute();
 
+    view.querySelector('#volantes')?.addEventListener('click', ()=> printPayslips((d.rows||[]).map(r=>r.employee.id)));
+    view.querySelectorAll('[data-slip]').forEach(b=> b.addEventListener('click', ()=> printPayslips([b.dataset.slip])));
+
     $('#save') && ($('#save').onclick = async () => {
       const entries = [...view.querySelectorAll('tr[data-emp]')].map(tr=>{
         const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; });
@@ -335,6 +339,51 @@
   function downloadB64(b64, name, mime){
     const bin = atob(b64); const arr = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
     const url = URL.createObjectURL(new Blob([arr],{type:mime})); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }
+
+  // ── volante de pago (desglose imprimible por empleado) ──
+  function money2(v){ return (Number(v)||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function readRowValues(empId){ const tr=view.querySelector(`tr[data-emp="${empId}"]`); const values={}; if(tr) tr.querySelectorAll('input[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; }); return values; }
+  function payslipHTML(emp, cols, values){
+    const r=computeRow(cols, values);
+    const earn=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total&&c.sign>0);
+    const ded=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total&&c.sign<0);
+    const client=S.clients.find(c=>c.id===S.clientId)||{};
+    const lines=arr=>arr.map(c=>`<tr><td>${esc(c.label)}</td><td class="n">${money2(r.cells[c.key])}</td></tr>`).join('');
+    return `<div class="slip">
+      <div class="hd"><div class="co">${esc(client.legal_name||'')}</div><div class="rnc">RNC ${esc(client.rnc||client.cedula||'')}</div></div>
+      <div class="ti">VOLANTE DE PAGO</div><div class="pe">${esc(S.period.period.label)}</div>
+      <table class="meta"><tr><td><b>Empleado:</b> ${esc(emp.full_name)}</td><td><b>Cédula:</b> ${esc(emp.identifier||'—')}</td></tr>
+        <tr><td><b>Posición:</b> ${esc(emp.position||'—')}</td><td><b>Sueldo mensual:</b> ${money2(r.cells.sueldo_mensual)}</td></tr></table>
+      <div class="cols">
+        <table class="bd"><tr><th colspan="2">Ingresos</th></tr>${lines(earn)}<tr class="tt"><td>Total ingresos</td><td class="n">${money2(r.ingresos)}</td></tr></table>
+        <table class="bd"><tr><th colspan="2">Deducciones</th></tr>${lines(ded)||'<tr><td colspan=2>—</td></tr>'}<tr class="tt"><td>Total deducciones</td><td class="n">${money2(r.deducciones)}</td></tr></table>
+      </div>
+      <div class="neto">NETO A PAGAR: RD$ ${money2(r.neto)}</div>
+      <div class="fw"><div class="fl">_____________________<br>Firma del empleado</div><div class="fl">_____________________<br>Fecha</div></div>
+    </div>`;
+  }
+  function printPayslips(empIds){
+    if(!S.period) return;
+    const cols=S.period.columns||[];
+    const slips=empIds.map(id=>{ const row=(S.period.rows||[]).find(r=>r.employee.id===id); return row ? payslipHTML(row.employee, cols, readRowValues(id)) : ''; }).filter(Boolean).join('');
+    if(!slips){ toast('No hay empleados para imprimir','err'); return; }
+    const css=`@page{margin:14mm} body{font:12px/1.45 system-ui,Arial,sans-serif;color:#111;margin:0}
+      .slip{page-break-after:always;padding:4px 2px;max-width:720px;margin:0 auto}
+      .slip:last-child{page-break-after:auto}
+      .hd{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #111;padding-bottom:6px}
+      .co{font-size:18px;font-weight:800}.rnc{color:#555}
+      .ti{text-align:center;font-weight:800;letter-spacing:2px;margin:10px 0 2px}.pe{text-align:center;color:#555;margin-bottom:10px}
+      table{width:100%;border-collapse:collapse}.meta td{padding:3px 0;font-size:12px}
+      .cols{display:flex;gap:18px;margin-top:8px}.bd{border:1px solid #ccc;vertical-align:top}
+      .bd th{background:#f0f0f0;text-align:left;padding:5px 8px;border-bottom:1px solid #ccc}
+      .bd td{padding:4px 8px;border-bottom:1px solid #eee}.bd .n{text-align:right;font-variant-numeric:tabular-nums}
+      .bd .tt td{font-weight:800;border-top:1px solid #999}
+      .neto{margin:14px 0;text-align:right;font-size:16px;font-weight:800}
+      .fw{display:flex;justify-content:space-around;margin-top:40px;text-align:center;color:#333;font-size:12px}`;
+    const w=window.open('','_blank'); if(!w){ toast('Permite las ventanas emergentes para imprimir','err'); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Volantes de pago</title><style>${css}</style></head><body>${slips}<scr`+`ipt>window.onload=function(){setTimeout(function(){window.print()},150)}<\/scr`+`ipt></body></html>`);
+    w.document.close();
   }
 
   // ── modal ──

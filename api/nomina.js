@@ -1,8 +1,19 @@
 // Único punto de entrada de Nómina (una sola función Vercel, como NALA).
 // vercel.json reescribe /api/nomina/<ruta> → /api/nomina?route=<ruta>.
+const crypto = require('crypto');
 const { nominaContext } = require('../lib/nomina/context');
 const { HttpError } = require('../lib/nala/http');
 const api = require('../lib/nomina/api');
+const autoCron = require('../lib/nomina/cron');
+
+// El cron de generación automática (Vercel Cron) se autentica con un secreto de
+// servidor, igual que el worker de NALA; no lleva sesión de usuario.
+function cronAuthorized(req) {
+  const header = String(req.headers.authorization || '');
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  return [process.env.NOMINA_CRON_SECRET, process.env.CRON_SECRET].filter(s => s && s.length >= 16)
+    .some(secret => token.length === secret.length && crypto.timingSafeEqual(Buffer.from(token), Buffer.from(secret)));
+}
 
 const ROUTES = [
   ['GET', /^me$/, ctx => api.me(ctx)],
@@ -40,6 +51,10 @@ module.exports = async (req, res) => {
   const route = String(req.query?.route || '').replace(/^\/+|\/+$/g, '');
   res.setHeader('Cache-Control', 'no-store');
   try {
+    if (route === 'cron' && ['GET', 'POST'].includes(req.method)) {
+      if (!cronAuthorized(req)) return res.status(401).json({ error: 'No autorizado' });
+      return res.json({ ok: true, ...(await autoCron.runAuto()) });
+    }
     const match = ROUTES.map(([method, re, fn]) => ({ method, m: re.exec(route), fn })).filter(r => r.m);
     if (!match.length) return res.status(404).json({ error: 'Ruta no encontrada' });
     const handler = match.find(r => r.method === req.method);

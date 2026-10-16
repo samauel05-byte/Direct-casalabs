@@ -13,6 +13,16 @@
     --blue:#60a5fa; --ok:#22c55e; --crit:#f87171;
     --radius:14px; --shadow:0 10px 30px rgba(0,0,0,.30);
   }
+  /* Tema claro: fondo blanco y letras oscuras. El shell pone data-theme en el
+     iframe; redefinir las variables basta para voltear todo el módulo. */
+  :root[data-theme="light"]{
+    --bg:#eef2f8; --panel:#ffffff; --panel2:#f6f8fc; --elev:#ffffff;
+    --line:#dde4ef; --line2:#c6d1e2;
+    --ink:#10203a; --muted:#54657f; --faint:#8090a8;
+    --accent-soft:rgba(245,158,11,.14); --shadow:0 8px 24px rgba(20,40,80,.10);
+  }
+  :root[data-theme="light"] body{ background:radial-gradient(1200px 500px at 70% -10%,#e7eefc 0%,transparent 60%),var(--bg); }
+  :root[data-theme="light"] ::-webkit-scrollbar-thumb{ background:#c7d2e3; border-color:var(--bg); }
   *{ box-sizing:border-box; }
   body{ margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink);
     background:radial-gradient(1200px 500px at 70% -10%, #13213c 0%, transparent 60%), var(--bg); min-height:100vh; }
@@ -40,7 +50,7 @@
   .btn.danger{ color:#fecaca; background:#3b1d1d; border-color:#5b2626; }
   .btn.danger:hover{ background:#4c2222; }
   .btn.ghost{ background:transparent; border-color:transparent; }
-  main{ padding:18px 22px; max-width:1680px; margin:0 auto; }
+  main{ padding:18px 26px; max-width:none; margin:0; }
   .tabs{ display:inline-flex; gap:4px; margin:6px 0 18px; padding:4px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; flex-wrap:wrap; }
   .tabs button{ border:none; background:transparent; border-radius:9px; padding:7px 15px; color:var(--muted); font-weight:600; }
   .tabs button:hover{ color:var(--ink); background:#17243e; }
@@ -414,6 +424,8 @@
     const cols = d.columns || [];
     const editable = cols.filter(c=>c.type!=='formula');
     const closed = p.status==='closed';
+    const locked = !closed && !!p.novedades_locked;   // corte pasado: sólo lectura
+    const ro = closed || locked;                       // read-only (no se captura)
     // valores locales editables: map employee_id -> {key:val}
     const vals = {}; (d.rows||[]).forEach(r=> vals[r.employee.id] = {}); // se llenan abajo con lo guardado
     // reconstruir valores capturados desde las celdas no-fórmula
@@ -422,15 +434,15 @@
     const head = `<div class="card"><div class="row">
       <select id="per-sel" style="min-width:230px;font-weight:700">${S.periods.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.label)}</option>`).join('')}</select>
       <button class="btn sm" id="per-new">+ Nuevo</button>
-      ${closed?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}${d.settings?`<span class="pill">${d.settings.period_type==='mensual'?'Mensual':'Quincenal'}</span>`:''}<span class="spacer"></span>
+      ${closed?'<span class="pill">Cerrado</span>':locked?'<span class="pill" style="color:var(--accent2)">🔒 Novedades cerradas (corte)</span>':'<span class="pill ok">Borrador</span>'}${d.settings?`<span class="pill">${d.settings.period_type==='mensual'?'Mensual':'Quincenal'}</span>`:''}<span class="spacer"></span>
       <button class="btn sm" id="volantes">🧾 Volantes</button>
       <button class="btn sm" id="pdf-all">⤓ PDF</button>
       <button class="btn sm" id="export">⇩ Excel</button>
       <button class="btn sm" id="report">⤓ Reporte PDF</button>
       <button class="btn sm" id="csv">⤓ CSV banco</button>
-      <button class="btn sm" id="toggle">${closed?'Reabrir':'Cerrar'}</button>
+      <button class="btn sm" id="toggle">${closed?'Reabrir':locked?'Reabrir novedades':'Cerrar'}</button>
       <button class="btn sm danger" id="del-per" title="Eliminar período">🗑</button>
-      ${closed?'':'<button class="btn" id="save">Guardar</button><button class="btn primary" id="procesar">✓ Procesar nómina</button>'}</div>
+      ${ro?'':'<button class="btn" id="save">Guardar</button><button class="btn primary" id="procesar">✓ Procesar nómina</button>'}</div>
       <div class="total-kpis" id="kpis"></div></div>`;
 
     if(!(d.rows||[]).length){ view.innerHTML = head + '<div class="card empty">No hay empleados activos. Agregue empleados para capturar la nómina.</div>'; wirePeriodTop(); return; }
@@ -446,9 +458,9 @@
           if(c.type==='formula') return `<td class="num" data-calc="${c.key}">${money(r.cells[c.key])}</td>`;
           const v = vals[r.employee.id][c.key];
           // "Cobra entero": interruptor Sí/No (vale 1 = mes completo esta quincena).
-          if(c.key==='cobra_entero') return `<td class="num"><select class="cell-in" data-k="${c.key}" ${closed?'disabled':''}><option value="0"${String(v)==='1'?'':' selected'}>No</option><option value="1"${String(v)==='1'?' selected':''}>Sí</option></select></td>`;
-          if(c.type==='texto') return `<td><input class="cell-in txt" data-k="${c.key}" value="${esc(v||'')}" ${closed?'disabled':''}></td>`;
-          return `<td class="num"><input class="cell-in" inputmode="decimal" data-k="${c.key}" value="${v===''||v==null?'':esc(v)}" ${closed?'disabled':''}></td>`;
+          if(c.key==='cobra_entero') return `<td class="num"><select class="cell-in" data-k="${c.key}" ${ro?'disabled':''}><option value="0"${String(v)==='1'?'':' selected'}>No</option><option value="1"${String(v)==='1'?' selected':''}>Sí</option></select></td>`;
+          if(c.type==='texto') return `<td><input class="cell-in txt" data-k="${c.key}" value="${esc(v||'')}" ${ro?'disabled':''}></td>`;
+          return `<td class="num"><input class="cell-in" inputmode="decimal" data-k="${c.key}" value="${v===''||v==null?'':esc(v)}" ${ro?'disabled':''}></td>`;
         }).join('')}
         <td class="num" data-ing>${money(r.ingresos)}</td><td class="num" data-ded>${money(r.deducciones)}</td><td class="num" data-neto><b>${money(r.neto)}</b></td></tr>`).join('')}
       <tr class="tot"><td>TOTALES</td>${cols.map(c=>`<td class="num" data-tot="${c.key}"></td>`).join('')}<td class="num" data-tot-ing></td><td class="num" data-tot-ded></td><td class="num" data-tot-neto></td></tr>
@@ -500,7 +512,7 @@
     $('#per-sel').onchange = e => openPeriod(e.target.value);
     $('#per-new').onclick = newPeriod;
     $('#del-per').onclick = async () => { if(!confirm('¿Eliminar este período y sus datos capturados?'))return; try{ await api('DELETE',`periods/${p.id}`); S.period=null; S.lastPeriodId=null; await loadClient(); render(); toast('Período eliminado','ok'); }catch(e){ fail(e); } };
-    $('#toggle').onclick = async () => { try{ await api('PATCH',`periods/${p.id}`, { status: p.status==='closed'?'draft':'closed' }); await openPeriod(p.id); toast('Período actualizado','ok'); }catch(e){ fail(e); } };
+    $('#toggle').onclick = async () => { try{ const patch = p.status==='closed' ? { status:'draft' } : locked ? { novedades_locked:false } : { status:'closed' }; await api('PATCH',`periods/${p.id}`, patch); await openPeriod(p.id); toast('Período actualizado','ok'); }catch(e){ fail(e); } };
     $('#export').onclick = async () => { try{ const r = await api('GET',`periods/${p.id}/export`); downloadB64(r.base64, r.filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }catch(e){ fail(e); } };
     $('#csv').onclick = bankCsv;
     $('#report').onclick = reportPdf;
@@ -722,7 +734,7 @@
   // ── Modal "Novedad" (detalle del empleado: conceptos on/off + neto en vivo) ──
   function novedadModal(empId){
     const d=S.period; if(!d) return; const cols=d.columns||[]; const row=(d.rows||[]).find(r=>r.employee.id===empId); if(!row) return;
-    const emp=row.employee; const closed=d.period.status==='closed';
+    const emp=row.employee; const closed=d.period.status==='closed'||!!d.period.novedades_locked;
     const cur=readRowValues(empId); // valores editables actuales (reflejan el grid)
     const editable=cols.filter(c=>c.type!=='formula');
     const fieldRow=c=>{

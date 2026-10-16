@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — fórmulas en los campos de monto (como en Excel)**: muchas facturas de súper (Bravo y otras, salvo Unidos) traen **sólo el total**, sin desglose de Subtotal/ITBIS. Ahora, en el comprobante, cualquier campo de monto acepta una **fórmula** cuando empiezas el valor con **`+`** o **`=`**: por ejemplo, en **Subtotal** escribes `=5815-888` (total − ITBIS) y guarda **4927.00** solo, sin calculadora. Soporta `+ - * / ( )` (ej.: `=5815-5815/1.18` para sacar el ITBIS de un total que ya lo incluye). Si la factura **ya viene desglosada**, escribes el monto normal (sin `+`/`=`) y no pasa nada.
+
 - **NALA — no avisa "baja confianza en Moneda" cuando es DOP**: al revisar un comprobante salía la advertencia «Lectura de baja confianza en Moneda; verifique contra el documento» aun cuando la moneda era **DOP** (lo normal en RD, donde el "$" es peso dominicano y todo se reporta en DOP). Ahora ese aviso **se omite cuando la moneda leída es DOP** (sigue avisando si es otra moneda o no se pudo identificar). Para los comprobantes ya leídos, basta pulsar **«Revalidar»** en el lote para que desaparezca.
 
 - **NALA — renombrar un lote**: en la lista de lotes de la carga masiva, cada lote trae ahora un botón **✏️** para **cambiar su nombre** sin tener que borrarlo y volver a subirlo. Abre una ventanita con el nombre actual, lo editas y guardas (no toca sus comprobantes ni su estado; queda registrado en el historial).

@@ -10,6 +10,33 @@
   const fmtC = c => (c === null ? '—' : money(Number(c) / 100));
   const sumC = arr => { let any = false; let t = 0n; for (const v of arr) { const c = cents(v); if (c !== null) { t += c; any = true; } } return any ? t : null; };
 
+  // Mini-calculadora para los campos de monto (como en Excel). Si el valor
+  // empieza con "=" o "+", se evalúa como fórmula: números y + - * / ( ). Útil
+  // para facturas de súper que sólo traen el total: en Subtotal escribes
+  // "=5815-888" (total − ITBIS) y guarda 4927.00. Sin "+"/"=" es un monto normal.
+  function evalExpr(src) {
+    const s = String(src); let i = 0;
+    const ws = () => { while (i < s.length && s[i] === ' ') i++; };
+    function numTok() { ws(); let j = i, dot = false; while (i < s.length && ((s[i] >= '0' && s[i] <= '9') || s[i] === '.')) { if (s[i] === '.') { if (dot) return NaN; dot = true; } i++; } return i === j ? NaN : Number(s.slice(j, i)); }
+    function factor() { ws(); if (s[i] === '+') { i++; return factor(); } if (s[i] === '-') { i++; const v = factor(); return isNaN(v) ? NaN : -v; } if (s[i] === '(') { i++; const v = expr(); ws(); if (s[i] !== ')') return NaN; i++; return v; } return numTok(); }
+    function term() { let v = factor(); ws(); while (s[i] === '*' || s[i] === '/') { const op = s[i++]; const r = factor(); if (isNaN(v) || isNaN(r)) return NaN; v = op === '*' ? v * r : (r === 0 ? NaN : v / r); ws(); } return v; }
+    function expr() { ws(); let v = term(); ws(); while (s[i] === '+' || s[i] === '-') { const op = s[i++]; const r = term(); if (isNaN(v) || isNaN(r)) return NaN; v = op === '+' ? v + r : v - r; ws(); } return v; }
+    if (/[^0-9.+\-*/() ]/.test(s)) return NaN;
+    const v = expr(); ws();
+    return (i === s.length && isFinite(v)) ? v : NaN;
+  }
+  // Devuelve el monto calculado (string con 2 decimales), null si no es fórmula,
+  // o 'ERR' si empieza con =/+ pero no se puede evaluar.
+  function formulaValue(raw) {
+    const t = String(raw).trim();
+    if (!(t.startsWith('=') || t.startsWith('+'))) return null;
+    const body = t.slice(1).trim();
+    if (body === '') return null;
+    const v = evalExpr(body);
+    if (!isFinite(v)) return 'ERR';
+    return (Math.round((Math.abs(v) + Number.EPSILON) * 100) / 100 * Math.sign(v || 1)).toFixed(2);
+  }
+
   const GROUPS = {
     '606': [
       ['Proveedor (emisor)', ['emisor_nombre', 'emisor_id', 'tipo_id']], ['Comprador (receptor)', ['receptor_nombre', 'receptor_id']],
@@ -43,7 +70,8 @@
     if (catalog) return `<select data-k="${key}" ${dis}>${NALA.catalogOptions(catalog, v)}</select>`;
     if (key === 'moneda') return `<select data-k="${key}" ${dis}><option value="">— Sin confirmar —</option>${CURRENCIES.map(c => `<option ${v === c ? 'selected' : ''}>${c}</option>`).join('')}${v && !CURRENCIES.includes(v) ? `<option selected>${esc(v)}</option>` : ''}</select>`;
     if (def.type === 'date') return `<input type="date" data-k="${key}" value="${esc(v)}" ${dis}>`;
-    return `<input data-k="${key}" value="${esc(v)}" ${def.type === 'amount' || def.type === 'rate' ? 'inputmode="decimal" class="num"' : ''} ${dis} autocomplete="off">`;
+    const amountHint = def.type === 'amount' ? ' title="Puedes escribir una fórmula: empieza con = o + (ej.: =5815-888 resta el ITBIS del total) y hace el cálculo solo."' : '';
+    return `<input data-k="${key}" value="${esc(v)}" ${def.type === 'amount' || def.type === 'rate' ? 'inputmode="decimal" class="num"' : ''}${amountHint} ${dis} autocomplete="off">`;
   }
 
   function listQuery(params) {
@@ -421,7 +449,13 @@
     root.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => NALA.go(`#/auditoria/${b.dataset.open}`)));
     const bindFields = () => {
       root.querySelectorAll('#fieldsbox [data-k]').forEach(el => el.addEventListener('change', () => {
-        const k = el.dataset.k; const v = el.value.trim() === '' ? null : el.value.trim();
+        const k = el.dataset.k;
+        if (defs[k]?.type === 'amount') {
+          const fv = formulaValue(el.value);
+          if (fv === 'ERR') { NALA.toast('Fórmula inválida: use sólo números y + - * / ( ).', 'err'); el.value = values[k] ?? ''; return; }
+          if (fv !== null) el.value = fv; // "=5815-888" → "4927.00"
+        }
+        const v = el.value.trim() === '' ? null : el.value.trim();
         if ((values[k] ?? null) === v) return;
         undo.push([k, values[k] ?? null]); values[k] = v; NALA.dirty = true;
         el.closest('[data-field]')?.classList.toggle('changed', (inv.fields[k] ?? null) !== v);

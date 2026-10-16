@@ -49,6 +49,13 @@ columnas dinámicas → empleados → períodos editables con totales/neto → E
 
 ## Reglas de cálculo
 
+Las tasas de ley no van fijas en las fórmulas: `paramsFromSettings` inyecta los
+ajustes de la empresa al scope con prefijo `p_` (`p_div` = divisor del período
+quincenal/mensual, `p_afp`, `p_sfs`, `p_tope_sfs`, `p_isr_ex/t2/t3`…), así
+editar Ajustes recalcula AFP/SFS/ISR. `computeRow(columns, values, params)` y
+`computePeriod(..., {settings})` los propagan; el cliente los deriva de
+`S.period.settings`. `validate()` permite refs `p_*` (son parámetros, no columnas).
+
 Por empleado: las columnas `monto`/`numero` entran como números; las de
 `formula` se evalúan en orden de `position` (una fórmula puede usar otra ya
 calculada). Neto = Σ(valor) de columnas `monto`/`formula` con `include_total`,

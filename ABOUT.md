@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — no avisa "baja confianza en Moneda" cuando es DOP**: al revisar un comprobante salía la advertencia «Lectura de baja confianza en Moneda; verifique contra el documento» aun cuando la moneda era **DOP** (lo normal en RD, donde el "$" es peso dominicano y todo se reporta en DOP). Ahora ese aviso **se omite cuando la moneda leída es DOP** (sigue avisando si es otra moneda o no se pudo identificar). Para los comprobantes ya leídos, basta pulsar **«Revalidar»** en el lote para que desaparezca.
+
 - **NALA — renombrar un lote**: en la lista de lotes de la carga masiva, cada lote trae ahora un botón **✏️** para **cambiar su nombre** sin tener que borrarlo y volver a subirlo. Abre una ventanita con el nombre actual, lo editas y guardas (no toca sus comprobantes ni su estado; queda registrado en el historial).
 
 - **Nómina — ahora las empresas se crean dentro del módulo**: antes la nómina se colgaba de los clientes de Direct y la empresa se elegía en un selector de la cabecera. Ahora Nómina tiene su **propia lista de empresas** (pestaña **Empresas**): el usuario **crea la empresa** (nombre/razón social y RNC) y **le sube su nómina** ahí mismo; también puede editarla, activarla/desactivarla o borrarla, y la empresa activa se recuerda en el navegador. La empresa que ya existía (**SAVE**, con sus empleados y su período) se **conservó intacta** en la migración. La pantalla de nómina se **amplió** para que la tabla se vea completa y cómoda.

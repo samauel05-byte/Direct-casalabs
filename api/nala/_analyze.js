@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Sin acceso a NALA' });
   }
   // Límite por usuario: el análisis usa visión de OpenAI (costoso), ritmo acotado.
-  if (!await rl.allow(req, 'nala-analyze', 60, 60 * 1000, session.userId)) {
+  // El Asistente lee varias facturas en paralelo; se da margen para ese caso.
+  if (!await rl.allow(req, 'nala-analyze', 120, 60 * 1000, session.userId)) {
     return res.status(429).json({ error: 'Demasiadas solicitudes. Espera un momento.' });
   }
 

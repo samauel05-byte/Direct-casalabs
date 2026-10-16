@@ -34,6 +34,10 @@
 
 ## Estado y novedades recientes
 
+- **Marca — tipografías y logo en el inicio de sesión**: la interfaz adopta la tipografía de marca: **Josefin Sans** para títulos y cosas importantes, **Poppins** para el texto general. Además, la pantalla de **inicio de sesión** vuelve a mostrar el **logo de Direct** (versión clara u oscura según el tema).
+
+- **Nómina — salario visible en la ficha del empleado**: la ficha ahora muestra arriba el **salario mensual** del empleado (antes solo se veían los acumulados, que se confundían con el salario). El ISR de las empresas que lo calculan por fórmula ahora toma correctamente los ingresos extra.
+
 - **Nómina — arreglo de contraste en tema claro**: en el tema claro, las casillas de montos de la nómina (sueldo, SFS, ISR, otros…) y las tarjetas de totales salían con **texto oscuro sobre fondo oscuro** y no se veían los números. Se completó el tema claro: esos fondos (casillas, tarjetas, KPIs, totales, modales) ahora se vuelven claros y los montos se leen bien; el tema oscuro queda igual.
 
 - **Nómina — recibo rediseñado con formato de declaración (TSS)**: el recibo por empleado se rehízo. Debajo del encabezado de la empresa y la declaración firmable ("Yo, … he recibido…"), ahora lleva una **tabla con las mismas columnas del Excel TSS** que usan los clientes —**Nombre completo, Documento, NSS, Salario SS, Salario ISR, Salario INFOTEP, Saldo a favor, Remuner. otros agentes, Otras remuneraciones, Ingresos exentos, Agente retención ISR**— con los montos **mensuales de declaración** (una persona exenta de TSS no cotiza), y cierra con el **Total a cobrar** (neto de la quincena), las firmas y el pie de Casa Labs. El PDF sale **apaisado** para que la tabla quepa a lo ancho. Se agregó el campo **NSS** a la ficha del empleado (editable); los empleados cargados desde los archivos TSS ya traen su NSS.

@@ -36,6 +36,8 @@
 
 - **Nómina — se genera sola por calendario (quincenal)**: ya no hay que crear cada quincena a mano. Un proceso automático genera la nómina de todas las empresas quincenales: la que se paga ~**15** se genera el **día 13** y la que se paga ~**30** el **día 28**. Las **novedades** (bono, otros, préstamo, etc.) se capturan hasta el **corte** (día **12** y **26**); lo que se meta después del corte **pasa solo a la próxima** nómina (la en curso queda bloqueada en solo lectura, con aviso y botón «Reabrir novedades»). Al abrir la nueva quincena se **arrastran las partes fijas** (sueldo, seguro, cobra entero) y las novedades arrancan en 0. Controles: en **Columnas** cada concepto se marca **Fija** (se mantiene) o novedad (arranca en 0); en **Empresas** se **fija** una empresa (📌, sale de primero) y se enciende/apaga su **Nómina automática**.
 
+- **Módulos a pantalla completa**: NALA y CAMI (como ya hacían Nómina, IR-2, DGII-módulos y Monitor) ya no muestran la barra superior del sistema; el módulo ocupa toda la pantalla y lleva un botón flotante **‹ Volver** para regresar a Accesos.
+
 - **Nómina — tema claro y pantalla a todo el ancho**: el módulo ahora respeta el **tema claro** (fondo blanco, letras oscuras) junto con el resto del sistema, y la tabla ocupa **todo el ancho** del navegador (sin márgenes oscuros a los lados).
 
 - **Marca Casa Labs en todo, sin el logo de Direct**: se terminó de quitar el logo de Direct de los últimos sitios donde quedaba (referencias internas) y en el **PDF del recibo** la declaración ahora resalta en **negrita** los datos clave (nombre del empleado, cédula, empresa y el monto en letras), igual que en la versión para imprimir. La marca queda como **Casa Labs** en encabezados, reporte del período, recibo y login.

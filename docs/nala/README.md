@@ -107,6 +107,16 @@ Los trabajos avanzan:
    | `CRON_SECRET` | autoriza la recuperación diaria de Vercel Cron | **nueva, opcional** |
    | `NALA_OPENAI_MODEL` | modelo de extracción (por defecto `gpt-4o`) | opcional |
    | `NALA_STORAGE_BUCKET` | bucket privado (por defecto `nala-documents`) | opcional |
+   | `NALA_OCR_TESSERACT` | `1`/`true` activa un OCR previo con Tesseract (`tesseract.js`, WASM) que se envía al modelo como texto de referencia para cotejar montos/NCF/RNC. Apagado por defecto; experimental. | opcional |
+   | `NALA_OCR_LANGS` | idiomas del OCR (por defecto `spa+eng`) | opcional |
+
+   El OCR es un **apoyo**, no un motor aparte: corre en el trabajo `extract` y
+   también en el **Asistente** (`/api/nala/analyze`, al soltar fotos o páginas
+   de PDF escaneadas), sólo sobre páginas-imagen, le da al modelo
+   de visión una capa de texto para no dejar vacíos los números difíciles, y la
+   imagen sigue mandando. Nunca interrumpe la lectura (si falla, se ignora). Baja
+   los datos de idioma a `/tmp` en el primer uso, así que la primera lectura tras
+   un arranque en frío tarda unos segundos más. `extraction_meta.ocr` indica si se usó.
 
 3. **Worker cada minuto (recomendado)** — en Supabase, con las extensiones
    `pg_cron` y `pg_net` activas y el secreto guardado en Vault:

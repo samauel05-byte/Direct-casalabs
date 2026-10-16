@@ -21,7 +21,7 @@ document.documentElement.setAttribute('data-theme',t);document.documentElement.s
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:      #070d1a;
@@ -46,7 +46,9 @@ document.documentElement.setAttribute('data-theme',t);document.documentElement.s
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
-body{font-family:'Outfit',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+body{font-family:'Poppins',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+/* Tipografía de marca: Josefin Sans para títulos/cosas importantes, Poppins para el resto. */
+h1,h2,h3,.auth-ttl,.company-name,.auth-logo-txt,.page-head h1,.client-hero h1,.client-empty h2,.client-card h3{font-family:'Josefin Sans','Poppins',system-ui,sans-serif}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 60% 50% at 20% 10%,rgba(0,56,152,.22) 0%,transparent 70%),radial-gradient(ellipse 50% 40% at 80% 80%,rgba(0,96,224,.14) 0%,transparent 70%);pointer-events:none;z-index:0}
 .layer{display:flex;flex-direction:column;min-height:100vh;position:relative;z-index:1}
 
@@ -101,7 +103,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .banner-info{flex:1}
 .banner-name{font-size:17px;font-weight:700;letter-spacing:-.2px}
 .banner-sub{font-size:12px;color:var(--text2);margin-top:2px}
-.btn-cfg-portal{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text2);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all .15s;font-family:'Outfit',sans-serif;flex-shrink:0}
+.btn-cfg-portal{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text2);background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:6px 12px;cursor:pointer;transition:all .15s;font-family:'Poppins',sans-serif;flex-shrink:0}
 .btn-cfg-portal:hover{background:rgba(255,255,255,.1);color:var(--text)}
 
 .company-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:12px;margin-bottom:10px}
@@ -120,14 +122,14 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .company-initial{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;background:linear-gradient(135deg,var(--p1),var(--accent));box-shadow:0 3px 10px rgba(0,0,0,.25)}
 .company-info{width:100%;min-width:0}
 .company-name{font-size:12px;font-weight:700;letter-spacing:-.1px;line-height:1.2;overflow:hidden;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere}
-.company-user{font-size:10.5px;color:var(--text2);margin-top:2px;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.company-user{font-size:10.5px;color:var(--text2);margin-top:2px;font-family:'Poppins',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .company-card .p-play{pointer-events:none}
 .company-card:hover .p-play{transform:scale(1.12);box-shadow:0 5px 14px rgba(37,99,235,.5)}
 .btn-edit-co{position:absolute;top:7px;left:7px;width:24px;height:24px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:7px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text3);transition:all .15s;padding:0}
 .btn-edit-co svg{width:11px;height:11px}
 .btn-edit-co:hover{background:rgba(255,255,255,.1);color:var(--text2)}
 
-.add-company-btn{width:100%;height:46px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.12);border-radius:var(--r);color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;font-family:'Outfit',sans-serif;margin-top:4px}
+.add-company-btn{width:100%;height:46px;background:rgba(255,255,255,.04);border:1.5px dashed rgba(255,255,255,.12);border-radius:var(--r);color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s;font-family:'Poppins',sans-serif;margin-top:4px}
 .add-company-btn:hover{background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3);color:var(--accent3)}
 
 /* auth */
@@ -139,20 +141,25 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
    vuelve transparente (igual que .brand-logo), así en claro queda casi invisible
    sin dejar un recuadro negro. */
 .auth-wrap::before{content:'Casa Labs';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(34px,9vw,84px);font-weight:800;letter-spacing:-1px;color:var(--accent);opacity:.08;pointer-events:none;z-index:0;white-space:nowrap}
+.auth-brand{display:flex;justify-content:center;margin-bottom:20px;position:relative;z-index:1}
+.auth-logo-img{height:50px;object-fit:contain}
+.auth-brand .on-light{display:none}
+:root[data-theme="light"] .auth-brand .on-dark{display:none}
+:root[data-theme="light"] .auth-brand .on-light{display:inline-block}
 .auth-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px}
 .auth-logo-ico{width:44px;height:44px;background:linear-gradient(135deg,var(--p1),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(0,96,224,.45)}
 .auth-logo-ico svg{color:#fff}
 .auth-logo-txt{font-size:22px;font-weight:800;letter-spacing:-.5px;background:linear-gradient(135deg,#ede8e8 0%,var(--accent3) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.auth-logo-slogan{font-size:10px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);text-align:center;margin-top:-20px;margin-bottom:22px;font-family:'Plus Jakarta Sans',sans-serif}
+.auth-logo-slogan{font-size:10px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);text-align:center;margin-top:-20px;margin-bottom:22px;font-family:'Poppins',sans-serif}
 .auth-ttl{font-size:18px;font-weight:700;text-align:center;margin-bottom:5px}
-.auth-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:26px;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.5}
+.auth-sub{font-size:13px;color:var(--text2);text-align:center;margin-bottom:26px;font-family:'Poppins',sans-serif;line-height:1.5}
 .field{margin-bottom:15px}
 .field label{display:block;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text2);margin-bottom:7px}
-.field input,.field textarea{width:100%;height:44px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);padding:0 14px;font-size:14px;font-family:'Outfit',sans-serif;outline:none;transition:border-color .15s,background .15s,box-shadow .15s}
+.field input,.field textarea{width:100%;height:44px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.04);color:var(--text);padding:0 14px;font-size:14px;font-family:'Poppins',sans-serif;outline:none;transition:border-color .15s,background .15s,box-shadow .15s}
 .field input:focus,.field textarea:focus{border-color:var(--accent2);background:rgba(37,99,235,.05);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
 .field textarea{height:auto;padding:10px 14px;resize:vertical;line-height:1.5}
 .ferr{font-size:12px;color:var(--danger);margin-top:5px}
-.btn-full{width:100%;height:48px;background:linear-gradient(135deg,var(--p1) 0%,var(--accent) 100%);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;letter-spacing:.4px;cursor:pointer;font-family:'Outfit',sans-serif;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(37,99,235,.4);margin-top:8px;transition:all .18s}
+.btn-full{width:100%;height:48px;background:linear-gradient(135deg,var(--p1) 0%,var(--accent) 100%);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;letter-spacing:.4px;cursor:pointer;font-family:'Poppins',sans-serif;position:relative;overflow:hidden;box-shadow:0 4px 20px rgba(37,99,235,.4);margin-top:8px;transition:all .18s}
 .btn-full::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.14) 0%,transparent 50%)}
 .btn-full:hover{filter:brightness(1.1);box-shadow:0 6px 24px rgba(37,99,235,.5);transform:translateY(-1px)}
 .btn-full{display:flex;align-items:center;justify-content:center;gap:10px}
@@ -171,8 +178,8 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .modal-ftr{display:flex;gap:9px;justify-content:flex-end;padding:0 22px 22px}
 .slabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:11px;margin-top:18px;padding-bottom:7px;border-bottom:1px solid rgba(255,255,255,.06)}
 .slabel:first-child{margin-top:0}
-.hint{font-size:12px;color:var(--text3);margin-top:-5px;margin-bottom:13px;font-family:'Plus Jakarta Sans',sans-serif;line-height:1.5}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:0 16px;height:38px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:'Outfit',sans-serif}
+.hint{font-size:12px;color:var(--text3);margin-top:-5px;margin-bottom:13px;font-family:'Poppins',sans-serif;line-height:1.5}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:0 16px;height:38px;border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:'Poppins',sans-serif}
 .btn-pri{background:linear-gradient(135deg,var(--p1) 0%,var(--accent) 100%);color:#fff;box-shadow:0 2px 10px rgba(37,99,235,.3)}
 .btn-pri:hover{filter:brightness(1.1)}
 .btn-ghost{background:rgba(255,255,255,.05);color:var(--text2);border:1px solid rgba(255,255,255,.08)}
@@ -200,7 +207,7 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* users view */
 .users-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:22px}
-.add-user-btn{background:linear-gradient(135deg,var(--p1),var(--accent));color:#fff;border:none;border-radius:10px;height:38px;padding:0 18px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:7px;transition:all .15s}
+.add-user-btn{background:linear-gradient(135deg,var(--p1),var(--accent));color:#fff;border:none;border-radius:10px;height:38px;padding:0 18px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;font-family:'Poppins',sans-serif;display:flex;align-items:center;gap:7px;transition:all .15s}
 .user-card{background:linear-gradient(145deg,var(--surface) 0%,var(--bg2) 100%);border:1px solid var(--border);border-radius:var(--r);display:flex;align-items:center;gap:14px;padding:14px 16px;margin-bottom:10px;transition:border-color .15s}
 .user-card:hover{border-color:var(--border2)}
 .user-avatar{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--p1),var(--accent));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:#fff;flex-shrink:0}
@@ -383,6 +390,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 <!-- Login -->
 <div id="view-login" class="layer auth-wrap" hidden>
   <div class="auth-card">
+    <div class="auth-brand"><img src="/img/direct-logo-light.png" alt="Direct" class="auth-logo-img on-dark"><img src="/img/direct-logo.png" alt="Direct" class="auth-logo-img on-light"></div>
     <p class="auth-ttl">Bienvenido de vuelta</p>
     <p class="auth-sub">Introduce tus credenciales para acceder al sistema.</p>
     <div class="field"><label>Usuario</label><input id="login-username" type="text" placeholder="Tu usuario" autocomplete="username"></div>

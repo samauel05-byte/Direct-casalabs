@@ -356,7 +356,8 @@
   async function openEmployee(id){
     let d; try{ d=await api('GET',`employees/${id}/history`); }catch(e){ return fail(e); }
     const e=d.employee; const H=d.history||[]; const t=d.totals||{ingresos:0,deducciones:0,neto:0};
-    view.innerHTML = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Empleados</button><h2 style="margin:0">${esc(e.full_name)}</h2>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}<span class="spacer"></span><button class="btn sm" id="edit">Editar</button></div>
+    const salario = H.length ? (Number(H[0].cells&&H[0].cells['sueldo_mensual'])||0) : 0;
+    view.innerHTML = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Empleados</button><h2 style="margin:0">${esc(e.full_name)}</h2>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}<span class="spacer"></span>${salario?`<span class="pill calc" style="font-size:13px">Salario: RD$ ${money(salario)} / mes</span>`:''}<button class="btn sm" id="edit">Editar</button></div>
       <div class="muted" style="margin-top:4px">${esc(e.position||'—')} · Cédula ${esc(e.identifier||'—')}${e.nss?' · NSS '+esc(e.nss):''}${e.notes?' · '+esc(e.notes):''}</div>
       <div class="total-kpis" style="margin-top:12px">
         <div class="k"><div class="muted">Períodos pagados</div><div class="v">${d.periods_count}</div></div>

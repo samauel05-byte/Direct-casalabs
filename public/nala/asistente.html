@@ -789,43 +789,46 @@ async function processFiles(files, modeOverride) {
   msgs.appendChild(progD);
   msgs.scrollTop = msgs.scrollHeight;
 
-  const results = [];
-  for (let i = 0; i < tasks.length; i++) {
-    const item = tasks[i];
-    document.getElementById('prog-content').textContent = `⏳ Procesando ${i + 1}/${tasks.length}: ${item.name}`;
-    document.getElementById('prog-bar').style.width = `${Math.round(i / tasks.length * 100)}%`;
-
-    try {
-      let payload = { mode: efectMode };
-      if (item.pdfText) {
-        // Pre-extracted text (text-based PDF page)
-        payload.pdfText = item.pdfText;
-      } else if (item.base64) {
-        // Pre-rendered image (scanned PDF page)
-        payload.base64 = item.base64;
-        payload.mimeType = item.mimeType || 'image/jpeg';
-      } else if (item.kind === 'img') {
-        // User-uploaded image file
-        const b64 = await fileToBase64(item.file);
-        payload.base64 = b64.split(',')[1];
-        payload.mimeType = item.file.type;
-      } else {
-        // Single-page PDF — extract text
-        payload.pdfText = await extractPdfText(item.file);
-      }
-
-      const res = await fetch('/api/nala/analyze', {
-        method: 'POST', headers: nalaHeaders(),
-        body: JSON.stringify(payload)
-      });
+  // Lee varias facturas EN PARALELO (antes era una por una, muy lento con
+  // paquetes grandes). Un grupo de "trabajadores" toma tareas de una cola
+  // compartida; los resultados se guardan en su posición para conservar el
+  // orden. Si el servidor responde 429 (límite de ritmo), se reintenta con
+  // espera creciente.
+  const CONCURRENCY = 4;
+  const results = new Array(tasks.length);
+  let doneCount = 0; let nextIndex = 0;
+  const setProg = (name) => {
+    const bar = document.getElementById('prog-bar'); const txt = document.getElementById('prog-content');
+    if (bar) bar.style.width = `${Math.round(doneCount / tasks.length * 100)}%`;
+    if (txt) txt.textContent = `⏳ Procesando ${doneCount}/${tasks.length}${name ? `: ${name}` : ''}…`;
+  };
+  async function analyzeOne(item) {
+    const payload = { mode: efectMode };
+    if (item.pdfText) payload.pdfText = item.pdfText;
+    else if (item.base64) { payload.base64 = item.base64; payload.mimeType = item.mimeType || 'image/jpeg'; }
+    else if (item.kind === 'img') { const b64 = await fileToBase64(item.file); payload.base64 = b64.split(',')[1]; payload.mimeType = item.file.type; }
+    else payload.pdfText = await extractPdfText(item.file);
+    for (let attempt = 0; ; attempt++) {
+      const res = await fetch('/api/nala/analyze', { method: 'POST', headers: nalaHeaders(), body: JSON.stringify(payload) });
+      if (res.status === 429 && attempt < 5) { await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); continue; }
       if (!res.ok) throw new Error(await res.text());
       const { data } = await res.json();
-      normalizeRow(data, efectMode); // ensure leading zeros on code fields
-      results.push({ data, name: item.name });
-    } catch (e) {
-      results.push({ error: e.message, name: item.name });
+      normalizeRow(data, efectMode);
+      return data;
     }
   }
+  async function worker() {
+    while (true) {
+      const i = nextIndex++;
+      if (i >= tasks.length) return;
+      const item = tasks[i];
+      try { results[i] = { data: await analyzeOne(item), name: item.name }; }
+      catch (e) { results[i] = { error: e.message, name: item.name }; }
+      doneCount++; setProg(item.name);
+    }
+  }
+  setProg();
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tasks.length) }, worker));
 
   document.getElementById('prog-bar').style.width = '100%';
   document.getElementById('prog-content').textContent = `✓ ${results.length} factura(s) procesadas`;

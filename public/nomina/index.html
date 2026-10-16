@@ -23,6 +23,20 @@
   }
   :root[data-theme="light"] body{ background:radial-gradient(1200px 500px at 70% -10%,#e7eefc 0%,transparent 60%),var(--bg); }
   :root[data-theme="light"] ::-webkit-scrollbar-thumb{ background:#c7d2e3; border-color:var(--bg); }
+  /* Fondos que estaban fijos en oscuro: en tema claro se vuelven claros para que
+     la letra oscura se lea (si no, queda texto oscuro sobre fondo oscuro). */
+  :root[data-theme="light"] header.top{ background:rgba(255,255,255,.85); }
+  :root[data-theme="light"] .card{ background:#ffffff; }
+  :root[data-theme="light"] .cell-in{ background:#f4f7fc; border-color:var(--line); }
+  :root[data-theme="light"] .cell-in:hover{ border-color:#9db3d4; }
+  :root[data-theme="light"] .btn:hover{ background:#e9eef6; border-color:#bccce2; }
+  :root[data-theme="light"] .tabs button:hover{ background:#e7edf6; }
+  :root[data-theme="light"] tr.tot td{ background:#eef2f8; }
+  :root[data-theme="light"] tbody tr:hover > td, :root[data-theme="light"] table tr:hover > td{ background:rgba(20,40,80,.035); }
+  :root[data-theme="light"] .total-kpis .k{ background:#f6f8fc; }
+  :root[data-theme="light"] .modal{ background:#ffffff; }
+  :root[data-theme="light"] .toast{ background:#ffffff; }
+  :root[data-theme="light"] .sw input{ background:#cbd5e6; }
   *{ box-sizing:border-box; }
   body{ margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink);
     background:radial-gradient(1200px 500px at 70% -10%, #13213c 0%, transparent 60%), var(--bg); min-height:100vh; }

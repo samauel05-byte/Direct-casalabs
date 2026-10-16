@@ -964,6 +964,9 @@ const INST = {
 };
 
 let masterKey = null, credentials = [], clients = [], appConfig = {}, lastPollTs = 0, pollTimer = null;
+// Cantidad de empresas de Nómina (tabla propia nomina_companies). Se carga bajo
+// demanda al pintar los accesos; null = aún sin cargar.
+let nominaCount = null;
 let _dupeGroups = [];
 let activePortal = null;
 let sessionToken = null, currentUser = null, vaultSecret = null, activeSessionId = null;
@@ -1798,9 +1801,10 @@ function renderPortalGrid() {
       inst.openDirect?openDirectPortal(key):inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key);
     });
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
-    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='monitor'?'Estado DGII':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
+    const nominaLabel=nominaCount==null?'Cargando…':`${nominaCount} empresa${nominaCount===1?'':'s'}`;
+    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='nomina'?nominaLabel:key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='monitor'?'Estado DGII':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
     const countHtml=isTool
-      ?`<div class="p-count">${toolLabel}</div>`
+      ?`<div class="p-count"${key==='nomina'?' id="nomina-count"':''}>${toolLabel}</div>`
       :`<div class="p-count${cos.length?'':' empty'}">${cos.length?`${cos.length} empresa${cos.length>1?'s':''}`:'Sin empresas'}</div>`;
     card.innerHTML=`${logoHtml}<div class="p-info"><div class="p-name">${inst.name}</div>${countHtml}</div><span class="p-play" aria-hidden="true">${PLAY}</span>`;
     return card;
@@ -1842,9 +1846,24 @@ function renderPortalGrid() {
   }
   hydrateLogos(main);
 
+  // Nómina muestra la cantidad de empresas (tabla propia). Se pide una vez y se
+  // actualiza la etiqueta de la tarjeta sin repintar todo.
+  if (allowed.includes('nomina')) loadNominaCount();
+
   // Construye el índice de accesos (solo portales permitidos) para el buscador.
   _homeIndex=null;
   buildHomeIndex(allowed.filter(k=>DIRECT_PORTALS.includes(k)));
+}
+
+// Trae la cantidad de empresas de Nómina y la refleja en la tarjeta. Silencioso
+// ante errores (la tarjeta queda con "Cargando…"/el último valor conocido).
+async function loadNominaCount() {
+  try {
+    const r=await A.get('/api/nomina/clients');
+    nominaCount=Array.isArray(r?.clients)?r.clients.length:0;
+  } catch { return; }
+  const el=document.getElementById('nomina-count');
+  if (el) el.textContent=`${nominaCount} empresa${nominaCount===1?'':'s'}`;
 }
 
 // Desencripta las credenciales de los portales permitidos para poder buscar por

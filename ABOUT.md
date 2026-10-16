@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Nómina — la tarjeta de acceso muestra la cantidad de empresas**: en la pantalla de Accesos, el mosaico de **Nómina** mostraba "606/607 · IT-1" (heredado de otras herramientas). Ahora muestra **cuántas empresas** tienes en Nómina (p. ej. "28 empresas"), igual que la tarjeta de Clientes muestra su conteo. El número se consulta al abrir Accesos.
+
 - **Nómina — el ISR ahora sale de todos los ingresos, no solo del sueldo**: la columna **"Otros (+)"** (ingresos extra) ahora **se suma al imponible**, la base sobre la que se calcula el ISR. Antes un pago extra solo se sumaba al **neto a pagar** y no generaba su ISR; ahora, después de restar los aportes a la TSS, se le suma lo que esté en "Otros (+)" para que el impuesto salga de **todo lo percibido**. Así, al poner un extra, suben tanto el sueldo a pagar como el ISR que le corresponde. El extra quincenal se anualiza igual que el sueldo (se trata como ingreso recurrente).
 
 - **Nómina — 28 empresas cargadas desde los archivos de la TSS**: se cargaron de una vez **28 nóminas** (90 empleados) a partir de los archivos de la Tesorería (TSS), como empresas **quincenales** con la plantilla de ley completa (SFS, pensión, ISR, "Cobra entero", "Seguro", "Otros ±", préstamo…). Cada empresa queda lista para calcular su nómina con solo su salario de la TSS; nombres y cédulas se normalizaron y el NSS quedó en las notas del empleado.

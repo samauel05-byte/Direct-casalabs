@@ -1,5 +1,6 @@
 import auth from '../../lib/auth.js';
 import rl from '../../lib/rate-limit.js';
+import ocr from '../../lib/nala/ocr.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -141,6 +142,14 @@ IMPORTANTE:
   const systemPrompt = tipo === 'IR17' ? promptIR17 : (tipo === '607' ? prompt607 : prompt606);
   const isImage = base64 && mimeType && mimeType.startsWith('image/');
 
+  // OCR previo opcional (Tesseract) como apoyo del modelo de visión, igual que
+  // en el lote. Sólo corre si NALA_OCR_TESSERACT está encendido y nunca
+  // interrumpe el análisis (ante cualquier fallo devuelve null).
+  let ocrText = null;
+  if (isImage) {
+    ocrText = await ocr.ocrImageParts([{ kind: 'image', base64 }]).catch(() => null);
+  }
+
   let messages;
   if (isImage) {
     messages = [
@@ -149,6 +158,7 @@ IMPORTANTE:
         content: [
           { type: 'text', text: systemPrompt },
           { type: 'image_url', image_url: { url: `data:${mimeType};base64,${base64}`, detail: 'high' } },
+          ...(ocrText ? [{ type: 'text', text: `Texto OCR de referencia (Tesseract; puede traer errores). Úsalo para no dejar vacíos montos, NCF o RNC; si hay conflicto, manda lo que ves en la imagen:\n"""\n${ocrText}\n"""` }] : []),
         ],
       },
     ];

@@ -554,24 +554,49 @@
 
   // ── volante de pago (desglose imprimible por empleado) ──
   function money2(v){ return (Number(v)||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  // Monto a letras en pesos dominicanos (para la declaración del recibo):
+  // «veintiocho mil cuatrocientos ... pesos dominicanos con 78/100».
+  function numeroALetras(num){
+    num=Math.floor(Math.abs(Number(num))||0);
+    if(num===0) return 'cero';
+    const U=['','uno','dos','tres','cuatro','cinco','seis','siete','ocho','nueve','diez','once','doce','trece','catorce','quince','dieciséis','diecisiete','dieciocho','diecinueve','veinte','veintiuno','veintidós','veintitrés','veinticuatro','veinticinco','veintiséis','veintisiete','veintiocho','veintinueve'];
+    const D=['','','','treinta','cuarenta','cincuenta','sesenta','setenta','ochenta','noventa'];
+    const C=['','ciento','doscientos','trescientos','cuatrocientos','quinientos','seiscientos','setecientos','ochocientos','novecientos'];
+    const dos=n=>{ if(n<30) return U[n]; const d=Math.floor(n/10), u=n%10; return D[d]+(u?' y '+U[u]:''); };
+    const tres=n=>{ if(n===100) return 'cien'; const c=Math.floor(n/100), r=n%100; return (c?C[c]:'')+(c&&r?' ':'')+(r?dos(r):''); };
+    const apoc=s=>/veintiuno$/.test(s)?s.replace(/veintiuno$/,'veintiún'):s.replace(/uno$/,'un');
+    const millones=Math.floor(num/1000000), miles=Math.floor((num%1000000)/1000), resto=num%1000;
+    const p=[];
+    if(millones) p.push(millones===1?'un millón':apoc(tres(millones))+' millones');
+    if(miles) p.push(miles===1?'mil':apoc(tres(miles))+' mil');
+    if(resto) p.push(tres(resto));
+    return p.join(' ').trim();
+  }
+  function montoEnLetras(v){
+    const n=Number(v)||0, ent=Math.floor(n), cent=Math.round((n-ent)*100);
+    let s=apocFinal(numeroALetras(ent))+' pesos dominicanos con '+String(cent).padStart(2,'0')+'/100';
+    return s.charAt(0).toUpperCase()+s.slice(1);
+  }
+  function apocFinal(s){ return /veintiuno$/.test(s)?s.replace(/veintiuno$/,'veintiún'):s.replace(/uno$/,'un'); }
   function readRowValues(empId){ const tr=view.querySelector(`tr[data-emp="${empId}"]`); const values={}; if(tr) tr.querySelectorAll('[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; }); return values; }
   function payslipHTML(emp, cols, values){
     const r=computeRow(cols, values);
-    const earn=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total&&c.sign>0);
-    const ded=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total&&c.sign<0);
     const client=S.clients.find(c=>c.id===S.clientId)||{};
-    const lines=arr=>arr.map(c=>`<tr><td>${esc(c.label)}</td><td class="n">${money2(r.cells[c.key])}</td></tr>`).join('');
+    const included=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total);
+    const fecha=new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'2-digit',year:'numeric'});
+    const rnc=client.rnc||client.cedula||'';
+    const ced=emp.identifier?`, portador(a) de la cédula <b>${esc(emp.identifier)}</b>`:'';
+    const filas=included.map(c=>{
+      const pre=c.key==='sueldo_quincenal'?'':(c.sign>0?'(+) ':'(−) ');
+      return `<tr><td>${pre}${esc(c.label)}</td><td class="n">RD$ ${money2(r.cells[c.key])}</td></tr>`;
+    }).join('');
     return `<div class="slip">
-      <div class="hd"><div class="br"><img class="logo" src="${location.origin}/img/direct-logo.png" alt="" onerror="this.style.display='none'"><div class="co">${esc(client.legal_name||'')}</div></div><div class="rnc">RNC ${esc(client.rnc||client.cedula||'')}</div></div>
-      <div class="ti">VOLANTE DE PAGO</div><div class="pe">${esc(S.period.period.label)}</div>
-      <table class="meta"><tr><td><b>Empleado:</b> ${esc(emp.full_name)}</td><td><b>Cédula:</b> ${esc(emp.identifier||'—')}</td></tr>
-        <tr><td><b>Posición:</b> ${esc(emp.position||'—')}</td><td><b>Sueldo mensual:</b> ${money2(r.cells.sueldo_mensual)}</td></tr></table>
-      <div class="cols">
-        <table class="bd"><tr><th colspan="2">Ingresos</th></tr>${lines(earn)}<tr class="tt"><td>Total ingresos</td><td class="n">${money2(r.ingresos)}</td></tr></table>
-        <table class="bd"><tr><th colspan="2">Deducciones</th></tr>${lines(ded)||'<tr><td colspan=2>—</td></tr>'}<tr class="tt"><td>Total deducciones</td><td class="n">${money2(r.deducciones)}</td></tr></table>
-      </div>
-      <div class="neto">NETO A PAGAR: RD$ ${money2(r.neto)}</div>
-      <div class="fw"><div class="fl">_____________________<br>Firma del empleado</div><div class="fl">_____________________<br>Fecha</div></div>
+      <div class="rhd"><div class="co">${esc(client.legal_name||'')}</div><div class="rm">${rnc?('RNC '+esc(rnc)+'<br>'):''}<span class="fx">${fecha}</span></div></div>
+      <div class="ti">RECIBO DE NÓMINA</div>
+      <p class="decl">Yo, <b>${esc(emp.full_name)}</b>${ced}, he recibido de la compañía <b>${esc(client.legal_name||'')}</b> la suma de <b>${esc(montoEnLetras(r.neto))}</b> (RD$ ${money2(r.neto)}), correspondiente al pago de ${esc(S.period.period.label)}.</p>
+      <table class="bd">${filas}<tr class="tt"><td>Total a cobrar</td><td class="n">RD$ ${money2(r.neto)}</td></tr></table>
+      <div class="fw"><div class="fl">_____________________<br>Entregado por</div><div class="fl">_____________________<br>Recibido por</div></div>
+      <div class="ft">Casa&nbsp;Labs · app.casalabs.com.do</div>
     </div>`;
   }
   function printPayslips(empIds){
@@ -579,20 +604,18 @@
     const cols=S.period.columns||[];
     const slips=empIds.map(id=>{ const row=(S.period.rows||[]).find(r=>r.employee.id===id); return row ? payslipHTML(row.employee, cols, readRowValues(id)) : ''; }).filter(Boolean).join('');
     if(!slips){ toast('No hay empleados para imprimir','err'); return; }
-    const css=`@page{margin:14mm} body{font:12px/1.45 system-ui,Arial,sans-serif;color:#111;margin:0}
-      .slip{page-break-after:always;padding:4px 2px;max-width:720px;margin:0 auto}
+    const css=`@page{margin:16mm} body{font:12.5px/1.5 system-ui,Arial,sans-serif;color:#111;margin:0}
+      .slip{page-break-after:always;padding:6px 2px;max-width:720px;margin:0 auto}
       .slip:last-child{page-break-after:auto}
-      .hd{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #111;padding-bottom:6px}
-      .br{display:flex;align-items:center;gap:10px}.logo{height:38px;width:auto}
-      .co{font-size:18px;font-weight:800}.rnc{color:#555}
-      .ti{text-align:center;font-weight:800;letter-spacing:2px;margin:10px 0 2px}.pe{text-align:center;color:#555;margin-bottom:10px}
-      table{width:100%;border-collapse:collapse}.meta td{padding:3px 0;font-size:12px}
-      .cols{display:flex;gap:18px;margin-top:8px}.bd{border:1px solid #ccc;vertical-align:top}
-      .bd th{background:#f0f0f0;text-align:left;padding:5px 8px;border-bottom:1px solid #ccc}
-      .bd td{padding:4px 8px;border-bottom:1px solid #eee}.bd .n{text-align:right;font-variant-numeric:tabular-nums}
-      .bd .tt td{font-weight:800;border-top:1px solid #999}
-      .neto{margin:14px 0;text-align:right;font-size:16px;font-weight:800}
-      .fw{display:flex;justify-content:space-around;margin-top:40px;text-align:center;color:#333;font-size:12px}`;
+      .rhd{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #111;padding-bottom:8px}
+      .co{font-size:19px;font-weight:800}.rm{color:#555;text-align:right;font-size:11px;line-height:1.5}.rm .fx{color:#111;font-weight:600}
+      .ti{text-align:center;font-weight:800;letter-spacing:2px;margin:14px 0 12px;font-size:14px}
+      .decl{margin:0 0 14px;text-align:justify}
+      table{width:100%;border-collapse:collapse}
+      .bd td{padding:6px 8px;border-bottom:1px solid #eee}.bd .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+      .bd .tt td{font-weight:800;border-top:2px solid #111;border-bottom:none;font-size:13px;padding-top:8px}
+      .fw{display:flex;justify-content:space-around;margin-top:52px;text-align:center;color:#333;font-size:12px}
+      .ft{margin-top:30px;text-align:center;color:#9aa6b2;font-size:10px;letter-spacing:.5px}`;
     const w=window.open('','_blank'); if(!w){ toast('Permite las ventanas emergentes para imprimir','err'); return; }
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Volantes de pago</title><style>${css}</style></head><body>${slips}<scr`+`ipt>window.onload=function(){setTimeout(function(){window.print()},150)}<\/scr`+`ipt></body></html>`);
     w.document.close();
@@ -611,45 +634,40 @@
     logoP=new Promise(res=>{ const img=new Image(); img.onload=()=>{ try{ const cv=document.createElement('canvas'); cv.width=img.naturalWidth; cv.height=img.naturalHeight; cv.getContext('2d').drawImage(img,0,0); res({data:cv.toDataURL('image/png'),w:img.naturalWidth,h:img.naturalHeight}); }catch(_){ res(null); } }; img.onerror=()=>res(null); img.src=location.origin+'/img/direct-logo.png'; });
     return logoP;
   }
-  function drawPayslip(doc, logo, client, emp, r, cols){
-    const M=14, W=210, R=W-M; let y=16;
+  function drawPayslip(doc, client, emp, r, cols){
+    const M=16, W=210, R=W-M; let y=18;
     const m=v=>money2(v);
     doc.setTextColor(17);
-    let tx=M;
-    if(logo){ const h=12, w=Math.min(55, logo.w*h/logo.h); try{ doc.addImage(logo.data,'PNG',M,y-7,w,h); tx=M+w+4; }catch(_){ } }
-    doc.setFont('helvetica','bold'); doc.setFontSize(15); doc.text(String(client.legal_name||''), tx, y+1);
-    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90);
-    doc.text('RNC '+(client.rnc||client.cedula||''), R, y+1, {align:'right'});
-    doc.setTextColor(17); y+=11; doc.setDrawColor(17); doc.setLineWidth(0.5); doc.line(M,y,R,y); y+=8;
-    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('VOLANTE DE PAGO', W/2, y, {align:'center'}); y+=6;
-    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90); doc.text(String(S.period.period.label), W/2, y, {align:'center'}); doc.setTextColor(17); y+=10;
-    doc.setFontSize(10);
-    const lab=(x,yy,k,v)=>{ doc.setFont('helvetica','bold'); doc.text(k, x, yy); const kw=doc.getTextWidth(k)+2; doc.setFont('helvetica','normal'); doc.text(String(v), x+kw, yy); };
-    lab(M,y,'Empleado:',emp.full_name); lab(W/2,y,'Cédula:',emp.identifier||'—'); y+=6;
-    lab(M,y,'Posición:',emp.position||'—'); lab(W/2,y,'Sueldo mensual:',m(r.cells.sueldo_mensual)); y+=9;
-    const earn=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total&&c.sign>0);
-    const ded=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total&&c.sign<0);
-    const colW=(R-M-6)/2, c2x=M+colW+6;
-    const tbl=(x,title,items,total,totLabel)=>{ let ty=y; doc.setFillColor(240); doc.rect(x,ty-4,colW,6,'F'); doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.text(title,x+2,ty); ty+=6; doc.setFont('helvetica','normal');
-      if(!items.length){ doc.setTextColor(120); doc.text('—',x+2,ty); doc.setTextColor(17); ty+=5.5; }
-      for(const c of items){ doc.text(String(c.label),x+2,ty); doc.text(m(r.cells[c.key]),x+colW-2,ty,{align:'right'}); ty+=5.5; }
-      doc.setDrawColor(150); doc.line(x,ty-3.5,x+colW,ty-3.5); doc.setFont('helvetica','bold'); doc.text(totLabel,x+2,ty); doc.text(m(total),x+colW-2,ty,{align:'right'}); return ty; };
-    const y1=tbl(M,'Ingresos',earn,r.ingresos,'Total ingresos');
-    const y2=tbl(c2x,'Deducciones',ded,r.deducciones,'Total deducciones');
-    y=Math.max(y1,y2)+12;
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text('NETO A PAGAR: RD$ '+m(r.neto), R, y, {align:'right'}); y+=24;
+    doc.setFont('helvetica','bold'); doc.setFontSize(16); doc.text(String(client.legal_name||''), M, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(90);
+    const rnc=client.rnc||client.cedula||''; if(rnc) doc.text('RNC '+rnc, R, y-3, {align:'right'});
+    doc.setTextColor(17); doc.text(new Date().toLocaleDateString('es-DO',{day:'2-digit',month:'2-digit',year:'numeric'}), R, y+1, {align:'right'});
+    y+=5; doc.setDrawColor(17); doc.setLineWidth(0.6); doc.line(M,y,R,y); y+=11;
+    doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.text('RECIBO DE NÓMINA', W/2, y, {align:'center'}); y+=11;
+    doc.setFont('helvetica','normal'); doc.setFontSize(10.5); doc.setTextColor(17);
+    const ced=emp.identifier?(', portador(a) de la cédula '+emp.identifier):'';
+    const decl=`Yo, ${emp.full_name}${ced}, he recibido de la compañía ${client.legal_name||''} la suma de ${montoEnLetras(r.neto)} (RD$ ${m(r.neto)}), correspondiente al pago de ${S.period.period.label}.`;
+    const dl=doc.splitTextToSize(decl, R-M); doc.text(dl, M, y); y+=dl.length*5.4+8;
+    const included=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total);
+    doc.setFontSize(10.5);
+    for(const c of included){ const pre=c.key==='sueldo_quincenal'?'':(c.sign>0?'(+) ':'(-) ');
+      doc.text(pre+String(c.label), M, y); doc.text('RD$ '+m(r.cells[c.key]), R, y, {align:'right'});
+      doc.setDrawColor(230); doc.setLineWidth(0.2); doc.line(M,y+1.8,R,y+1.8); y+=7; }
+    doc.setDrawColor(17); doc.setLineWidth(0.5); doc.line(M,y-0.5,R,y-0.5); y+=5;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12.5); doc.text('Total a cobrar', M, y); doc.text('RD$ '+m(r.neto), R, y, {align:'right'}); y+=26;
     doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(60);
-    doc.setDrawColor(120); doc.line(M,y,M+70,y); doc.line(R-70,y,R,y);
-    doc.text('Firma del empleado', M, y+5); doc.text('Fecha', R-70, y+5); doc.setTextColor(17);
+    doc.setDrawColor(120); doc.setLineWidth(0.3); doc.line(M,y,M+70,y); doc.line(R-70,y,R,y);
+    doc.text('Entregado por', M, y+5); doc.text('Recibido por', R-70, y+5);
+    doc.setFontSize(8.5); doc.setTextColor(150); doc.text('Casa Labs · app.casalabs.com.do', W/2, 287, {align:'center'});
+    doc.setTextColor(17);
   }
   async function downloadPdf(empIds){
     if(!S.period) return;
     try{ await ensureJsPDF(); }catch(e){ return fail(e); }
-    const logo=await logoData();
     const JS=window.jspdf.jsPDF; const doc=new JS({unit:'mm',format:'a4'});
     const cols=S.period.columns||[]; const client=S.clients.find(c=>c.id===S.clientId)||{};
     let first=true, one=null;
-    for(const id of empIds){ const row=(S.period.rows||[]).find(r=>r.employee.id===id); if(!row) continue; if(!first) doc.addPage(); first=false; one=row.employee.full_name; drawPayslip(doc, logo, client, row.employee, computeRow(cols, readRowValues(id)), cols); }
+    for(const id of empIds){ const row=(S.period.rows||[]).find(r=>r.employee.id===id); if(!row) continue; if(!first) doc.addPage(); first=false; one=row.employee.full_name; drawPayslip(doc, client, row.employee, computeRow(cols, readRowValues(id)), cols); }
     if(first){ toast('No hay empleados para descargar','err'); return; }
     const base = empIds.length===1 ? ('Volante - '+one) : ('Volantes '+S.period.period.label);
     doc.save(base.replace(/[^\w .\-–]+/g,'_')+'.pdf');

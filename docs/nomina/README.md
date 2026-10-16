@@ -32,11 +32,18 @@ con totales/neto → Excel.
   pestañas **Empresas** / Nómina / Empleados / Columnas / Ajustes (la empresa
   activa se elige y crea desde la pestaña Empresas; se recuerda en el navegador).
   La tabla del período recalcula el
-  neto en vivo con un espejo del evaluador de fórmulas. Incluye el **volante de
-  pago** por empleado (ingresos/deducciones/neto + firma): **🧾 Imprimir**
-  (abre una ventana con uno o todos los volantes del período y lanza la
-  impresión) y **⤓ Descargar PDF** de un clic (PDF vectorial generado con jsPDF
-  cargado bajo demanda desde cdnjs; uno por empleado o todos juntos, con el logo).
+  neto en vivo con un espejo del evaluador de fórmulas. Incluye el **recibo de
+  nómina** por empleado, con el formato de un recibo real firmable: la empresa
+  (razón social + RNC) y la fecha arriba, el título **«RECIBO DE NÓMINA»**, la
+  **declaración** («Yo, _Empleado_, …, he recibido de la compañía _Empresa_ la
+  suma de _monto en letras_ (RD$ _monto_), correspondiente al pago de _período_»),
+  el **desglose** de conceptos con signo `(+)`/`(−)` y el **Total a cobrar**, dos
+  firmas **«Entregado por» / «Recibido por»**, y al pie la marca **Casa Labs**.
+  El monto a cobrar se escribe también en letras (`montoEnLetras`, con apócope
+  correcto: «veintiún», «treinta y un mil»). Se genera con **🧾 Imprimir** (abre
+  una ventana con uno o todos los recibos del período y lanza la impresión) y
+  **⤓ Descargar PDF** de un clic (PDF vectorial con jsPDF cargado bajo demanda
+  desde cdnjs; uno por empleado o todos juntos).
 - `supabase/migrations/202610160001_nomina.sql` — tablas `nomina_*`, RLS cerrada
   al navegador y la columna `access_nomina`.
 

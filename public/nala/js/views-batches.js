@@ -140,16 +140,26 @@
     root.innerHTML = `<div class="stack"><div class="row">${NALA.can('upload') ? '<button class="btn primary" id="new">+ Nuevo lote</button>' : ''}
       <button class="btn" id="all">${params.all ? `Sólo ${period(s.period)}` : 'Todos los períodos'}</button><span class="muted" id="pumpinfo"></span></div>
       ${NALA.can('upload') && !s.client ? '<div class="issue warning"><span class="ico">ℹ️</span><span><b>Vista consolidada (todas las empresas).</b> Para subir facturas, elija una <b>empresa activa</b> en el selector de arriba.</span></div>' : ''}
-      ${batches.length ? `<div class="table-wrap"><table><tr><th>Lote</th><th>Empresa</th><th>Período</th><th>Formato</th><th>Estado</th><th class="num">Docs</th><th class="num">Comprob.</th><th class="num">Pend.</th><th class="num">Errores</th><th class="num">Aprob.</th><th>Creado</th></tr>
+      ${batches.length ? `<div class="table-wrap"><table><tr><th>Lote</th><th>Empresa</th><th>Período</th><th>Formato</th><th>Estado</th><th class="num">Docs</th><th class="num">Comprob.</th><th class="num">Pend.</th><th class="num">Errores</th><th class="num">Aprob.</th><th>Creado</th>${NALA.can('reprocess') ? '<th></th>' : ''}</tr>
         ${batches.map(b => `<tr class="clickable" data-id="${b.id}"><td><b>${esc(b.name)}</b></td><td>${esc(NALA.clientName(b.client_id))}</td><td>${period(b.period)}</td><td>${b.format}</td><td>${NALA.badge(b.status)}${b.summary?.jobs_pending ? ` <span class="muted">${int(b.summary.jobs_pending)} trabajos</span>` : ''}</td>
-          <td class="num">${int(b.summary?.documents)}</td><td class="num">${int(b.summary?.invoices)}</td><td class="num">${int(b.summary?.pending)}</td><td class="num">${b.summary?.with_errors ? `<span class="badge crit">${int(b.summary.with_errors)}</span>` : '0'}</td><td class="num">${int(b.summary?.approved)}</td><td>${NALA.dateTime(b.created_at)}</td></tr>`).join('')}</table></div>`
+          <td class="num">${int(b.summary?.documents)}</td><td class="num">${int(b.summary?.invoices)}</td><td class="num">${int(b.summary?.pending)}</td><td class="num">${b.summary?.with_errors ? `<span class="badge crit">${int(b.summary.with_errors)}</span>` : '0'}</td><td class="num">${int(b.summary?.approved)}</td><td>${NALA.dateTime(b.created_at)}</td>${NALA.can('reprocess') ? `<td class="chk"><button class="btn sm danger" data-del="${b.id}" data-name="${esc(b.name)}" title="Eliminar lote">🗑</button></td>` : ''}</tr>`).join('')}</table></div>`
         : '<div class="card empty">No hay lotes con estos filtros.</div>'}</div>`;
     root.querySelector('#new')?.addEventListener('click', () => {
       if (!s.client) { NALA.toast('Elija primero la empresa activa (arriba) para crear un lote.', 'err'); document.getElementById('scope-client')?.focus(); return; }
       NALA.go('#/lotes?nuevo=1');
     });
     root.querySelector('#all').addEventListener('click', () => NALA.go(params.all ? '#/lotes' : '#/lotes?all=1'));
-    root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', () => NALA.go(`#/lotes/${tr.dataset.id}`)));
+    root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('[data-del]')) return; NALA.go(`#/lotes/${tr.dataset.id}`); }));
+    root.querySelectorAll('[data-del]').forEach(btn => btn.addEventListener('click', async e => {
+      e.stopPropagation();
+      const ok = await NALA.modal({ title: 'Eliminar lote', okText: 'Eliminar definitivamente', okClass: 'danger',
+        body: `<p>Se eliminará el lote <b>${esc(btn.dataset.name)}</b> con sus comprobantes, documentos y archivos originales. Esta acción no se puede deshacer.</p>
+          <p class="muted" style="margin-top:6px">Si algún comprobante ya está en una exportación generada, primero debe anularla.</p>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="confirm-del"> Entiendo que se borra todo el lote</label>`,
+        onOk: m => { if (!m.querySelector('#confirm-del').checked) throw new Error('Marque la casilla para confirmar.'); return true; } });
+      if (!ok) return;
+      try { await NALA.api('DELETE', `batches/${btn.dataset.del}`); NALA.toast('Lote eliminado', 'ok'); NALA.route(); } catch (err) { NALA.fail(err); }
+    }));
     if (batches.some(b => ['queued', 'processing'].includes(b.status))) {
       NALA.onTick = () => {}; NALA.pump();
       const timer = setInterval(() => NALA.route(), 5000);
@@ -185,6 +195,7 @@
         <button class="btn" id="refresh" title="Actualizar">↻ Actualizar</button>
         ${NALA.can('upload') ? `<button class="btn" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
         ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn" id="reproc">Reprocesar fallidos</button>' : ''}
+        ${NALA.can('reprocess') ? '<button class="btn" id="reproc-all" title="Vuelve a LEER todas las facturas con la IA (y el OCR si está activo). Conserva las correcciones hechas a mano y no toca las aprobadas ni las excluidas.">Reprocesar (re-leer)</button>' : ''}
         ${NALA.can('reprocess') ? '<button class="btn" id="reval" title="Vuelve a validar los comprobantes con las reglas y la configuración actuales (sin re-escanear)">Revalidar</button>' : ''}
         <button class="btn primary" data-href="#/auditoria?batch=${b.id}">Auditar lote</button>
         ${NALA.can('reprocess') ? '<button class="btn danger" id="del-batch">Eliminar lote</button>' : ''}</h2>
@@ -211,6 +222,13 @@
     root.querySelector('#refresh')?.addEventListener('click', () => NALA.route());
     root.querySelector('#reproc')?.addEventListener('click', async () => {
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: true }); NALA.toast(`${r.requeued} documento(s) en cola de nuevo`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
+    });
+    root.querySelector('#reproc-all')?.addEventListener('click', async () => {
+      const ok = await NALA.modal({ title: 'Reprocesar (re-leer con IA)', okText: 'Reprocesar', okClass: 'primary',
+        body: `<p>Se <b>vuelven a leer</b> todas las facturas del lote con la IA (y el OCR si está activo).</p>
+          <ul style="margin:6px 0 0 16px"><li>Conserva las <b>correcciones hechas a mano</b>.</li><li><b>No toca</b> las aprobadas ni las excluidas.</li><li>Tiene costo de IA y puede tardar.</li></ul>` });
+      if (!ok) return;
+      try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: false }); NALA.toast(`Re-leyendo ${r.requeued} documento(s)…`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
     });
     root.querySelector('#reval')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `batches/${b.id}/revalidate`); NALA.toast('Revalidando el lote…', 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }

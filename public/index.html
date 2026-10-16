@@ -1045,6 +1045,11 @@ function refreshSession(){
   return _refreshing;
 }
 
+// Hook para los iframes de módulos de la misma sesión (p. ej. NALA): refresca el
+// token y devuelve el nuevo, para que puedan reintentar un 401 sin mandar al
+// login. Mismo origen, así que el iframe llama window.parent.directRefresh().
+window.directRefresh = async function(){ try{ if(await refreshSession()) return { token: sessionToken, sid: activeSessionId }; }catch(_){ } return null; };
+
 // Renovación proactiva: se programa ~2 min antes de que venza el token, así el
 // usuario no topa con el 401 mientras trabaja (p. ej. en Estimación Fiscal).
 function scheduleRefresh(){

@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — la moneda extranjera ya no exige tasa de cambio**: a la DGII todo se reporta en **DOP (pesos)**. Antes, un comprobante en otra moneda (USD, etc.) quedaba **bloqueado** exigiendo **tasa, fecha y fuente** de la tasa. Ahora esos tres campos **ya no son obligatorios**: si los montos ya están en pesos, el comprobante se aprueba sin más; si pones una **tasa válida**, se convierte a DOP como antes; y si no la pones, el monto se toma **tal cual en pesos** (en vez de quedar en blanco). Queda solo un aviso suave por si hace falta convertir.
+
 - **NALA — en una factura repetida, puedes eliminar cualquiera de las dos**: el aviso de comprobante repetido ahora enmarca que **hay dos copias** y ofrece **«🗑 Descartar esta»** y **«🗑 Descartar la otra»** (además de **«Ver la otra»** para abrirla). Así eliges cuál conservar sin tener que ir a buscarla; al descartar una, la que queda deja de marcarse como repetida automáticamente. Disponible en la lista y en el detalle.
 
 - **NALA — al marcar una factura repetida, dice exactamente cuál es la otra**: el aviso de comprobante repetido ahora identifica la otra copia con su **lote, período, archivo y página** (ej.: «…ya está en revisión en el lote «MODELO 606» (09/2026), archivo "FACTURAS.pdf", pág. 3»), además del botón **«Ver la original»** que ya abría la otra factura. Para los comprobantes ya leídos, basta pulsar **«Revalidar»** en el lote para refrescar el mensaje.

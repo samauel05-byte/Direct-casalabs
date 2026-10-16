@@ -61,10 +61,12 @@ test('validate: detects missing, invalid, mismatched and misplaced data', () => 
   assert.match(r.issues.find(i => i.code === 'MONEDA_NO_IDENTIFICADA').message, /no asume/);
 });
 
-test('validate: foreign currency requires rate, date and source; converts exactly', () => {
+test('validate: foreign currency no longer blocks on rate (todo se reporta en DOP); converts when a rate is given', () => {
   const usd = { ...base606, moneda: 'USD', monto_servicios: '100.00', itbis: '18.00', total: '118.00' };
-  assert.ok(validate({ format: '606', period: '202608', fields: usd, client }).issues.some(i => i.code === 'TASA_REQUERIDA'));
-  const ok = validate({ format: '606', period: '202608', client, fields: { ...usd, tasa_cambio: '60.25', tasa_fecha: '2026-08-14', tasa_fuente: 'Banco Central RD' } });
+  const noRate = validate({ format: '606', period: '202608', fields: usd, client });
+  assert.ok(noRate.issues.some(i => i.code === 'TASA_OPCIONAL'), 'debe avisar (suave) que se puede indicar la tasa');
+  assert.ok(!noRate.issues.some(i => ['TASA_REQUERIDA', 'TASA_FECHA_REQUERIDA', 'TASA_FUENTE_REQUERIDA'].includes(i.code)), 'ya no exige tasa/fecha/fuente');
+  const ok = validate({ format: '606', period: '202608', client, fields: { ...usd, tasa_cambio: '60.25' } });
   assert.equal(ok.critical_count, 0);
   assert.equal(ok.computed.dop.monto_servicios, '6025.00');
   assert.equal(ok.computed.dop.itbis, '1084.50');

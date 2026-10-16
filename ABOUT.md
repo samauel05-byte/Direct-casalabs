@@ -34,7 +34,7 @@
 
 ## Estado y novedades recientes
 
-- **NALA — panel de control mejorado**: el panel ahora abre con un **banner de estado del período** (porcentaje de **avance de aprobación** con barra, resumen «X de Y aprobadas · pendientes · con errores · con advertencias» y **acciones rápidas**: revisar pendientes, corregir errores, exportar). Los KPIs clave llevan un **acento de color** (amarillo = pendientes/advertencias, rojo = errores, verde = aprobados, morado = total) para leerlo de un vistazo. Se mantiene el gráfico de 12 meses y la tabla por empresa.
+- **NALA — panel de control mejorado**: el panel ahora abre con un **banner de estado del período** (porcentaje de **avance de aprobación** con barra, resumen «X de Y aprobadas · pendientes · con errores · con advertencias» y **acciones rápidas**: revisar pendientes, corregir errores, exportar). Los KPIs clave llevan un **acento de color** (amarillo = pendientes/advertencias, rojo = errores, verde = aprobados, morado = total) para leerlo de un vistazo. El **gráfico de 12 meses** se rediseñó: altura contenida y centrado, **barras más anchas con su número encima** y **eje redondo** (0, 50, 100…), para que no quede alto y vacío cuando hay pocos meses con datos. Se mantiene la tabla por empresa.
 
 - **NALA ya no saca al usuario al inicio por un 401**: si el token de sesión vencía justo durante una acción en NALA, el módulo mostraba «su sesión terminó» y mandaba a iniciar sesión. Ahora, ante un 401, NALA le pide al sistema **refrescar el token y reintenta una vez** (igual que ya hacía el resto de la app); solo si el refresco falla de verdad avisa que la sesión terminó.
 

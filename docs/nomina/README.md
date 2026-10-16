@@ -28,8 +28,10 @@ columnas dinámicas → empleados → períodos editables con totales/neto → E
 - `public/nomina/index.html` — app de una sola página (iframe, igual que NALA):
   pestañas Empleados / Columnas / Períodos; la tabla del período recalcula el
   neto en vivo con un espejo del evaluador de fórmulas. Incluye el **volante de
-  pago imprimible** por empleado (ingresos/deducciones/neto + firma): abre una
-  ventana con uno o todos los volantes del período y lanza la impresión.
+  pago** por empleado (ingresos/deducciones/neto + firma): **🧾 Imprimir**
+  (abre una ventana con uno o todos los volantes del período y lanza la
+  impresión) y **⤓ Descargar PDF** de un clic (PDF vectorial generado con jsPDF
+  cargado bajo demanda desde cdnjs; uno por empleado o todos juntos, con el logo).
 - `supabase/migrations/202610160001_nomina.sql` — tablas `nomina_*`, RLS cerrada
   al navegador y la columna `access_nomina`.
 

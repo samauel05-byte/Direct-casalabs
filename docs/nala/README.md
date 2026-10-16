@@ -52,6 +52,18 @@ un valor desconocido queda vacío, nunca se convierte en cero.
   auto-completado de la contraparte (`counterparty.js`), almacenamiento privado
   (`storage.js`), cola de trabajos (`pipeline.js`) y rutas (`lib/nala/api/*`).
 
+### Progreso del lote (monótono)
+
+`lib/nala/progress.js` (`batchProgress(documents, jobs)`) calcula el avance
+**ponderado por documento**, no por trabajo: el número de trabajos no se conoce
+al inicio (un PDF/ZIP sólo se parte en sus `extract`/documentos hijo cuando corre
+su `prepare`), así que medir `hechos/totales` hacía retroceder la barra. Cada
+documento «hoja» (los ZIP son contenedores y cuentan sus hijos) aporta una
+fracción que sólo sube: terminado = 1; en curso = trabajos hechos ÷ trabajos
+conocidos. `api/batches.js` lo expone en `progress` (con `docs_total`/`docs_done`)
+y el frontend además aplica un **piso por lote** para que la barra nunca baje
+mientras procesa. Con pruebas unitarias en `tests/nala/unit.test.js`.
+
 ### Auto-completado de la contraparte (lectura por lotes)
 
 Al leer cada factura, la IA a veces trae sólo el nombre de la contraparte

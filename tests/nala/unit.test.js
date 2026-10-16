@@ -315,3 +315,41 @@ test('counterparty: nunca pisa un campo corregido a mano ni usa el RNC del propi
   await completeCounterparty(has, '606', new Set(), { directory: dir });
   assert.equal(has.emisor_id, '130000009');
 });
+
+const { batchProgress } = require('../../lib/nala/progress');
+
+test('progress: no retrocede cuando un PDF se parte en más trabajos', () => {
+  // 1 PDF subido: sólo su 'prepare' encolado.
+  const doc = [{ id: 'd1', kind: 'pdf', status: 'queued' }];
+  let p = batchProgress(doc, [{ document_id: 'd1', status: 'queued' }]);
+  assert.equal(p.percent, 0);
+  // 'prepare' termina y encola 3 'extract' (el total de trabajos salta de 1 a 4).
+  const jobs2 = [{ document_id: 'd1', status: 'succeeded' },
+    { document_id: 'd1', status: 'queued' }, { document_id: 'd1', status: 'queued' }, { document_id: 'd1', status: 'queued' }];
+  const p2 = batchProgress(doc, jobs2);
+  assert.ok(p2.percent >= p.percent, `no debe bajar: ${p.percent} -> ${p2.percent}`);
+  // Con el viejo cálculo trabajos-hechos/totales daría 1/4 = 25% tras haber
+  // mostrado 0%, pero aquí sube de forma monótona dentro del documento.
+  // A medida que terminan los extracts, sube hasta que el documento queda listo.
+  const p3 = batchProgress([{ id: 'd1', kind: 'pdf', status: 'processed' }], jobs2.map(j => ({ ...j, status: 'succeeded' })));
+  assert.equal(p3.percent, 100);
+});
+
+test('progress: ponderado por documento, un ZIP cuenta sus hijos (no el contenedor)', () => {
+  const docs = [
+    { id: 'z', kind: 'zip', status: 'processed' },      // contenedor: no cuenta
+    { id: 'a', parent_id: 'z', kind: 'image', status: 'processed' },
+    { id: 'b', parent_id: 'z', kind: 'image', status: 'queued' },
+  ];
+  const jobs = [{ document_id: 'a', status: 'succeeded' }, { document_id: 'b', status: 'queued' }];
+  const p = batchProgress(docs, jobs);
+  assert.equal(p.docs_total, 2);
+  assert.equal(p.docs_done, 1);
+  assert.equal(p.percent, 50);
+});
+
+test('progress: lote vacío y lote totalmente terminado', () => {
+  assert.equal(batchProgress([], []).percent, 0);
+  const docs = [{ id: 'a', kind: 'image', status: 'processed' }, { id: 'b', kind: 'image', status: 'failed' }];
+  assert.equal(batchProgress(docs, [{ document_id: 'a', status: 'succeeded' }, { document_id: 'b', status: 'failed' }]).percent, 100);
+});

@@ -56,6 +56,16 @@ sumando las de signo + y restando las de signo −. Montos redondeados a 2
 decimales. La misma lógica corre en el servidor (`compute.js`, autoritativa al
 guardar/exportar) y en el navegador (para el neto en vivo).
 
+## Ajustes de la empresa (tasas configurables)
+
+`lib/nomina/settings.js` define las tasas por defecto RD (empleado AFP 2.87% /
+SFS 3.04% con topes, escala ISR, aportes del empleador AFP 7.10% / SFS 7.09% /
+SRL / INFOTEP 1%) y las guarda por empresa en `nomina_settings` (una fila por
+tenant+empresa; sin fila = defaults). Endpoints `GET/PUT
+/api/nomina/clients/:id/settings`; `sanitize()` valida que las tasas estén en
+[0,1]. Los empleados tienen `forma_pago` (texto). Migración aditiva
+`202610160002_nomina_ajustes.sql` (no toca datos existentes).
+
 ## Ficha del empleado (historial)
 
 `GET /api/nomina/employees/:id/history` (`api.employeeHistory`) devuelve el

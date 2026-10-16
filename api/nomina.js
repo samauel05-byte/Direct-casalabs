@@ -8,6 +8,9 @@ const ROUTES = [
   ['GET', /^me$/, ctx => api.me(ctx)],
   ['GET', /^clients$/, ctx => api.listClients(ctx)],
 
+  ['GET', /^clients\/([^/]+)\/settings$/, (ctx, q, b, m) => api.getSettings(ctx, m[1])],
+  ['PUT', /^clients\/([^/]+)\/settings$/, (ctx, q, b, m) => api.putSettings(ctx, m[1], b)],
+
   ['GET', /^clients\/([^/]+)\/columns$/, (ctx, q, b, m) => api.listColumns(ctx, m[1])],
   ['POST', /^clients\/([^/]+)\/columns$/, (ctx, q, b, m) => api.createColumn(ctx, m[1], b)],
   ['PATCH', /^columns\/([^/]+)$/, (ctx, q, b, m) => api.updateColumn(ctx, m[1], b)],

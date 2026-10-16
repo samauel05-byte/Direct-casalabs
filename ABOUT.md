@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Nómina — "Cobra entero" (pago de mes completo) y columna "Seguro"**: algunos empleados cobran el **mes entero en una quincena** (p. ej. socios o pagos mensuales). Ahora cada período tiene un interruptor **"Cobra entero" (Sí/No)** por empleado: al marcarlo **Sí**, se le paga el **sueldo mensual completo** y se le aplican las **deducciones de ley de mes entero** (SFS, pensión, ISR), en vez de la mitad; los demás siguen quincenal y **nada cambia** para ellos. Además se agregó una columna **"Seguro"** (deducción aparte) para el seguro médico de quien lo tenga. Con esto, **LAURA** en SAVE quedó cuadrada al centavo (mes completo + su seguro).
+
 - **NALA — la moneda extranjera ya no exige tasa de cambio**: a la DGII todo se reporta en **DOP (pesos)**. Antes, un comprobante en otra moneda (USD, etc.) quedaba **bloqueado** exigiendo **tasa, fecha y fuente** de la tasa. Ahora esos tres campos **ya no son obligatorios**: si los montos ya están en pesos, el comprobante se aprueba sin más; si pones una **tasa válida**, se convierte a DOP como antes; y si no la pones, el monto se toma **tal cual en pesos** (en vez de quedar en blanco). Queda solo un aviso suave por si hace falta convertir.
 
 - **NALA — en una factura repetida, puedes eliminar cualquiera de las dos**: el aviso de comprobante repetido ahora enmarca que **hay dos copias** y ofrece **«🗑 Descartar esta»** y **«🗑 Descartar la otra»** (además de **«Ver la otra»** para abrirla). Así eliges cuál conservar sin tener que ir a buscarla; al descartar una, la que queda deja de marcarse como repetida automáticamente. Disponible en la lista y en el detalle.

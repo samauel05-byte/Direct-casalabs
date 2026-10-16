@@ -246,12 +246,13 @@
   function renderEmpresas(){
     view.innerHTML = `<div class="card"><div class="row"><h2>Empresas</h2><span class="spacer"></span><button class="btn primary" id="addco">+ Nueva empresa</button></div>
       ${S.clients.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th>RNC</th><th>Estado</th><th></th></tr>
-        ${S.clients.map(c=>`<tr class="clickable" data-open="${c.id}"><td><b>${esc(c.legal_name)}</b>${c.id===S.clientId?' <span class="pill ok">Seleccionada</span>':''}</td><td class="mono">${esc(c.rnc||'—')}</td><td>${c.active===false?'<span class="pill">Inactiva</span>':'<span class="pill ok">Activa</span>'}</td>
-          <td class="num">${c.id===S.clientId?'':`<button class="btn sm primary" data-use="${c.id}">Usar</button> `}<button class="btn sm" data-edco="${c.id}">Editar</button> <button class="btn sm danger" data-delco="${c.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+        ${S.clients.map(c=>`<tr class="clickable" data-open="${c.id}"><td>${c.pinned?'📌 ':''}<b>${esc(c.legal_name)}</b>${c.id===S.clientId?' <span class="pill ok">Seleccionada</span>':''}${c.auto_nomina===false?' <span class="pill">Auto off</span>':''}</td><td class="mono">${esc(c.rnc||'—')}</td><td>${c.active===false?'<span class="pill">Inactiva</span>':'<span class="pill ok">Activa</span>'}</td>
+          <td class="num"><button class="btn sm" data-pin="${c.id}" title="${c.pinned?'Quitar de fijadas':'Fijar arriba'}">${c.pinned?'📌':'📍'}</button> ${c.id===S.clientId?'':`<button class="btn sm primary" data-use="${c.id}">Usar</button> `}<button class="btn sm" data-edco="${c.id}">Editar</button> <button class="btn sm danger" data-delco="${c.id}">Borrar</button></td></tr>`).join('')}</table></div>`
         : '<div class="empty">Aún no tiene empresas.<br><br>Cree la primera para empezar a cargarle su nómina.</div>'}
       <p class="hint">Cada empresa tiene sus propias columnas, empleados, ajustes (tasas de ley) y períodos de nómina.</p></div>`;
     $('#addco').onclick=()=>companyModal(null);
     const use = async id => { await selectClient(id); S.tab='nomina'; syncTabs(); render(); toast('Empresa seleccionada','ok'); };
+    view.querySelectorAll('[data-pin]').forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const c=S.clients.find(x=>x.id===b.dataset.pin); try{ await api('PATCH',`clients/${c.id}`,{ legal_name:c.legal_name, pinned:!c.pinned }); const {clients}=await api('GET','clients'); S.clients=clients||[]; render(); }catch(err){ fail(err);} });
     view.querySelectorAll('[data-use]').forEach(b=> b.onclick=e=>{ e.stopPropagation(); use(b.dataset.use); });
     view.querySelectorAll('[data-edco]').forEach(b=> b.onclick=e=>{ e.stopPropagation(); companyModal(S.clients.find(x=>x.id===b.dataset.edco)); });
     view.querySelectorAll('[data-delco]').forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const c=S.clients.find(x=>x.id===b.dataset.delco); if(!confirm(`¿Borrar la empresa "${c.legal_name}"? Se eliminarán sus columnas, empleados y períodos.`))return;
@@ -264,9 +265,10 @@
     modal(`${co?'Editar':'Nueva'} empresa`, `
       <label class="f"><span>Nombre / Razón social *</span><input id="m-co-name" maxlength="160" value="${esc(co?.legal_name||'')}"></label>
       <label class="f"><span>RNC</span><input id="m-co-rnc" maxlength="20" value="${esc(co?.rnc||'')}"></label>
-      ${co?`<label class="row" style="gap:8px"><input type="checkbox" id="m-co-active" ${co.active!==false?'checked':''} style="width:auto"> Activa</label>`:''}`,
+      ${co?`<label class="row" style="gap:8px"><input type="checkbox" id="m-co-active" ${co.active!==false?'checked':''} style="width:auto"> Activa</label>`:''}
+      <label class="row" style="gap:8px"><input type="checkbox" id="m-co-auto" ${(co?co.auto_nomina!==false:true)?'checked':''} style="width:auto"> Nómina automática (se genera sola cada quincena)</label>`,
       async()=>{ const legal_name=$('#m-co-name').value.trim(); if(!legal_name){ toast('Escriba el nombre','err'); return false; }
-        const body={ legal_name, rnc:$('#m-co-rnc').value.trim() }; if(co) body.active=$('#m-co-active').checked;
+        const body={ legal_name, rnc:$('#m-co-rnc').value.trim(), auto_nomina:$('#m-co-auto').checked }; if(co) body.active=$('#m-co-active').checked;
         try{ const r=await api(co?'PATCH':'POST', co?`clients/${co.id}`:'clients', body); const {clients}=await api('GET','clients'); S.clients=clients||[];
           if(!co){ await selectClient(r.client.id); S.tab='nomina'; syncTabs(); } else updateCurco();
           render(); toast('Guardado','ok'); return true; }catch(e){ fail(e); return false; } });
@@ -361,7 +363,7 @@
     view.innerHTML = `<div class="card"><div class="row"><h2>Columnas de nómina</h2><span class="spacer"></span><button class="btn primary" id="add">+ Columna</button></div>
       <p class="hint">Defina los conceptos de esta empresa. <b>Monto</b> = dinero; <b>Número</b> = cantidad (horas, días…); <b>Texto</b> = nota; <b>Fórmula</b> = se calcula con otras columnas por su <i>clave</i> (ej. <span class="mono">sueldo + horas_extra * 1.35</span>). El <b>signo</b> dice si una columna suma al neto (ingreso) o resta (deducción).</p>
       ${S.columns.length ? `<div class="table-wrap"><table><tr><th>Orden</th><th>Nombre</th><th>Clave</th><th>Tipo</th><th>Signo</th><th>Fórmula</th><th></th></tr>
-        ${S.columns.map(c=>`<tr><td class="num">${c.position}</td><td><b>${esc(c.label)}</b></td><td class="mono">${esc(c.key)}</td><td>${esc(TYPE_LABEL[c.type]||c.type)}</td>
+        ${S.columns.map(c=>`<tr><td class="num">${c.position}</td><td><b>${esc(c.label)}</b>${c.carry&&c.type!=='formula'?' <span class="pill ok">Fija</span>':''}</td><td class="mono">${esc(c.key)}</td><td>${esc(TYPE_LABEL[c.type]||c.type)}</td>
           <td>${c.type==='monto'||c.type==='formula' ? (c.sign>0?'+ ingreso':c.sign<0?'− deducción':'neutro') : '—'}</td><td class="mono">${esc(c.formula||'')}</td>
           <td class="num"><button class="btn sm" data-ed="${c.id}">Editar</button> <button class="btn sm danger" data-del="${c.id}">Borrar</button></td></tr>`).join('')}</table></div>`
         : '<div class="empty">Aún no hay columnas. Cree, por ejemplo, «Sueldo» (Monto, +) y una deducción.</div>'}</div>`;
@@ -380,11 +382,12 @@
         <option value="1">+ Ingreso (suma)</option><option value="-1">− Deducción (resta)</option><option value="0">Neutro (no afecta el neto)</option></select></label>
         <label class="row" style="gap:8px"><input type="checkbox" id="m-inc" checked style="width:auto"> Incluir en los totales</label></div>
       <label class="f" id="m-formwrap" style="display:none"><span>Fórmula</span><input id="m-formula" class="mono" maxlength="500" value="${esc(col?.formula||'')}" placeholder="sueldo + horas_extra * 1.35">
-        <span class="hint">Claves disponibles: ${esc(keys.join(', ')||'(aún ninguna)')}</span></label>`,
+        <span class="hint">Claves disponibles: ${esc(keys.join(', ')||'(aún ninguna)')}</span></label>
+      <label class="row" style="gap:8px" id="m-carrywrap"><input type="checkbox" id="m-carry" style="width:auto"> <b>Fija</b>: se mantiene al generar la próxima quincena (si no, es <b>novedad</b> y arranca en 0)</label>`,
       async () => {
         const type=$('#m-type').value;
         const body={ label:$('#m-label').value.trim(), key: col?col.key:slug($('#m-key').value||$('#m-label').value), type,
-          sign:Number($('#m-sign').value), include_total:$('#m-inc').checked, formula: type==='formula'?$('#m-formula').value.trim():null,
+          sign:Number($('#m-sign').value), include_total:$('#m-inc').checked, carry:$('#m-carry').checked, formula: type==='formula'?$('#m-formula').value.trim():null,
           position: col?col.position:(S.columns.reduce((m,c)=>Math.max(m,c.position),0)+1) };
         if(!body.label){ toast('El nombre es obligatorio','err'); return false; }
         if(!col && !/^[a-z][a-z0-9_]{0,38}$/.test(body.key)){ toast('Clave inválida (letras minúsculas, números y _)','err'); return false; }
@@ -393,9 +396,9 @@
         catch(e){ fail(e); return false; }
       });
     const type=$('#m-type'), formwrap=$('#m-formwrap'), signwrap=$('#m-signwrap'), key=$('#m-key'), label=$('#m-label');
-    const sync=()=>{ const t=type.value; formwrap.style.display=t==='formula'?'flex':'none'; signwrap.style.display=(t==='monto'||t==='formula')?'block':'none'; };
+    const sync=()=>{ const t=type.value; formwrap.style.display=t==='formula'?'flex':'none'; signwrap.style.display=(t==='monto'||t==='formula')?'block':'none'; $('#m-carrywrap').style.display=t==='formula'?'none':'flex'; };
     type.onchange=sync; sync();
-    if(col){ $('#m-sign').value=String(col.sign); $('#m-inc').checked=col.include_total!==false; }
+    if(col){ $('#m-sign').value=String(col.sign); $('#m-inc').checked=col.include_total!==false; $('#m-carry').checked=col.carry===true; }
     if(!col && label && key){ label.oninput=()=>{ if(!key.dataset.touched) key.value=slug(label.value); }; key.oninput=()=>{ key.dataset.touched='1'; }; }
   }
 

@@ -302,12 +302,19 @@
   }
 
   // ── EMPLEADOS ──
+  const EXIT_LABEL={renuncia:'Renuncia',desahucio:'Desahucio',despido:'Despido',fin_contrato:'Fin de contrato',otro:'Otro'};
+  function empActions(e){ return `<td class="num"><button class="btn sm" data-ficha="${e.id}">Ficha</button> <button class="btn sm" data-ed="${e.id}">Editar</button> <button class="btn sm danger" data-del="${e.id}">Borrar</button></td>`; }
   function renderEmployees(){
-    view.innerHTML = `<div class="card"><div class="row"><h2>Empleados</h2><span class="spacer"></span><button class="btn primary" id="add">+ Empleado</button></div>
-      ${S.employees.length ? `<div class="table-wrap"><table><tr><th>Nombre</th><th>Cédula</th><th>Puesto</th><th>Estado</th><th></th></tr>
-        ${S.employees.map(e=>`<tr><td><b>${esc(e.full_name)}</b></td><td class="mono">${esc(e.identifier||'—')}</td><td>${esc(e.position||'—')}</td><td>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}</td>
-          <td class="num"><button class="btn sm" data-ficha="${e.id}">Ficha</button> <button class="btn sm" data-ed="${e.id}">Editar</button> <button class="btn sm danger" data-del="${e.id}">Borrar</button></td></tr>`).join('')}</table></div>`
-        : '<div class="empty">Aún no hay empleados. Agregue el primero.</div>'}</div>`;
+    const activos=S.employees.filter(e=>!e.exit_date);
+    const bajas=S.employees.filter(e=>e.exit_date).sort((a,b)=>String(b.exit_date).localeCompare(String(a.exit_date)));
+    view.innerHTML = `<div class="card"><div class="row"><h2>Empleados activos</h2><span class="pill">${activos.length}</span><span class="spacer"></span><button class="btn primary" id="add">+ Empleado</button></div>
+      ${activos.length ? `<div class="table-wrap"><table><tr><th>Nombre</th><th>Cédula</th><th>Puesto</th><th>Entrada</th><th>Estado</th><th></th></tr>
+        ${activos.map(e=>`<tr><td><b>${esc(e.full_name)}</b></td><td class="mono">${esc(e.identifier||'—')}</td><td>${esc(e.position||'—')}</td><td>${e.hire_date?esc(fdate(e.hire_date)):'—'}</td><td>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}</td>${empActions(e)}</tr>`).join('')}</table></div>`
+        : '<div class="empty">Aún no hay empleados activos. Agregue el primero.</div>'}</div>
+      ${bajas.length?`<div class="card"><div class="row"><h2>Ex-empleados</h2><span class="pill">${bajas.length}</span></div>
+      <div class="table-wrap"><table><tr><th>Nombre</th><th>Cédula</th><th>Salida</th><th>Motivo</th><th>Prestaciones</th><th></th></tr>
+        ${bajas.map(e=>`<tr><td><b>${esc(e.full_name)}</b></td><td class="mono">${esc(e.identifier||'—')}</td><td>${esc(fdate(e.exit_date))}</td><td>${e.exit_reason?esc(EXIT_LABEL[e.exit_reason]||e.exit_reason):'—'}</td>
+          <td>${e.severance_paid?('<span class="pill ok">Pagadas</span>'+(e.severance_amount?' RD$ '+money2(e.severance_amount):'')):'<span class="pill">Pendientes</span>'}</td>${empActions(e)}</tr>`).join('')}</table></div></div>`:''}`;
     $('#add').onclick = () => employeeModal(null);
     view.querySelectorAll('[data-ficha]').forEach(b=> b.onclick=()=> openEmployee(b.dataset.ficha));
     view.querySelectorAll('[data-ed]').forEach(b=> b.onclick=()=> employeeModal(S.employees.find(x=>x.id===b.dataset.ed)));
@@ -318,14 +325,24 @@
       <label class="f"><span>Nombre completo *</span><input id="m-name" maxlength="120" value="${esc(emp?.full_name||'')}"></label>
       <div class="grid2"><label class="f"><span>Cédula</span><input id="m-id" maxlength="20" value="${esc(emp?.identifier||'')}"></label>
       <label class="f"><span>NSS (Seg. Social)</span><input id="m-nss" maxlength="20" value="${esc(emp?.nss||'')}"></label></div>
-      <label class="f"><span>Puesto</span><input id="m-pos" maxlength="80" value="${esc(emp?.position||'')}"></label>
-      <label class="row" style="gap:8px"><input type="checkbox" id="m-active" ${emp?.active!==false?'checked':''} style="width:auto"> Activo</label>`,
+      <div class="grid2"><label class="f"><span>Puesto</span><input id="m-pos" maxlength="80" value="${esc(emp?.position||'')}"></label>
+      <label class="f"><span>Fecha de entrada</span><input id="m-hire" type="date" value="${esc(emp?.hire_date||'')}"></label></div>
+      <label class="row" style="gap:8px"><input type="checkbox" id="m-active" ${emp?.active!==false?'checked':''} style="width:auto"> Activo</label>
+      <div class="ajs" style="margin-top:12px"><h3>Baja / salida (opcional)</h3>
+        <div class="grid2"><label class="f"><span>Fecha de salida</span><input id="m-exit" type="date" value="${esc(emp?.exit_date||'')}"></label>
+        <label class="f"><span>Motivo</span><select id="m-reason"><option value="">—</option>${Object.entries(EXIT_LABEL).map(([k,v])=>`<option value="${k}" ${emp?.exit_reason===k?'selected':''}>${v}</option>`).join('')}</select></label></div>
+        <label class="row" style="gap:8px;margin-top:4px"><input type="checkbox" id="m-sev" ${emp?.severance_paid?'checked':''} style="width:auto"> Prestaciones pagadas</label>
+        <label class="f" id="m-sev-wrap" style="${emp?.severance_paid?'':'display:none'}"><span>Monto de prestaciones (RD$)</span><input id="m-sev-amt" inputmode="decimal" value="${esc(emp?.severance_amount||'')}"></label>
+        <p class="hint">Al poner una fecha de salida, el empleado pasa a <b>Ex-empleados</b> y queda inactivo.</p></div>`,
       async () => {
-        const body = { full_name: $('#m-name').value.trim(), identifier: $('#m-id').value.trim(), nss: $('#m-nss').value.trim(), position: $('#m-pos').value.trim(), active: $('#m-active').checked };
+        const body = { full_name: $('#m-name').value.trim(), identifier: $('#m-id').value.trim(), nss: $('#m-nss').value.trim(), position: $('#m-pos').value.trim(), active: $('#m-active').checked,
+          hire_date: $('#m-hire').value||null, exit_date: $('#m-exit').value||null, exit_reason: $('#m-reason').value||null,
+          severance_paid: $('#m-sev').checked, severance_amount: $('#m-sev').checked ? ($('#m-sev-amt').value||null) : null };
         if(!body.full_name){ toast('El nombre es obligatorio','err'); return false; }
         try { await api(emp?'PATCH':'POST', emp?`employees/${emp.id}`:`clients/${S.clientId}/employees`, body); await loadClient(); render(); toast('Guardado','ok'); return true; }
         catch(e){ fail(e); return false; }
       });
+    const sev=m.querySelector('#m-sev'); if(sev) sev.onchange=()=>{ const w=m.querySelector('#m-sev-wrap'); if(w) w.style.display=sev.checked?'':'none'; };
     return m;
   }
 
@@ -353,12 +370,27 @@
   }
 
   // ── FICHA DEL EMPLEADO (historial de nómina) ──
+  function fileToB64(f){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(',')[1]||''); r.onerror=()=>rej(new Error('No se pudo leer el archivo')); r.readAsDataURL(f); }); }
+  function pickUpload(empId, periodId, kind){
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='.pdf,image/*';
+    inp.onchange=async()=>{ const f=inp.files&&inp.files[0]; if(!f) return;
+      if(f.size>3*1024*1024){ toast('Máximo 3 MB por archivo','err'); return; }
+      try{ const data=await fileToB64(f); await api('POST',`employees/${empId}/files`,{ period_id:periodId||null, kind:kind||'documento', name:f.name, mime:f.type||'application/octet-stream', data }); toast('Archivo subido','ok'); openEmployee(empId); }catch(e){ fail(e); } };
+    inp.click();
+  }
+  async function viewFile(id){ try{ const {url}=await api('GET',`files/${id}/link`); window.open(url,'_blank','noopener'); }catch(e){ fail(e); } }
+  async function delFile(id, empId){ if(!confirm('¿Borrar este archivo?'))return; try{ await api('DELETE',`files/${id}`); toast('Archivo borrado','ok'); openEmployee(empId); }catch(e){ fail(e); } }
   async function openEmployee(id){
     let d; try{ d=await api('GET',`employees/${id}/history`); }catch(e){ return fail(e); }
+    let files=[]; try{ files=(await api('GET',`employees/${id}/files`)).files||[]; }catch(_){ }
     const e=d.employee; const H=d.history||[]; const t=d.totals||{ingresos:0,deducciones:0,neto:0};
     const salario = H.length ? (Number(H[0].cells&&H[0].cells['sueldo_mensual'])||0) : 0;
-    view.innerHTML = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Empleados</button><h2 style="margin:0">${esc(e.full_name)}</h2>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}<span class="spacer"></span>${salario?`<span class="pill calc" style="font-size:13px">Salario: RD$ ${money(salario)} / mes</span>`:''}<button class="btn sm" id="edit">Editar</button></div>
-      <div class="muted" style="margin-top:4px">${esc(e.position||'—')} · Cédula ${esc(e.identifier||'—')}${e.nss?' · NSS '+esc(e.nss):''}${e.notes?' · '+esc(e.notes):''}</div>
+    const general=files.filter(f=>!f.period_id); const byPeriod={}; files.forEach(f=>{ if(f.period_id){ (byPeriod[f.period_id]=byPeriod[f.period_id]||[]).push(f); } });
+    const estado = e.exit_date ? '<span class="pill">Ex-empleado</span>' : (e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>');
+    const bajaLine = e.exit_date ? `<div class="muted" style="margin-top:3px">Salida ${fdate(e.exit_date)}${e.exit_reason?' · '+(EXIT_LABEL[e.exit_reason]||e.exit_reason):''} · Prestaciones ${e.severance_paid?('<b>pagadas</b>'+(e.severance_amount?' (RD$ '+money2(e.severance_amount)+')':'')):'<b>pendientes</b>'}</div>` : '';
+    const fileChip=f=>`<span class="pill calc" style="cursor:pointer" data-view="${f.id}" title="${esc(f.original_name)}">📎 ${esc((f.original_name||'archivo').slice(0,22))}</span> <button class="btn sm danger" data-delf="${f.id}">✕</button>`;
+    view.innerHTML = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Empleados</button><h2 style="margin:0">${esc(e.full_name)}</h2>${estado}<span class="spacer"></span>${salario?`<span class="pill calc" style="font-size:13px">Salario: RD$ ${money(salario)} / mes</span>`:''}<button class="btn sm" id="edit">Editar</button></div>
+      <div class="muted" style="margin-top:4px">${esc(e.position||'—')} · Cédula ${esc(e.identifier||'—')}${e.nss?' · NSS '+esc(e.nss):''}${e.hire_date?' · Entrada '+fdate(e.hire_date):''}</div>${bajaLine}
       <div class="total-kpis" style="margin-top:12px">
         <div class="k"><div class="muted">Períodos pagados</div><div class="v">${d.periods_count}</div></div>
         <div class="k"><div class="muted">Ingresos acum.</div><div class="v">${money(t.ingresos)}</div></div>
@@ -366,12 +398,22 @@
         <div class="k neto"><div class="muted">Neto acum.</div><div class="v">${money(t.neto)}</div></div>
       </div></div>
       <div class="card"><h2>Historial de nómina</h2>
-      ${H.length?`<div class="table-wrap"><table><tr><th>Período</th><th>Estado</th><th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th></tr>
-        ${H.map(r=>`<tr class="clickable" data-per="${r.period.id}" title="Abrir período"><td><b>${esc(r.period.label)}</b></td><td>${r.period.status==='closed'?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}</td><td class="num">${money(r.ingresos)}</td><td class="num">${money(r.deducciones)}</td><td class="num"><b>${money(r.neto)}</b></td></tr>`).join('')}</table></div>`
-        :'<div class="empty">Este empleado aún no aparece en ningún período.</div>'}</div>`;
+      ${H.length?`<div class="table-wrap"><table><tr><th>Período</th><th>Estado</th><th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th><th>Recibo firmado / soporte</th></tr>
+        ${H.map(r=>`<tr><td><b class="lnk" data-per="${r.period.id}" style="cursor:pointer;color:var(--accent)">${esc(r.period.label)}</b></td><td>${r.period.status==='closed'?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}</td><td class="num">${money(r.ingresos)}</td><td class="num">${money(r.deducciones)}</td><td class="num"><b>${money(r.neto)}</b></td>
+          <td>${(byPeriod[r.period.id]||[]).map(fileChip).join(' ')} <button class="btn sm" data-up="${r.period.id}">⤒ Subir</button></td></tr>`).join('')}</table></div>`
+        :'<div class="empty">Este empleado aún no aparece en ningún período.</div>'}</div>
+      <div class="card"><div class="row"><h2>Expediente del empleado</h2><span class="spacer"></span><button class="btn sm primary" id="up-gen">⤒ Subir documento</button></div>
+      <p class="hint">Contratos, cartas, soportes de prestaciones y cualquier documento general (no atado a un período).</p>
+      ${general.length?`<div class="table-wrap"><table><tr><th>Documento</th><th>Subido</th><th></th></tr>
+        ${general.map(f=>`<tr><td><b class="lnk" data-view="${f.id}" style="cursor:pointer;color:var(--accent)">${esc(f.original_name)}</b></td><td class="muted">${fdate((f.created_at||'').slice(0,10))}</td><td class="num"><button class="btn sm" data-view="${f.id}">Ver</button> <button class="btn sm danger" data-delf="${f.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+        :'<div class="empty">Sin documentos en el expediente.</div>'}</div>`;
     $('#back').onclick=()=>{ S.tab='empleados'; render(); };
     $('#edit').onclick=()=> employeeModal(S.employees.find(x=>x.id===e.id)||e);
-    view.querySelectorAll('[data-per]').forEach(tr=> tr.onclick=()=> openPeriod(tr.dataset.per));
+    view.querySelectorAll('[data-per]').forEach(el=> el.onclick=()=> openPeriod(el.dataset.per));
+    view.querySelectorAll('[data-up]').forEach(b=> b.onclick=()=> pickUpload(e.id, b.dataset.up, 'recibo_firmado'));
+    const ug=$('#up-gen'); if(ug) ug.onclick=()=> pickUpload(e.id, null, 'documento');
+    view.querySelectorAll('[data-view]').forEach(b=> b.onclick=()=> viewFile(b.dataset.view));
+    view.querySelectorAll('[data-delf]').forEach(b=> b.onclick=()=> delFile(b.dataset.delf, e.id));
   }
 
   // ── COLUMNAS ──
@@ -586,6 +628,7 @@
 
   // ── volante de pago (desglose imprimible por empleado) ──
   function money2(v){ return (Number(v)||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fdate(s){ if(!s) return '—'; const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(s)); return m?`${m[3]}/${m[2]}/${m[1]}`:String(s); }
   // Fecha del recibo: la del período (fin de la quincena si el label trae rango),
   // no la de impresión. Cae al último día del mes del período, o a hoy si no hay.
   function periodDate(){

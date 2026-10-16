@@ -6,6 +6,12 @@
   const { esc, int, period, ms } = NALA;
   const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar';
 
+  // Piso de progreso por lote: aunque el servidor ya calcula un porcentaje que
+  // sólo sube para archivos sueltos, un ZIP puede revelar más archivos a mitad
+  // de camino. Guardamos el máximo visto para que la barra nunca retroceda
+  // mientras el lote procesa; se olvida cuando termina.
+  const progressFloor = {};
+
   // ── Bomba de trabajos: mientras NALA esté abierto y haya trabajos ───────
   let pumping = false;
   NALA.pump = async function pump() {
@@ -176,6 +182,9 @@
     if (!isCurrent()) return;
     const b = d.batch; const st = d.stats; const p = d.progress;
     const active = ['queued', 'processing'].includes(b.status);
+    // La barra nunca retrocede mientras procesa (ver progressFloor arriba).
+    const pct = active ? Math.max(p.percent, progressFloor[b.id] || 0) : p.percent;
+    if (active) progressFloor[b.id] = pct; else delete progressFloor[b.id];
     const top = d.documents.filter(x => !x.parent_id);
     const children = parent => d.documents.filter(x => x.parent_id === parent);
     const jobsFor = docId => d.jobs.filter(j => j.document_id === docId);
@@ -200,8 +209,8 @@
         ${NALA.can('reprocess') ? '<button class="btn sm" id="reval" title="Vuelve a validar los comprobantes con las reglas y la configuración actuales (sin re-escanear)">Revalidar</button>' : ''}
         ${NALA.can('reprocess') ? '<button class="btn sm danger" id="del-batch">Eliminar</button>' : ''}</h2>
         <div class="muted">${esc(b.client_name)} · ${b.format} · ${period(b.period)} · creado ${NALA.dateTime(b.created_at)}</div>
-        <div style="margin-top:10px" class="progress"><div style="width:${p.percent}%"></div></div>
-        <div class="row muted" style="margin-top:6px;gap:16px"><span>${p.percent}% · ${p.jobs_done}/${p.jobs_total} trabajos</span><span>${p.jobs_running} en ejecución · ${p.jobs_queued} en cola · ${p.jobs_failed} fallidos</span>
+        <div style="margin-top:10px" class="progress"><div style="width:${pct}%"></div></div>
+        <div class="row muted" style="margin-top:6px;gap:16px"><span>${pct}%${p.docs_total ? ` · ${p.docs_done}/${p.docs_total} archivos leídos` : ''}</span><span>${p.jobs_done}/${p.jobs_total} trabajos · ${p.jobs_running} en ejecución · ${p.jobs_queued} en cola · ${p.jobs_failed} fallidos</span>
           <span>Duración ${ms(p.elapsed_ms)}${p.avg_job_ms ? ` · promedio ${ms(p.avg_job_ms)}/trabajo` : ''}</span>${active ? '<span>⏳ procesando en segundo plano…</span>' : ''}</div></div>
       <div class="grid kpis">
         <div class="card kpi"><div class="label">Comprobantes</div><div class="value">${int(st.invoices)}</div></div>

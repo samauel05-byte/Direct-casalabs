@@ -34,16 +34,22 @@ con totales/neto → Excel.
   La tabla del período recalcula el
   neto en vivo con un espejo del evaluador de fórmulas. Incluye el **recibo de
   nómina** por empleado, con el formato de un recibo real firmable: la empresa
-  (razón social + RNC) y la fecha arriba, el título **«RECIBO DE NÓMINA»**, la
-  **declaración** («Yo, _Empleado_, …, he recibido de la compañía _Empresa_ la
-  suma de _monto en letras_ (RD$ _monto_), correspondiente al pago de _período_»),
-  el **desglose** de conceptos con signo `(+)`/`(−)` y el **Total a cobrar**, dos
-  firmas **«Entregado por» / «Recibido por»**, y al pie la marca **Casa Labs**.
-  El monto a cobrar se escribe también en letras (`montoEnLetras`, con apócope
-  correcto: «veintiún», «treinta y un mil»). Se genera con **🧾 Imprimir** (abre
-  una ventana con uno o todos los recibos del período y lanza la impresión) y
-  **⤓ Descargar PDF** de un clic (PDF vectorial con jsPDF cargado bajo demanda
-  desde cdnjs; uno por empleado o todos juntos).
+  (razón social + RNC) y la fecha arriba, el título **«RECIBO DE NÓMINA»** con el
+  período, la **declaración** («Yo, _Empleado_, …, he recibido de la compañía
+  _Empresa_ la suma de _monto en letras_ (RD$ _monto_), correspondiente al pago de
+  _período_»), y a continuación una **tabla con el formato de declaración TSS**
+  (helper `tssFields` → `payslipHTML`): las 11 columnas del Excel que usan los
+  clientes —**Nombre completo, Documento, NSS, Salario SS, Salario ISR, Salario
+  INFOTEP, Saldo a favor, Remuner. otros agentes, Otras remuneraciones, Ingresos
+  exentos, Agente retención ISR**— con los **montos mensuales de declaración**
+  (`sueldo_mensual`; una persona `exento_tss` no cotiza → SS/INFOTEP en 0). Cierra
+  con el **Total a cobrar** (neto de la quincena), dos firmas **«Entregado por» /
+  «Recibido por»** y al pie la marca **Casa Labs**. El monto a cobrar se escribe
+  también en letras (`montoEnLetras`, con apócope correcto: «veintiún», «treinta y
+  un mil»). Se genera con **🧾 Imprimir** (abre una ventana con uno o todos los
+  recibos del período y lanza la impresión) y **⤓ Descargar PDF** de un clic (PDF
+  vectorial **apaisado** con jsPDF cargado bajo demanda desde cdnjs, para que la
+  tabla de 11 columnas quepa a lo ancho; uno por empleado o todos juntos).
 - `supabase/migrations/202610160001_nomina.sql` — tablas `nomina_*`, RLS cerrada
   al navegador y la columna `access_nomina`.
 
@@ -60,7 +66,7 @@ con totales/neto → Excel.
   −1 deducción, 0 neutro) e `include_total` definen el neto. `key` es el
   identificador usado en las fórmulas (único por empresa). FK compuesta
   `(tenant_id, client_id)` → `nomina_companies`.
-- **`nomina_employees`** — empleados manuales (nombre, cédula, puesto, activo).
+- **`nomina_employees`** — empleados manuales (nombre, cédula, **NSS**, puesto, activo).
 - **`nomina_periods`** — períodos (`label`, año/mes, `status` draft/closed,
   `cycle` p. ej. `2026-10-B`, `pay_date`, `novedades_locked`).
 - **`nomina_entries`** — valores capturados por empleado y período (`values`

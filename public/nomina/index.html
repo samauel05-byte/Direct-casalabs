@@ -53,6 +53,17 @@
   .emp{ display:flex; align-items:center; gap:9px; }
   .av{ width:32px; height:32px; border-radius:50%; background:var(--accent); color:var(--accentink); font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .emp .en{ font-weight:700; } .emp .sub{ font-size:12px; color:var(--muted); } .emp .cid{ font-size:11px; color:#5f7399; }
+  .nvsec{ } .nvsec h3{ font-size:12px; color:var(--muted); margin:2px 0 4px; text-transform:uppercase; letter-spacing:.3px; }
+  .nv{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--line); }
+  .nv .nl{ flex:1; } .nv .na{ width:130px; text-align:right; padding:5px 8px; } .nv .na.num{ font-variant-numeric:tabular-nums; }
+  .nv.ro{ color:var(--muted); } .nv .nr{ width:130px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
+  .sw input{ width:36px; height:20px; -webkit-appearance:none; appearance:none; background:var(--line); border-radius:999px; position:relative; cursor:pointer; outline:none; border:none; transition:background .15s; flex:0 0 auto; }
+  .sw input:checked{ background:var(--accent); }
+  .sw input::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; }
+  .sw input:checked::after{ left:18px; }
+  .nvtot{ display:flex; gap:18px; justify-content:flex-end; margin-top:10px; font-size:14px; } .nvtot .neto b{ color:var(--accent); font-size:16px; }
+  .ajs{ border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px; } .ajs h3{ font-size:13px; margin:0 0 8px; color:var(--accent); }
+  .ajs .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
 </style>
 </head>
 <body>
@@ -64,9 +75,10 @@
 </header>
 <main>
   <div class="tabs" id="tabs">
-    <button data-tab="empleados" class="active">Empleados</button>
+    <button data-tab="nomina" class="active">Nómina</button>
+    <button data-tab="empleados">Empleados</button>
     <button data-tab="columnas">Columnas</button>
-    <button data-tab="periodos">Períodos de nómina</button>
+    <button data-tab="ajustes">Ajustes</button>
   </div>
   <div id="view"></div>
 </main>
@@ -142,7 +154,7 @@
   }
 
   // ── estado ──
-  const S = { clients:[], clientId:'', tab:'empleados', columns:[], employees:[], periods:[], period:null };
+  const S = { clients:[], clientId:'', tab:'nomina', columns:[], employees:[], periods:[], period:null, lastPeriodId:null };
   const view = $('#view');
   const TYPE_LABEL = { monto:'Monto (RD$)', numero:'Número', texto:'Texto', formula:'Fórmula' };
 
@@ -172,9 +184,23 @@
   function render(){
     if(!S.clientId){ view.innerHTML='<div class="card empty">Cree o seleccione una empresa en SERP para empezar.</div>'; return; }
     if(S.period) return renderPeriod();
+    if(S.tab==='nomina') return renderNomina();
     if(S.tab==='empleados') return renderEmployees();
     if(S.tab==='columnas') return renderColumns();
-    if(S.tab==='periodos') return renderPeriods();
+    if(S.tab==='ajustes') return renderAjustes();
+  }
+
+  // ── NÓMINA (pantalla principal): aterriza en el período más reciente ──
+  async function renderNomina(){
+    if(!S.periods.length){ view.innerHTML = '<div class="card empty">Aún no hay períodos de nómina.<br><br><button class="btn primary" id="np">+ Crear primer período</button></div>'; $('#np').onclick=newPeriod; return; }
+    const pid = (S.lastPeriodId && S.periods.some(p=>p.id===S.lastPeriodId)) ? S.lastPeriodId : S.periods[0].id;
+    await openPeriod(pid);
+  }
+  function newPeriod(){
+    const def = `Nómina ${new Date().toLocaleDateString('es-DO',{month:'long',year:'numeric'})}`;
+    modal('Nuevo período', `<label class="f"><span>Nombre del período *</span><input id="m-label" maxlength="80" value="${esc(def)}"></label>`,
+      async()=>{ const label=$('#m-label').value.trim(); if(!label){toast('Escriba un nombre','err');return false;}
+        try{ const now=new Date(); const { period } = await api('POST',`clients/${S.clientId}/periods`, { label, year:now.getFullYear(), month:now.getMonth()+1 }); await loadClient(); openPeriod(period.id); toast('Período creado','ok'); return true; }catch(e){ fail(e); return false; } });
   }
 
   // ── EMPLEADOS ──
@@ -202,6 +228,29 @@
         catch(e){ fail(e); return false; }
       });
     return m;
+  }
+
+  // ── AJUSTES (tasas de ley y aportes del empleador, por empresa) ──
+  function clientName(){ const c=S.clients.find(x=>x.id===S.clientId); return c?c.legal_name:''; }
+  async function renderAjustes(){
+    let s; try{ s=(await api('GET',`clients/${S.clientId}/settings`)).settings; }catch(e){ return fail(e); }
+    const pct=v=>(Number(v)*100).toFixed(2);
+    const F=(id,label,val)=>`<label class="f"><span>${esc(label)}</span><input id="${id}" inputmode="decimal" value="${esc(val)}"></label>`;
+    view.innerHTML = `<div class="card stack"><h2>Ajustes · ${esc(clientName())}</h2>
+      <p class="hint">Tasas de ley y aportes del empleador para esta empresa. Afectan los cálculos de la nómina.</p>
+      <div class="ajs"><h3>Tipo de período</h3><label class="f" style="max-width:240px"><span>Período</span><select id="a-pt"><option value="quincenal" ${s.period_type!=='mensual'?'selected':''}>Quincenal</option><option value="mensual" ${s.period_type==='mensual'?'selected':''}>Mensual</option></select></label></div>
+      <div class="ajs"><h3>Deducciones del empleado</h3><div class="grid2">${F('a-afp','AFP (Pensión) %',pct(s.empleado.afp))}${F('a-sfs','SFS (Salud) %',pct(s.empleado.sfs))}${F('a-tsfs','Tope salario SFS (RD$)',s.empleado.tope_sfs)}${F('a-tafp','Tope salario AFP (RD$)',s.empleado.tope_afp)}</div></div>
+      <div class="ajs"><h3>Escala ISR (anual, RD$)</h3><div class="grid2">${F('a-ex','Exento hasta',s.isr.exento)}${F('a-t2','Tramo 15% hasta',s.isr.tramo2)}${F('a-t3','Tramo 20% hasta',s.isr.tramo3)}</div><p class="hint">Sobre el último tramo se aplica 25%.</p></div>
+      <div class="ajs"><h3>Aportes del empleador</h3><div class="grid2">${F('p-afp','AFP (Pensión) %',pct(s.empleador.afp))}${F('p-sfs','SFS (Salud) %',pct(s.empleador.sfs))}${F('p-srl','SRL (Riesgos) %',pct(s.empleador.srl))}${F('p-inf','INFOTEP %',pct(s.empleador.infotep))}</div></div>
+      <div class="row"><button class="btn primary" id="a-save">Guardar ajustes</button></div></div>`;
+    const pv=id=>Number($('#'+id).value)/100, nv=id=>Number($('#'+id).value);
+    $('#a-save').onclick=async()=>{
+      const body={ period_type:$('#a-pt').value,
+        empleado:{ afp:pv('a-afp'), sfs:pv('a-sfs'), tope_sfs:nv('a-tsfs'), tope_afp:nv('a-tafp') },
+        isr:{ exento:nv('a-ex'), tramo2:nv('a-t2'), tramo3:nv('a-t3') },
+        empleador:{ afp:pv('p-afp'), sfs:pv('p-sfs'), srl:pv('p-srl'), infotep:pv('p-inf') } };
+      try{ await api('PUT',`clients/${S.clientId}/settings`, body); toast('Ajustes guardados','ok'); }catch(e){ fail(e); }
+    };
   }
 
   // ── FICHA DEL EMPLEADO (historial de nómina) ──
@@ -286,7 +335,7 @@
   }
 
   async function openPeriod(id){
-    try{ const d = await api('GET',`periods/${id}`); S.period = d; render(); }catch(e){ fail(e); }
+    try{ const d = await api('GET',`periods/${id}`); S.period = d; S.lastPeriodId = id; render(); }catch(e){ fail(e); }
   }
 
   function renderPeriod(){
@@ -299,12 +348,15 @@
     // reconstruir valores capturados desde las celdas no-fórmula
     (d.rows||[]).forEach(r=>{ editable.forEach(c=>{ const v=r.cells[c.key]; vals[r.employee.id][c.key] = (c.type==='texto')? (v||'') : (v===0?'' : v); }); });
 
-    const head = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Períodos</button><h2 style="margin:0">${esc(p.label)}</h2>
+    const head = `<div class="card"><div class="row">
+      <select id="per-sel" style="min-width:230px;font-weight:700">${S.periods.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.label)}</option>`).join('')}</select>
+      <button class="btn sm" id="per-new">+ Nuevo</button>
       ${closed?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}${d.settings?`<span class="pill">${d.settings.period_type==='mensual'?'Mensual':'Quincenal'}</span>`:''}<span class="spacer"></span>
-      <button class="btn sm" id="volantes">🧾 Imprimir volantes</button>
-      <button class="btn sm" id="pdf-all">⤓ Descargar PDF</button>
-      <button class="btn sm" id="export">⇩ Exportar Excel</button>
-      <button class="btn sm" id="toggle">${closed?'Reabrir':'Cerrar período'}</button>
+      <button class="btn sm" id="volantes">🧾 Volantes</button>
+      <button class="btn sm" id="pdf-all">⤓ PDF</button>
+      <button class="btn sm" id="export">⇩ Excel</button>
+      <button class="btn sm" id="toggle">${closed?'Reabrir':'Cerrar'}</button>
+      <button class="btn sm danger" id="del-per" title="Eliminar período">🗑</button>
       ${closed?'':'<button class="btn primary" id="save">Guardar</button>'}</div>
       <div class="total-kpis" id="kpis"></div></div>`;
 
@@ -316,7 +368,7 @@
       <th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th></tr>
       ${(d.rows||[]).map(r=>`<tr data-emp="${r.employee.id}" data-name="${esc(String(r.employee.full_name||'').toLowerCase())} ${esc(String(r.employee.position||'').toLowerCase())}"><td>
         <div class="emp"><span class="av">${esc(initials(r.employee.full_name))}</span><div><div class="en">${esc(r.employee.full_name)}</div><div class="sub">${esc(r.employee.position||'—')}${r.employee.forma_pago?' · '+esc(r.employee.forma_pago):''}</div><div class="cid mono">${esc(r.employee.identifier||'')}</div></div></div>
-        <div class="row" style="gap:4px;margin-top:5px"><button class="btn sm" data-slip="${r.employee.id}" title="Imprimir volante">🧾</button><button class="btn sm" data-pdf="${r.employee.id}" title="Descargar PDF">⤓</button></div></td>
+        <div class="row" style="gap:4px;margin-top:5px"><button class="btn sm primary" data-nov="${r.employee.id}" title="Novedad / detalle">✎ Novedad</button><button class="btn sm" data-slip="${r.employee.id}" title="Imprimir volante">🧾</button><button class="btn sm" data-pdf="${r.employee.id}" title="Descargar PDF">⤓</button></div></td>
         ${cols.map(c=>{
           if(c.type==='formula') return `<td class="num" data-calc="${c.key}">${money(r.cells[c.key])}</td>`;
           const v = vals[r.employee.id][c.key];
@@ -356,6 +408,7 @@
     view.querySelectorAll('[data-slip]').forEach(b=> b.addEventListener('click', ()=> printPayslips([b.dataset.slip])));
     view.querySelector('#pdf-all')?.addEventListener('click', ()=> downloadPdf((d.rows||[]).map(r=>r.employee.id)));
     view.querySelectorAll('[data-pdf]').forEach(b=> b.addEventListener('click', ()=> downloadPdf([b.dataset.pdf])));
+    view.querySelectorAll('[data-nov]').forEach(b=> b.addEventListener('click', ()=> novedadModal(b.dataset.nov)));
 
     $('#save') && ($('#save').onclick = async () => {
       const entries = [...view.querySelectorAll('tr[data-emp]')].map(tr=>{
@@ -368,7 +421,9 @@
 
   function wirePeriodTop(){
     const p = S.period.period;
-    $('#back').onclick = async () => { S.period=null; await loadClient(); S.tab='periodos'; [...$('#tabs').children].forEach(x=>x.classList.toggle('active', x.dataset.tab==='periodos')); render(); };
+    $('#per-sel').onchange = e => openPeriod(e.target.value);
+    $('#per-new').onclick = newPeriod;
+    $('#del-per').onclick = async () => { if(!confirm('¿Eliminar este período y sus datos capturados?'))return; try{ await api('DELETE',`periods/${p.id}`); S.period=null; S.lastPeriodId=null; await loadClient(); render(); toast('Período eliminado','ok'); }catch(e){ fail(e); } };
     $('#toggle').onclick = async () => { try{ await api('PATCH',`periods/${p.id}`, { status: p.status==='closed'?'draft':'closed' }); await openPeriod(p.id); toast('Período actualizado','ok'); }catch(e){ fail(e); } };
     $('#export').onclick = async () => { try{ const r = await api('GET',`periods/${p.id}/export`); downloadB64(r.base64, r.filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }catch(e){ fail(e); } };
   }
@@ -479,6 +534,45 @@
     if(first){ toast('No hay empleados para descargar','err'); return; }
     const base = empIds.length===1 ? ('Volante - '+one) : ('Volantes '+S.period.period.label);
     doc.save(base.replace(/[^\w .\-–]+/g,'_')+'.pdf');
+  }
+
+  // ── Modal "Novedad" (detalle del empleado: conceptos on/off + neto en vivo) ──
+  function novedadModal(empId){
+    const d=S.period; if(!d) return; const cols=d.columns||[]; const row=(d.rows||[]).find(r=>r.employee.id===empId); if(!row) return;
+    const emp=row.employee; const closed=d.period.status==='closed';
+    const cur=readRowValues(empId); // valores editables actuales (reflejan el grid)
+    const editable=cols.filter(c=>c.type!=='formula');
+    const fieldRow=c=>{
+      const v=cur[c.key];
+      const on = v!=null && String(v)!=='' && !(c.type!=='texto' && Number(v)===0);
+      const amt = c.type==='texto'
+        ? `<input class="na" data-k="${c.key}" value="${esc(v||'')}" ${closed||!on?'disabled':''}>`
+        : `<input class="na num" inputmode="decimal" data-k="${c.key}" value="${on&&v!=null?esc(v):''}" ${closed||!on?'disabled':''}>`;
+      return `<div class="nv"><label class="sw"><input type="checkbox" data-on="${c.key}" ${on?'checked':''} ${closed?'disabled':''}></label><span class="nl">${esc(c.label)}</span>${amt}</div>`;
+    };
+    const formulaRow=c=>`<div class="nv ro"><span class="sw" style="width:36px"></span><span class="nl">${esc(c.label)} <span class="pill calc">fx</span></span><span class="nr" data-calc="${c.key}">—</span></div>`;
+    const ingresos=editable.filter(c=>c.sign>=0);
+    const deducEdit=editable.filter(c=>c.sign<0);
+    const deducLey=cols.filter(c=>c.type==='formula'&&c.sign<0);
+    const ingLey=cols.filter(c=>c.type==='formula'&&c.sign>0);
+    const inner=`
+      <div class="muted" style="margin-bottom:6px">${esc(emp.position||'—')}${emp.forma_pago?' · '+esc(emp.forma_pago):''} · Cédula ${esc(emp.identifier||'—')}</div>
+      <div class="nvsec"><h3>Ingresos y datos</h3>${ingLey.map(formulaRow).join('')}${ingresos.map(fieldRow).join('')}</div>
+      <div class="nvsec"><h3>Deducciones</h3>${deducLey.map(formulaRow).join('')}${deducEdit.map(fieldRow).join('')||'<div class="muted" style="padding:4px 0">Sin deducciones manuales.</div>'}</div>
+      <div class="nvtot"><span>Ingresos <b data-t="ing">—</b></span><span>Deducciones <b data-t="ded">—</b></span><span class="neto">Neto <b data-t="neto">—</b></span></div>`;
+    const bg=modal(`Novedad · ${emp.full_name}`, inner, async()=>{
+      if(closed) return true;
+      try{ const d2=await api('PUT',`periods/${d.period.id}/entries`,{ entries:[{employee_id:empId, values:gather()}] }); S.period=d2; render(); toast('Novedad guardada','ok'); return true; }
+      catch(e){ fail(e); return false; }
+    });
+    if(closed){ const ok=bg.querySelector('[data-ok]'); if(ok) ok.textContent='Cerrar'; }
+    function gather(){ const values={}; bg.querySelectorAll('.nv:not(.ro)').forEach(nv=>{ const cb=nv.querySelector('[data-on]'); const inp=nv.querySelector('[data-k]'); if(!cb||!inp||!cb.checked) return; const raw=String(inp.value).trim(); if(raw==='') return; values[inp.dataset.k]=raw; }); return values; }
+    function recompute(){ const res=computeRow(cols, gather());
+      cols.forEach(c=>{ if(c.type==='formula'){ const el=bg.querySelector(`[data-calc="${c.key}"]`); if(el) el.textContent=money(res.cells[c.key]); } });
+      bg.querySelector('[data-t="ing"]').textContent=money(res.ingresos); bg.querySelector('[data-t="ded"]').textContent=money(res.deducciones); bg.querySelector('[data-t="neto"]').textContent=money(res.neto); }
+    bg.querySelectorAll('[data-on]').forEach(cb=> cb.addEventListener('change', ()=>{ const inp=cb.closest('.nv').querySelector('[data-k]'); if(inp){ inp.disabled=!cb.checked||closed; if(!cb.checked) inp.value=''; else inp.focus(); } recompute(); }));
+    bg.querySelectorAll('.na').forEach(inp=> inp.addEventListener('input', recompute));
+    recompute();
   }
 
   // ── modal ──

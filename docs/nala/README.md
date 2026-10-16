@@ -48,8 +48,27 @@ un valor desconocido queda vacío, nunca se convierte en cero.
   cambiar su contenido** (el guion bajo evita que cuenten como función).
 - `lib/nala/` — contexto y permisos, validación, formatos, Excel, extracción
   (`extractor.js`, OpenAI con `OPENAI_API_KEY` del servidor), Consulta RNC
-  (`rnc-dgii.js`), almacenamiento privado (`storage.js`), cola de trabajos
-  (`pipeline.js`) y rutas (`lib/nala/api/*`).
+  (`rnc-dgii.js`) y padrón oficial descargable (`rnc-registry.js`),
+  auto-completado de la contraparte (`counterparty.js`), almacenamiento privado
+  (`storage.js`), cola de trabajos (`pipeline.js`) y rutas (`lib/nala/api/*`).
+
+### Auto-completado de la contraparte (lectura por lotes)
+
+Al leer cada factura, la IA a veces trae sólo el nombre de la contraparte
+(proveedor en 606, cliente en 607) o sólo su RNC/cédula. `counterparty.js`
+rellena el que falte, **sin pisar campos corregidos a mano** y sólo sobre vacíos:
+
+1. **RNC válido (9/11 dígitos) y nombre vacío** → nombre oficial del padrón de la
+   DGII (`rnc-registry.find`, en memoria tras la primera descarga).
+2. **Nombre presente y RNC vacío** → RNC de una contraparte ya vista de la misma
+   empresa. `pipeline.js` arma un directorio `nombre normalizado → RNC` con el
+   historial del cliente (`counterpartDirectory`, una sola consulta por trabajo);
+   nunca asigna el RNC de la propia empresa del lote.
+
+Corre en `extract` (lecturas nuevas) y en `revalidate` (pulsar **«Revalidar»**
+completa lo ya cargado sin volver a llamar a la IA). La comparación de nombres se
+normaliza (mayúsculas, sin acentos ni puntuación). Si el padrón no está
+disponible, la lectura continúa igual.
 - `supabase/migrations/202609300001_nala_fiscal_pipeline.sql` — tablas `nala_*`,
   funciones `nala_claim_jobs`, `nala_finish_job`, `nala_refresh_batch` y
   `nala_stats`, RLS cerrada al navegador y bucket privado `nala-documents`.

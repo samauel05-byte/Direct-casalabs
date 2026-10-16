@@ -277,3 +277,41 @@ test('607: TXT de ejemplo se analiza con el esquema del 607', () => {
   assert.equal(a.lines, 1);
   assert.equal(a.rnc, '131944401');
 });
+
+const { completeCounterparty, normName } = require('../../lib/nala/counterparty');
+
+test('counterparty: normaliza nombres (acentos y puntuación)', () => {
+  assert.equal(normName('A.G y S. Ferreservís'), 'A G Y S FERRESERVIS');
+  assert.equal(normName('  Texaco   Friusa '), 'TEXACO FRIUSA');
+  assert.equal(normName(null), '');
+});
+
+test('606: completa el RNC del proveedor desde el historial del cliente (nombre→RNC)', async () => {
+  const dir = new Map([['A G Y S FERRESERVIS', '130043671']]);
+  const f = { emisor_nombre: 'A.G y S. Ferreservís', emisor_id: null };
+  await completeCounterparty(f, '606', new Set(), { directory: dir, selfRncs: ['132715268'] });
+  assert.equal(f.emisor_id, '130043671');
+});
+
+test('607: completa el RNC del cliente usando los campos del receptor', async () => {
+  const dir = new Map([['SUPER TIENDA SRL', '101234567']]);
+  const f = { receptor_nombre: 'Super Tienda SRL', receptor_id: '' };
+  await completeCounterparty(f, '607', new Set(), { directory: dir });
+  assert.equal(f.receptor_id, '101234567');
+});
+
+test('counterparty: nunca pisa un campo corregido a mano ni usa el RNC del propio cliente', async () => {
+  const dir = new Map([['PROVEEDOR X', '130043671'], ['MI EMPRESA', '132715268']]);
+  // corregido a mano: no se toca aunque el RNC esté vacío
+  const corr = { emisor_nombre: 'Proveedor X', emisor_id: '' };
+  await completeCounterparty(corr, '606', new Set(['emisor_id']), { directory: dir });
+  assert.equal(corr.emisor_id, '');
+  // el RNC del propio cliente nunca se usa como contraparte
+  const self = { emisor_nombre: 'Mi Empresa', emisor_id: null };
+  await completeCounterparty(self, '606', new Set(), { directory: dir, selfRncs: ['132715268'] });
+  assert.equal(self.emisor_id, null);
+  // con RNC ya presente, no se cambia
+  const has = { emisor_nombre: 'Proveedor X', emisor_id: '130000009' };
+  await completeCounterparty(has, '606', new Set(), { directory: dir });
+  assert.equal(has.emisor_id, '130000009');
+});

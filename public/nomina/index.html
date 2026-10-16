@@ -50,6 +50,7 @@
   .total-kpis{ display:flex; gap:18px; flex-wrap:wrap; margin:4px 0 12px; }
   .total-kpis .k{ background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-width:130px; }
   .total-kpis .k .v{ font-size:18px; font-weight:800; } .total-kpis .k.neto .v{ color:var(--accent); } .total-kpis .k.aportes .v{ color:#60a5fa; }
+  .total-kpis .k.aportes{ cursor:pointer; } .total-kpis .k.aportes:hover{ border-color:#60a5fa; }
   .emp{ display:flex; align-items:center; gap:9px; }
   .av{ width:32px; height:32px; border-radius:50%; background:var(--accent); color:var(--accentink); font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
   .emp .en{ font-weight:700; } .emp .sub{ font-size:12px; color:var(--muted); } .emp .cid{ font-size:11px; color:#5f7399; }
@@ -355,9 +356,11 @@
       <button class="btn sm" id="volantes">🧾 Volantes</button>
       <button class="btn sm" id="pdf-all">⤓ PDF</button>
       <button class="btn sm" id="export">⇩ Excel</button>
+      <button class="btn sm" id="report">⤓ Reporte PDF</button>
+      <button class="btn sm" id="csv">⤓ CSV banco</button>
       <button class="btn sm" id="toggle">${closed?'Reabrir':'Cerrar'}</button>
       <button class="btn sm danger" id="del-per" title="Eliminar período">🗑</button>
-      ${closed?'':'<button class="btn primary" id="save">Guardar</button>'}</div>
+      ${closed?'':'<button class="btn" id="save">Guardar</button><button class="btn primary" id="procesar">✓ Procesar nómina</button>'}</div>
       <div class="total-kpis" id="kpis"></div></div>`;
 
     if(!(d.rows||[]).length){ view.innerHTML = head + '<div class="card empty">No hay empleados activos. Agregue empleados para capturar la nómina.</div>'; wirePeriodTop(); return; }
@@ -403,6 +406,7 @@
     view.querySelectorAll('input[data-k]').forEach(inp=> inp.addEventListener('input', recompute));
     recompute();
     const fe=$('#f-emp'); if(fe) fe.addEventListener('input', ()=>{ const q=fe.value.trim().toLowerCase(); let shown=0; view.querySelectorAll('tr[data-emp]').forEach(tr=>{ const ok=!q||(tr.dataset.name||'').includes(q); tr.style.display=ok?'':'none'; if(ok)shown++; }); $('#f-count').textContent=q?`${shown} de ${(d.rows||[]).length}`:''; });
+    $('#kpis').addEventListener('click', e=>{ if(e.target.closest('.k.aportes')) aportesModal(); });
 
     view.querySelector('#volantes')?.addEventListener('click', ()=> printPayslips((d.rows||[]).map(r=>r.employee.id)));
     view.querySelectorAll('[data-slip]').forEach(b=> b.addEventListener('click', ()=> printPayslips([b.dataset.slip])));
@@ -426,6 +430,49 @@
     $('#del-per').onclick = async () => { if(!confirm('¿Eliminar este período y sus datos capturados?'))return; try{ await api('DELETE',`periods/${p.id}`); S.period=null; S.lastPeriodId=null; await loadClient(); render(); toast('Período eliminado','ok'); }catch(e){ fail(e); } };
     $('#toggle').onclick = async () => { try{ await api('PATCH',`periods/${p.id}`, { status: p.status==='closed'?'draft':'closed' }); await openPeriod(p.id); toast('Período actualizado','ok'); }catch(e){ fail(e); } };
     $('#export').onclick = async () => { try{ const r = await api('GET',`periods/${p.id}/export`); downloadB64(r.base64, r.filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }catch(e){ fail(e); } };
+    $('#csv').onclick = bankCsv;
+    $('#report').onclick = reportPdf;
+    $('#procesar') && ($('#procesar').onclick = procesarModal);
+  }
+
+  // ── CSV para el banco (Cédula, Nombre, Forma de pago, Neto) ──
+  function bankCsv(){
+    const d=S.period; const cols=d.columns||[]; const rows=[['Cédula','Nombre','Forma de pago','Neto a pagar']];
+    (d.rows||[]).forEach(r=>{ const res=computeRow(cols, readRowValues(r.employee.id)); rows.push([r.employee.identifier||'', r.employee.full_name, r.employee.forma_pago||'', res.neto.toFixed(2)]); });
+    const csv=rows.map(r=>r.map(c=>{ const s=String(c==null?'':c); return /[",;\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; }).join(',')).join('\r\n');
+    const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=('Banco '+(d.period.label||'periodo')).replace(/[^\w .\-–]+/g,'_')+'.csv'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),2000);
+  }
+
+  // ── Reporte general en PDF (resumen por empleado) ──
+  async function reportPdf(){
+    try{ await ensureJsPDF(); }catch(e){ return fail(e); }
+    const logo=await logoData(); const JS=window.jspdf.jsPDF; const doc=new JS({unit:'mm',format:'a4',orientation:'landscape'});
+    const d=S.period; const cols=d.columns||[]; const client=S.clients.find(c=>c.id===S.clientId)||{}; const M=12, W=297; let y=16;
+    if(logo){ const h=11,w=Math.min(48,logo.w*h/logo.h); try{doc.addImage(logo.data,'PNG',M,y-7,w,h);}catch(_){ } }
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text(String(client.legal_name||''), M+(logo?42:0), y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.text('RNC '+(client.rnc||client.cedula||''), W-M, y, {align:'right'}); y+=7;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.text('Reporte de nómina — '+String(d.period.label||''), M, y); y+=7;
+    const cx=[[ 'Empleado',M,'l'],['Cargo',95,'l'],['Bruto',150,'r'],['Deducciones',188,'r'],['Aportes',225,'r'],['Neto',W-M,'r']];
+    doc.setFontSize(9); doc.setFont('helvetica','bold'); cx.forEach(c=> doc.text(c[0], c[1], y, {align:c[2]==='r'?'right':'left'})); y+=1.5; doc.setDrawColor(150); doc.line(M,y,W-M,y); y+=4;
+    doc.setFont('helvetica','normal'); let tB=0,tD=0,tN=0,tA=0;
+    (d.rows||[]).forEach(r=>{ const res=computeRow(cols, readRowValues(r.employee.id)); const apo=empAportes(res.cells['sueldo_mensual'], Number(res.cells['exento_tss'])||0);
+      doc.text(String(r.employee.full_name||'').slice(0,42), M, y); doc.text(String(r.employee.position||'').slice(0,28), 95, y);
+      doc.text(money(res.ingresos),150,y,{align:'right'}); doc.text(money(res.deducciones),188,y,{align:'right'}); doc.text(money(apo),225,y,{align:'right'}); doc.text(money(res.neto),W-M,y,{align:'right'});
+      tB+=res.ingresos;tD+=res.deducciones;tN+=res.neto;tA+=apo; y+=5.4; if(y>195){ doc.addPage(); y=16; } });
+    y+=1; doc.setDrawColor(100); doc.line(M,y,W-M,y); y+=5; doc.setFont('helvetica','bold');
+    doc.text('TOTALES',M,y); doc.text(money(round2(tB)),150,y,{align:'right'}); doc.text(money(round2(tD)),188,y,{align:'right'}); doc.text(money(round2(tA)),225,y,{align:'right'}); doc.text(money(round2(tN)),W-M,y,{align:'right'});
+    doc.save(('Reporte '+(d.period.label||'periodo')).replace(/[^\w .\-–]+/g,'_')+'.pdf');
+  }
+
+  // ── Procesar nómina (confirmar + cerrar período) ──
+  function procesarModal(){
+    const d=S.period; if(!d||d.period.status==='closed'){ toast('El período ya está procesado','err'); return; }
+    const neto=round2((d.rows||[]).reduce((s,r)=>s+r.neto,0));
+    modal('Procesar nómina', `<p>Vas a <b>procesar y cerrar</b> la nómina <b>${esc(d.period.label)}</b>. Luego podrás reabrirla si necesitas corregir.</p>
+      <div class="nvtot"><span>Empleados <b>${(d.rows||[]).length}</b></span><span class="neto">Neto a pagar <b>${money(neto)}</b></span></div>
+      <p class="hint">Al confirmar se guardan los valores capturados y el período queda cerrado. Después puedes descargar volantes, Excel, reporte PDF y el CSV del banco.</p>`,
+      async()=>{ const entries=[...view.querySelectorAll('tr[data-emp]')].map(tr=>{ const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; }); return { employee_id:tr.dataset.emp, values }; });
+        try{ await api('PUT',`periods/${d.period.id}/entries`, { entries }); await api('PATCH',`periods/${d.period.id}`, { status:'closed' }); await openPeriod(d.period.id); toast('Nómina procesada ✓','ok'); return true; }catch(e){ fail(e); return false; } });
   }
 
   function downloadB64(b64, name, mime){
@@ -534,6 +581,30 @@
     if(first){ toast('No hay empleados para descargar','err'); return; }
     const base = empIds.length===1 ? ('Volante - '+one) : ('Volantes '+S.period.period.label);
     doc.save(base.replace(/[^\w .\-–]+/g,'_')+'.pdf');
+  }
+
+  // ── Popup de aportes a la TSS (empleador vs empleado) ──
+  function aportesBreakdown(){
+    const st=S.period&&S.period.settings; const res={ emp:{afp:0,sfs:0}, patr:{afp:0,sfs:0,srl:0,infotep:0} };
+    if(!st) return res;
+    const f=(st.period_type==='mensual')?1:0.5; const e=st.empleador||{}, em=st.empleado||{}; const cols=S.period.columns||[];
+    view.querySelectorAll('tr[data-emp]').forEach(tr=>{ const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ values[inp.dataset.k]=inp.value; });
+      const r=computeRow(cols, values); if(Number(r.cells['exento_tss'])||0) return; const base=Number(r.cells['sueldo_mensual'])||0;
+      const ts=Number(em.tope_sfs)||base, ta=Number(em.tope_afp)||base;
+      res.emp.afp+=Math.min(base,ta)*(em.afp||0)*f; res.emp.sfs+=Math.min(base,ts)*(em.sfs||0)*f;
+      res.patr.afp+=Math.min(base,ta)*(e.afp||0)*f; res.patr.sfs+=Math.min(base,ts)*(e.sfs||0)*f; res.patr.srl+=Math.min(base,ts)*(e.srl||0)*f; res.patr.infotep+=base*(e.infotep||0)*f;
+    });
+    return res;
+  }
+  function aportesModal(){
+    const b=aportesBreakdown();
+    const row=(lbl,emp,patr)=>`<tr><td>${lbl}</td><td class="num">${emp==null?'—':money(round2(emp))}</td><td class="num">${patr==null?'—':money(round2(patr))}</td><td class="num"><b>${money(round2((emp||0)+(patr||0)))}</b></td></tr>`;
+    const et=round2(b.emp.afp+b.emp.sfs), pt=round2(b.patr.afp+b.patr.sfs+b.patr.srl+b.patr.infotep);
+    const bg=modal('Aportes a la TSS', `<div class="table-wrap"><table><tr><th>Concepto</th><th class="num">Empleado</th><th class="num">Empleador</th><th class="num">Total</th></tr>
+      ${row('AFP (Pensión)', b.emp.afp, b.patr.afp)}${row('SFS (Salud)', b.emp.sfs, b.patr.sfs)}${row('SRL (Riesgos laborales)', null, b.patr.srl)}${row('INFOTEP', null, b.patr.infotep)}
+      <tr class="tot"><td>Total</td><td class="num">${money(et)}</td><td class="num">${money(pt)}</td><td class="num">${money(round2(et+pt))}</td></tr></table></div>
+      <p class="hint">Sobre el salario cotizable del período (${S.period.settings&&S.period.settings.period_type==='mensual'?'mensual':'quincenal'}); las personas exentas no aportan.</p>`, async()=>true);
+    const ok=bg.querySelector('[data-ok]'); if(ok) ok.textContent='Cerrar'; const x=bg.querySelector('[data-x]'); if(x) x.style.display='none';
   }
 
   // ── Modal "Novedad" (detalle del empleado: conceptos on/off + neto en vivo) ──

@@ -139,7 +139,7 @@ test('procesamiento en segundo plano con reintentos, ZIP, PDF de varias facturas
   state.inv = { alfa: by('B0100000101'), beta: by('B0100000202'), delta: by('B0100000501'), otra: by('B0100000601'), dolar: by('B0100000701'), gamma: by('E310000000401'), zeta2: by('B0100000802') };
   const codes = i => i.issues.map(x => x.code);
   assert.ok(codes(state.inv.beta).includes('DIFERENCIA_TOTAL'));
-  assert.ok(codes(state.inv.delta).includes('TASA_REQUERIDA'));
+  assert.ok(codes(state.inv.delta).includes('TASA_OPCIONAL'));
   assert.ok(codes(state.inv.otra).includes('EMPRESA_INCORRECTA'));
   assert.ok(codes(state.inv.dolar).includes('MONEDA_NO_IDENTIFICADA'));
   const copies = list.invoices.filter(i => i.ncf === 'B0100000101');
@@ -204,10 +204,11 @@ test('auditoría: versión, bloqueo, guardar ≠ aprobar, críticos bloquean, ad
   assert.equal(approved.invoice.status, 'approved');
   assert.equal((await api('admin', 'PATCH', `invoices/${alfa.id}`, { version: approved.invoice.version, fields: { total: '1' } })).status, 409, 'aprobada no se edita');
   state.inv.alfa = approved.invoice;
-  // Critical: total difference remains blocked until corrected.
+  // Moneda extranjera: ya no bloquea por tasa (a la DGII se reporta en DOP).
   const delta = (await ok('admin', 'GET', `invoices/${state.inv.delta.id}`)).invoice;
-  assert.equal((await api('admin', 'POST', `invoices/${delta.id}/approve`, { version: delta.version, accept_warnings: true, reason: 'x x x x x' })).status, 422);
-  const fixed = await ok('admin', 'PATCH', `invoices/${delta.id}`, { version: delta.version, fields: { tasa_cambio: '60.2500', tasa_fecha: '2026-08-05', tasa_fuente: 'Banco Central RD', tipo_bienes_servicios: '09' } });
+  assert.equal(delta.critical_count, 0, 'sin tasa ya no hay críticos');
+  // Al indicar la tasa, convierte exacto a DOP.
+  const fixed = await ok('admin', 'PATCH', `invoices/${delta.id}`, { version: delta.version, fields: { tasa_cambio: '60.2500', tipo_bienes_servicios: '09' } });
   assert.equal(fixed.invoice.critical_count, 0);
   assert.equal(fixed.invoice.total_dop, '7109.50');
   state.inv.delta = (await ok('admin', 'POST', `invoices/${delta.id}/approve`, { version: fixed.invoice.version, accept_warnings: true, reason: 'Tasa BCRD del día' })).invoice;

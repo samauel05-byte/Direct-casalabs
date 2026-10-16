@@ -5,77 +5,110 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nómina</title>
 <style>
-  :root{ --bg:#0f172a; --panel:#111c33; --panel2:#0c1830; --line:#1e2d4a; --ink:#e7edf7; --muted:#8aa0c2; --accent:#f59e0b; --accentink:#1a1203; --ok:#10b981; --crit:#ef4444; --info:#3b82f6; }
+  :root{
+    --bg:#0a1120; --panel:#101b30; --panel2:#0c1526; --elev:#16233c;
+    --line:#223049; --line2:#2d3f5d;
+    --ink:#eaf0fb; --muted:#93a4c4; --faint:#5f7399;
+    --accent:#f59e0b; --accent2:#fbbf24; --accentink:#1a1203; --accent-soft:rgba(245,158,11,.13);
+    --blue:#60a5fa; --ok:#22c55e; --crit:#f87171;
+    --radius:14px; --shadow:0 10px 30px rgba(0,0,0,.30);
+  }
   *{ box-sizing:border-box; }
-  body{ margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
-  h1,h2,h3{ margin:0 0 .4em; } h1{ font-size:20px; } h2{ font-size:16px; }
+  body{ margin:0; font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink);
+    background:radial-gradient(1200px 500px at 70% -10%, #13213c 0%, transparent 60%), var(--bg); min-height:100vh; }
+  h1,h2,h3{ margin:0 0 .4em; } h1{ font-size:20px; } h2{ font-size:16px; letter-spacing:.2px; } h3{ font-size:13px; }
   .muted{ color:var(--muted); } .mono{ font-family:ui-monospace,Menlo,Consolas,monospace; }
   a{ color:var(--accent); }
-  header.top{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel2); position:sticky; top:0; z-index:5; }
-  .brand{ font-weight:800; letter-spacing:.5px; }
-  .brand b{ color:var(--accent); }
+  ::-webkit-scrollbar{ height:10px; width:10px; } ::-webkit-scrollbar-thumb{ background:#223049; border-radius:8px; border:2px solid var(--bg); }
+  header.top{ display:flex; gap:14px; align-items:center; flex-wrap:wrap; padding:12px 18px; border-bottom:1px solid var(--line);
+    background:rgba(12,21,38,.85); backdrop-filter:blur(8px); position:sticky; top:0; z-index:5; }
+  .brand{ display:flex; align-items:center; gap:9px; font-weight:800; letter-spacing:.3px; font-size:16px; }
+  .brand .mk{ width:26px; height:26px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px;
+    background:linear-gradient(135deg,var(--accent),#b45309); color:var(--accentink); box-shadow:0 2px 10px rgba(245,158,11,.4); }
+  .brand b{ color:var(--accent); font-weight:800; }
   .spacer{ flex:1; }
-  select,input,button,textarea{ font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
-  input::placeholder,textarea::placeholder{ color:#5f7399; }
-  button{ cursor:pointer; background:var(--panel); }
-  button:hover{ border-color:#2c436d; }
-  .btn.primary{ background:var(--accent); color:var(--accentink); border-color:var(--accent); font-weight:700; }
-  .btn.sm{ padding:4px 8px; font-size:12px; }
-  .btn.danger{ color:#fff; background:#7f1d1d; border-color:#7f1d1d; }
-  .btn.ghost{ background:transparent; }
-  main{ padding:16px; max-width:1200px; margin:0 auto; }
-  .tabs{ display:flex; gap:6px; margin:4px 0 16px; flex-wrap:wrap; }
-  .tabs button{ border-radius:999px; }
-  .tabs button.active{ background:var(--accent); color:var(--accentink); border-color:var(--accent); font-weight:700; }
-  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; }
+  select,input,button,textarea{ font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:8px 11px; transition:border-color .12s, box-shadow .12s, background .12s; }
+  select:focus,input:focus,textarea:focus{ outline:none; border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+  input::placeholder,textarea::placeholder{ color:var(--faint); }
+  select{ cursor:pointer; }
+  button.btn,.btn{ cursor:pointer; background:var(--elev); border:1px solid var(--line2); border-radius:10px; font-weight:600; }
+  .btn:hover{ border-color:#3a527a; background:#1a2a46; }
+  .btn:active{ transform:translateY(1px); }
+  .btn.primary{ background:linear-gradient(135deg,var(--accent),#d97706); color:var(--accentink); border-color:transparent; box-shadow:0 2px 12px rgba(245,158,11,.28); }
+  .btn.primary:hover{ filter:brightness(1.06); }
+  .btn.sm{ padding:5px 9px; font-size:12px; border-radius:8px; }
+  .btn.danger{ color:#fecaca; background:#3b1d1d; border-color:#5b2626; }
+  .btn.danger:hover{ background:#4c2222; }
+  .btn.ghost{ background:transparent; border-color:transparent; }
+  main{ padding:18px 22px; max-width:1680px; margin:0 auto; }
+  .tabs{ display:inline-flex; gap:4px; margin:6px 0 18px; padding:4px; background:var(--panel2); border:1px solid var(--line); border-radius:12px; flex-wrap:wrap; }
+  .tabs button{ border:none; background:transparent; border-radius:9px; padding:7px 15px; color:var(--muted); font-weight:600; }
+  .tabs button:hover{ color:var(--ink); background:#17243e; }
+  .tabs button.active{ background:var(--accent); color:var(--accentink); font-weight:700; box-shadow:0 2px 10px rgba(245,158,11,.25); }
+  .card{ background:linear-gradient(180deg,#121f36,#101a2e); border:1px solid var(--line); border-radius:var(--radius); padding:18px; margin-bottom:16px; box-shadow:var(--shadow); }
+  .card.stack{ display:flex; flex-direction:column; gap:12px; }
   .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
   .grid{ display:grid; gap:10px; }
-  table{ width:100%; border-collapse:collapse; }
-  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
-  th{ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px; }
+  table{ width:100%; border-collapse:separate; border-spacing:0; }
+  th,td{ text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th{ color:var(--muted); font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.4px; background:var(--panel2); position:sticky; top:0; z-index:1; }
+  tbody tr:hover > td, table tr:hover > td{ background:rgba(255,255,255,.015); }
   td.num,th.num{ text-align:right; font-variant-numeric:tabular-nums; }
-  .table-wrap{ overflow:auto; border:1px solid var(--line); border-radius:12px; }
-  tr.tot td{ font-weight:800; border-top:2px solid var(--line); background:var(--panel2); position:sticky; bottom:0; }
-  .cell-in{ width:110px; padding:5px 7px; text-align:right; }
-  .cell-in.txt{ text-align:left; width:150px; }
-  .pill{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; border:1px solid var(--line); color:var(--muted); }
-  .pill.ok{ color:var(--ok); border-color:#114b38; } .pill.calc{ color:var(--info); border-color:#1c3a66; }
-  .empty{ color:var(--muted); text-align:center; padding:28px; }
-  .modal-bg{ position:fixed; inset:0; background:rgba(2,6,18,.6); display:flex; align-items:center; justify-content:center; padding:16px; z-index:20; }
-  .modal{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; width:100%; max-width:520px; max-height:90vh; overflow:auto; }
-  label.f{ display:flex; flex-direction:column; gap:4px; font-size:13px; } label.f span{ color:var(--muted); }
-  .toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#0b1221; border:1px solid var(--line); padding:10px 14px; border-radius:10px; z-index:40; box-shadow:0 10px 30px rgba(0,0,0,.4); }
-  .toast.err{ border-color:#7f1d1d; } .toast.ok{ border-color:#114b38; }
+  .table-wrap{ overflow:auto; border:1px solid var(--line); border-radius:12px; background:var(--panel2); max-height:none; }
+  tr.tot td{ font-weight:800; border-top:2px solid var(--line2); background:#0e1a2e; position:sticky; bottom:0; }
+  tr.clickable{ cursor:pointer; } tr.clickable:hover > td{ background:rgba(245,158,11,.06); }
+  .cell-in{ width:104px; padding:6px 8px; text-align:right; background:#0c1728; border-color:#1d2a42; }
+  .cell-in:hover{ border-color:#324665; } .cell-in.txt{ text-align:left; width:150px; }
+  .cell-in:disabled{ opacity:.55; }
+  .pill{ display:inline-block; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:600; border:1px solid var(--line2); color:var(--muted); }
+  .pill.ok{ color:#86efac; border-color:#1d5a40; background:rgba(34,197,94,.1); }
+  .pill.calc{ color:#93c5fd; border-color:#24456f; background:rgba(96,165,250,.1); }
+  .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; border:1px solid var(--line2); }
+  .badge.ok{ color:#86efac; } .badge.warn{ color:var(--accent2); } .badge.crit{ color:var(--crit); } .badge.accent{ color:var(--accent); }
+  .empty{ color:var(--muted); text-align:center; padding:34px 16px; }
+  .modal-bg{ position:fixed; inset:0; background:rgba(4,8,18,.66); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:16px; z-index:20; animation:fade .12s ease; }
+  @keyframes fade{ from{ opacity:0 } to{ opacity:1 } }
+  .modal{ background:linear-gradient(180deg,#13203a,#0f1a2e); border:1px solid var(--line2); border-radius:16px; padding:20px; width:100%; max-width:540px; max-height:90vh; overflow:auto; box-shadow:0 24px 60px rgba(0,0,0,.5); }
+  .modal h2{ margin-bottom:2px; }
+  label.f{ display:flex; flex-direction:column; gap:5px; font-size:13px; } label.f span{ color:var(--muted); }
+  .toast{ position:fixed; left:50%; bottom:22px; transform:translateX(-50%); background:#0e1a2e; border:1px solid var(--line2); padding:11px 16px; border-radius:11px; z-index:40; box-shadow:0 12px 34px rgba(0,0,0,.45); font-weight:600; }
+  .toast.err{ border-color:#5b2626; color:#fecaca; } .toast.ok{ border-color:#1d5a40; color:#bbf7d0; }
   .hint{ font-size:12px; color:var(--muted); }
-  .total-kpis{ display:flex; gap:18px; flex-wrap:wrap; margin:4px 0 12px; }
-  .total-kpis .k{ background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-width:130px; }
-  .total-kpis .k .v{ font-size:18px; font-weight:800; } .total-kpis .k.neto .v{ color:var(--accent); } .total-kpis .k.aportes .v{ color:#60a5fa; }
-  .total-kpis .k.aportes{ cursor:pointer; } .total-kpis .k.aportes:hover{ border-color:#60a5fa; }
-  .emp{ display:flex; align-items:center; gap:9px; }
-  .av{ width:32px; height:32px; border-radius:50%; background:var(--accent); color:var(--accentink); font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
-  .emp .en{ font-weight:700; } .emp .sub{ font-size:12px; color:var(--muted); } .emp .cid{ font-size:11px; color:#5f7399; }
-  .nvsec{ } .nvsec h3{ font-size:12px; color:var(--muted); margin:2px 0 4px; text-transform:uppercase; letter-spacing:.3px; }
-  .nv{ display:flex; align-items:center; gap:10px; padding:5px 0; border-bottom:1px solid var(--line); }
-  .nv .nl{ flex:1; } .nv .na{ width:130px; text-align:right; padding:5px 8px; } .nv .na.num{ font-variant-numeric:tabular-nums; }
-  .nv.ro{ color:var(--muted); } .nv .nr{ width:130px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; }
-  .sw input{ width:36px; height:20px; -webkit-appearance:none; appearance:none; background:var(--line); border-radius:999px; position:relative; cursor:pointer; outline:none; border:none; transition:background .15s; flex:0 0 auto; }
+  .total-kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:2px 0 4px; }
+  .total-kpis .k{ background:linear-gradient(180deg,#132ografia,#0e1a2e); background:linear-gradient(180deg,#13223c,#0e1a2e); border:1px solid var(--line); border-radius:13px; padding:13px 15px; position:relative; overflow:hidden; }
+  .total-kpis .k::before{ content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--line2); }
+  .total-kpis .k .label{ font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); } .total-kpis .k .muted{ font-size:11px; text-transform:uppercase; letter-spacing:.4px; }
+  .total-kpis .k .v{ font-size:21px; font-weight:800; margin-top:3px; letter-spacing:.2px; }
+  .total-kpis .k.neto .v{ color:var(--accent); } .total-kpis .k.neto::before{ background:var(--accent); }
+  .total-kpis .k.aportes .v{ color:var(--blue); } .total-kpis .k.aportes::before{ background:var(--blue); }
+  .total-kpis .k.aportes{ cursor:pointer; } .total-kpis .k.aportes:hover{ border-color:var(--blue); }
+  .emp{ display:flex; align-items:center; gap:10px; }
+  .av{ width:36px; height:36px; border-radius:11px; color:#fff; font-weight:800; font-size:13px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+  .emp .en{ font-weight:700; } .emp .sub{ font-size:12px; color:var(--muted); margin-top:1px; } .emp .cid{ font-size:11px; color:var(--faint); }
+  .nvsec{ margin-top:4px; } .nvsec h3{ font-size:11px; color:var(--accent); margin:2px 0 6px; text-transform:uppercase; letter-spacing:.4px; }
+  .nv{ display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line); }
+  .nv .nl{ flex:1; } .nv .na{ width:130px; text-align:right; padding:6px 9px; } .nv .na.num{ font-variant-numeric:tabular-nums; }
+  .nv.ro{ color:var(--muted); } .nv .nr{ width:130px; text-align:right; font-variant-numeric:tabular-nums; font-weight:700; color:var(--ink); }
+  .sw input{ width:38px; height:21px; -webkit-appearance:none; appearance:none; background:#2a3a57; border-radius:999px; position:relative; cursor:pointer; outline:none; border:none; transition:background .15s; flex:0 0 auto; }
   .sw input:checked{ background:var(--accent); }
-  .sw input::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; }
-  .sw input:checked::after{ left:18px; }
-  .nvtot{ display:flex; gap:18px; justify-content:flex-end; margin-top:10px; font-size:14px; } .nvtot .neto b{ color:var(--accent); font-size:16px; }
-  .ajs{ border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:12px; } .ajs h3{ font-size:13px; margin:0 0 8px; color:var(--accent); }
-  .ajs .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:10px; }
+  .sw input::after{ content:''; position:absolute; top:2.5px; left:2.5px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; box-shadow:0 1px 3px rgba(0,0,0,.4); }
+  .sw input:checked::after{ left:19px; }
+  .nvtot{ display:flex; gap:20px; justify-content:flex-end; margin-top:14px; padding-top:12px; border-top:1px solid var(--line2); font-size:14px; } .nvtot .neto b{ color:var(--accent); font-size:17px; }
+  .ajs{ border:1px solid var(--line); border-radius:13px; padding:14px 16px; margin-bottom:12px; background:var(--panel2); } .ajs h3{ font-size:12px; margin:0 0 10px; color:var(--accent); text-transform:uppercase; letter-spacing:.4px; }
+  .ajs .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+  @media(max-width:620px){ main{ padding:12px; } .card{ padding:14px; } header.top{ padding:10px 12px; } }
 </style>
 </head>
 <body>
 <header class="top">
-  <span class="brand">LO<b>NÓMINA</b></span>
-  <label class="row" style="gap:6px"><span class="muted">Empresa</span><select id="client"></select></label>
+  <span class="brand"><span class="mk">N</span>LO<b>NÓMINA</b></span>
+  <button class="btn sm" id="curco" title="Cambiar o crear empresa">— Empresa —</button>
   <span class="spacer"></span>
   <span class="muted mono" id="who"></span>
 </header>
 <main>
   <div class="tabs" id="tabs">
+    <button data-tab="empresas">Empresas</button>
     <button data-tab="nomina" class="active">Nómina</button>
     <button data-tab="empleados">Empleados</button>
     <button data-tab="columnas">Columnas</button>
@@ -161,18 +194,20 @@
   const view = $('#view');
   const TYPE_LABEL = { monto:'Monto (RD$)', numero:'Número', texto:'Texto', formula:'Fórmula' };
 
+  function syncTabs(){ [...$('#tabs').children].forEach(x=>x.classList.toggle('active', x.dataset.tab===S.tab)); }
+  function updateCurco(){ const n=clientName(); $('#curco').textContent = n ? ('🏢 '+n) : '— Empresa —'; }
+
   async function boot(){
     try {
       const me = await api('GET','me'); $('#who').textContent = me.tenant?.name || '';
       const { clients } = await api('GET','clients'); S.clients = clients || [];
     } catch(e){ view.innerHTML = '<div class="card empty"><b>Su sesión terminó o se abrió en otro equipo.</b><br>Vuelva a iniciar sesión en SERP.</div>'; return; }
-    const sel = $('#client');
-    sel.innerHTML = S.clients.length ? S.clients.map(c=>`<option value="${esc(c.id)}">${esc(c.legal_name)}</option>`).join('') : '<option value="">— Sin empresas —</option>';
-    S.clientId = S.clients[0]?.id || '';
-    sel.value = S.clientId;
-    sel.onchange = async () => { S.clientId = sel.value; await loadClient(); render(); };
-    $('#tabs').onclick = e => { const b=e.target.closest('[data-tab]'); if(!b)return; S.tab=b.dataset.tab; S.period=null; [...$('#tabs').children].forEach(x=>x.classList.toggle('active', x===b)); render(); };
-    await loadClient(); render();
+    let saved=''; try{ saved=localStorage.getItem('nomina_client_id')||''; }catch(_){}
+    S.clientId = (saved && S.clients.some(c=>c.id===saved)) ? saved : (S.clients[0]?.id || '');
+    if(!S.clientId) S.tab='empresas';
+    $('#curco').onclick = ()=>{ S.tab='empresas'; S.period=null; syncTabs(); render(); };
+    $('#tabs').onclick = e => { const b=e.target.closest('[data-tab]'); if(!b)return; S.tab=b.dataset.tab; S.period=null; syncTabs(); render(); };
+    syncTabs(); await loadClient(); updateCurco(); render();
   }
 
   async function loadClient(){
@@ -184,13 +219,46 @@
     } catch(err){ fail(err); }
   }
 
+  async function selectClient(id){ S.clientId=id; try{ localStorage.setItem('nomina_client_id', id); }catch(_){} S.period=null; S.lastPeriodId=null; await loadClient(); updateCurco(); }
+
   function render(){
-    if(!S.clientId){ view.innerHTML='<div class="card empty">Cree o seleccione una empresa en SERP para empezar.</div>'; return; }
+    if(S.tab==='empresas') return renderEmpresas();
+    if(!S.clientId){ S.tab='empresas'; syncTabs(); return renderEmpresas(); }
     if(S.period) return renderPeriod();
     if(S.tab==='nomina') return renderNomina();
     if(S.tab==='empleados') return renderEmployees();
     if(S.tab==='columnas') return renderColumns();
     if(S.tab==='ajustes') return renderAjustes();
+  }
+
+  // ── EMPRESAS (propias de Nómina: el usuario crea la empresa y le sube la nómina) ──
+  function renderEmpresas(){
+    view.innerHTML = `<div class="card"><div class="row"><h2>Empresas</h2><span class="spacer"></span><button class="btn primary" id="addco">+ Nueva empresa</button></div>
+      ${S.clients.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th>RNC</th><th>Estado</th><th></th></tr>
+        ${S.clients.map(c=>`<tr class="clickable" data-open="${c.id}"><td><b>${esc(c.legal_name)}</b>${c.id===S.clientId?' <span class="pill ok">Seleccionada</span>':''}</td><td class="mono">${esc(c.rnc||'—')}</td><td>${c.active===false?'<span class="pill">Inactiva</span>':'<span class="pill ok">Activa</span>'}</td>
+          <td class="num">${c.id===S.clientId?'':`<button class="btn sm primary" data-use="${c.id}">Usar</button> `}<button class="btn sm" data-edco="${c.id}">Editar</button> <button class="btn sm danger" data-delco="${c.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+        : '<div class="empty">Aún no tiene empresas.<br><br>Cree la primera para empezar a cargarle su nómina.</div>'}
+      <p class="hint">Cada empresa tiene sus propias columnas, empleados, ajustes (tasas de ley) y períodos de nómina.</p></div>`;
+    $('#addco').onclick=()=>companyModal(null);
+    const use = async id => { await selectClient(id); S.tab='nomina'; syncTabs(); render(); toast('Empresa seleccionada','ok'); };
+    view.querySelectorAll('[data-use]').forEach(b=> b.onclick=e=>{ e.stopPropagation(); use(b.dataset.use); });
+    view.querySelectorAll('[data-edco]').forEach(b=> b.onclick=e=>{ e.stopPropagation(); companyModal(S.clients.find(x=>x.id===b.dataset.edco)); });
+    view.querySelectorAll('[data-delco]').forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const c=S.clients.find(x=>x.id===b.dataset.delco); if(!confirm(`¿Borrar la empresa "${c.legal_name}"? Se eliminarán sus columnas, empleados y períodos.`))return;
+      try{ await api('DELETE',`clients/${c.id}`); const {clients}=await api('GET','clients'); S.clients=clients||[];
+        if(S.clientId===c.id){ S.clientId=S.clients[0]?.id||''; try{ S.clientId?localStorage.setItem('nomina_client_id',S.clientId):localStorage.removeItem('nomina_client_id'); }catch(_){} await loadClient(); updateCurco(); }
+        render(); toast('Empresa borrada','ok'); }catch(err){ fail(err);} });
+    view.querySelectorAll('tr[data-open]').forEach(tr=> tr.onclick=()=> use(tr.dataset.open));
+  }
+  function companyModal(co){
+    modal(`${co?'Editar':'Nueva'} empresa`, `
+      <label class="f"><span>Nombre / Razón social *</span><input id="m-co-name" maxlength="160" value="${esc(co?.legal_name||'')}"></label>
+      <label class="f"><span>RNC</span><input id="m-co-rnc" maxlength="20" value="${esc(co?.rnc||'')}"></label>
+      ${co?`<label class="row" style="gap:8px"><input type="checkbox" id="m-co-active" ${co.active!==false?'checked':''} style="width:auto"> Activa</label>`:''}`,
+      async()=>{ const legal_name=$('#m-co-name').value.trim(); if(!legal_name){ toast('Escriba el nombre','err'); return false; }
+        const body={ legal_name, rnc:$('#m-co-rnc').value.trim() }; if(co) body.active=$('#m-co-active').checked;
+        try{ const r=await api(co?'PATCH':'POST', co?`clients/${co.id}`:'clients', body); const {clients}=await api('GET','clients'); S.clients=clients||[];
+          if(!co){ await selectClient(r.client.id); S.tab='nomina'; syncTabs(); } else updateCurco();
+          render(); toast('Guardado','ok'); return true; }catch(e){ fail(e); return false; } });
   }
 
   // ── NÓMINA (pantalla principal): aterriza en el período más reciente ──

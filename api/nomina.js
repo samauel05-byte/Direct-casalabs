@@ -7,6 +7,9 @@ const api = require('../lib/nomina/api');
 const ROUTES = [
   ['GET', /^me$/, ctx => api.me(ctx)],
   ['GET', /^clients$/, ctx => api.listClients(ctx)],
+  ['POST', /^clients$/, (ctx, q, b) => api.createClient(ctx, b)],
+  ['PATCH', /^clients\/([^/]+)$/, (ctx, q, b, m) => api.updateClient(ctx, m[1], b)],
+  ['DELETE', /^clients\/([^/]+)$/, (ctx, q, b, m) => api.deleteClient(ctx, m[1])],
 
   ['GET', /^clients\/([^/]+)\/settings$/, (ctx, q, b, m) => api.getSettings(ctx, m[1])],
   ['PUT', /^clients\/([^/]+)\/settings$/, (ctx, q, b, m) => api.putSettings(ctx, m[1], b)],
@@ -31,7 +34,7 @@ const ROUTES = [
   ['GET', /^periods\/([^/]+)\/export$/, (ctx, q, b, m) => api.exportPeriod(ctx, m[1])],
 ];
 
-const CREATED = /\/(columns|employees|periods)$/;
+const CREATED = /(?:^clients|\/(?:columns|employees|periods))$/;
 
 module.exports = async (req, res) => {
   const route = String(req.query?.route || '').replace(/^\/+|\/+$/g, '');

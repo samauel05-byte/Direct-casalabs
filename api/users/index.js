@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
-        .select('id, role, access_direct, access_cami, access_nala, access_ir2, access_estimacion, access_clientes, portals_direct, companies_direct, created_at')
+        .select('id, role, access_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_clientes, portals_direct, companies_direct, created_at')
         .eq('tenant_id', session.tenantId)
         .order('created_at');
 
@@ -45,6 +45,7 @@ module.exports = async (req, res) => {
         access_direct: p.access_direct !== false,
         access_cami: p.access_cami,
         access_nala: p.access_nala,
+        access_nomina: p.access_nomina === true,
         access_ir2: p.access_ir2,
         access_estimacion: p.access_estimacion,
         access_clientes: p.access_clientes !== false,
@@ -57,7 +58,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -75,6 +76,7 @@ module.exports = async (req, res) => {
         access_direct: access_direct !== false,
         access_cami: access_cami || false,
         access_nala: access_nala || false,
+        access_nomina: access_nomina || false,
         access_ir2: access_ir2 || false,
         access_estimacion: access_estimacion || false,
         // Client records are isolated by the tenant, not by a module checkbox.

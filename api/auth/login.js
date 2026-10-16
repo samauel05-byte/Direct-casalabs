@@ -13,6 +13,7 @@ function profileResponse(profile, defaultPortals) {
     access_direct: profile.access_direct !== false,
     access_cami: profile.access_cami || false,
     access_nala: profile.access_nala || false,
+    access_nomina: profile.access_nomina === true,
     access_ir2: profile.access_ir2 === true,
     access_estimacion: profile.access_estimacion === true,
     access_clientes: profile.access_clientes !== false,

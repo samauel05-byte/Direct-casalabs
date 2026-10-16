@@ -5,6 +5,7 @@
     { "source": "/api/poll", "destination": "/api/credentials?poll=1" },
     { "source": "/api/logo/:key", "destination": "/api/config?logo=:key" },
     { "source": "/api/nala/:path*", "destination": "/api/nala?route=:path*" },
+    { "source": "/api/nomina/:path*", "destination": "/api/nomina?route=:path*" },
     { "source": "/api/monitor/:path*", "destination": "/api/monitor?route=:path*" }
   ],
   "headers": [

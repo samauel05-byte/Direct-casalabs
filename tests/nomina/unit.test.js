@@ -1,0 +1,92 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const { compile, validate, round2 } = require('../../lib/nomina/formula');
+
+test('fórmula: aritmética y precedencia', () => {
+  assert.equal(compile('2 + 3 * 4').evaluate(), 14);
+  assert.equal(compile('(2 + 3) * 4').evaluate(), 20);
+  assert.equal(compile('-5 + 2').evaluate(), -3);
+  assert.equal(compile('10 / 4').evaluate(), 2.5);
+  assert.equal(compile('10 / 0').evaluate(), 0, 'división por cero → 0, nunca NaN/Infinity');
+});
+
+test('fórmula: referencias a columnas y refs detectadas', () => {
+  const f = compile('sueldo + horas_extra * 1.35');
+  assert.deepEqual(f.refs.sort(), ['horas_extra', 'sueldo']);
+  assert.equal(f.evaluate({ sueldo: 20000, horas_extra: 10 }), 20013.5);
+  assert.equal(compile('falta_clave + 5').evaluate({}), 5, 'columna ausente cuenta como 0');
+});
+
+test('fórmula: funciones permitidas', () => {
+  assert.equal(compile('round(10.004, 2)').evaluate(), 10);
+  assert.equal(compile('round(1234.5678, 2)').evaluate(), 1234.57);
+  assert.equal(compile('max(1, 9, 4)').evaluate(), 9);
+  assert.equal(compile('min(sueldo, 5000)').evaluate({ sueldo: 3000 }), 3000);
+  assert.equal(compile('abs(0 - 7)').evaluate(), 7);
+});
+
+test('fórmula: rechaza entradas peligrosas o mal formadas (nunca ejecuta código)', () => {
+  assert.throws(() => compile('process.exit(1)'), /no permitido|desconocida|mal formada/i);
+  assert.throws(() => compile('a => 1'), /no permitido|mal formada|Sobran/i);
+  assert.throws(() => compile('2 +'), /incompleta|mal formada/i);
+  assert.throws(() => compile('(2 + 3'), /incompleta|mal formada/i);
+  assert.throws(() => compile(''), /vac/i);
+  assert.throws(() => compile('1.2.3'), /inválido|Número/i);
+  assert.throws(() => compile('"drop"'), /no permitido/i);
+});
+
+test('fórmula: validate() con columnas conocidas', () => {
+  assert.equal(validate('sueldo * 2', ['sueldo']).ok, true);
+  const bad = validate('sueldo + bono', ['sueldo']);
+  assert.equal(bad.ok, false);
+  assert.match(bad.error, /no existen|bono/);
+  assert.equal(validate('1 +', null).ok, false);
+});
+
+test('round2: redondeo monetario a 2 decimales', () => {
+  assert.equal(round2(10.005), 10.01);
+  assert.equal(round2(1234.5), 1234.5);
+  assert.equal(round2('abc'), 0);
+});
+
+const { computePeriod, computeRow } = require('../../lib/nomina/compute');
+
+const COLS = [
+  { key: 'sueldo', type: 'monto', sign: 1, include_total: true, position: 1 },
+  { key: 'horas_extra', type: 'numero', sign: 0, include_total: false, position: 2 },
+  { key: 'pago_extra', type: 'formula', formula: 'horas_extra * (sueldo / 23.83 / 8) * 1.35', sign: 1, include_total: true, position: 3 },
+  { key: 'afp', type: 'formula', formula: 'round((sueldo + pago_extra) * 0.0287, 2)', sign: -1, include_total: true, position: 4 },
+  { key: 'nota', type: 'texto', sign: 0, include_total: false, position: 5 },
+];
+
+test('compute: fila con fórmulas en cadena, ingresos/deducciones/neto', () => {
+  const r = computeRow(COLS, { sueldo: 20000, horas_extra: 0, nota: 'ok' });
+  assert.equal(r.cells.sueldo, 20000);
+  assert.equal(r.cells.pago_extra, 0);
+  assert.equal(r.cells.afp, 574, 'AFP = 20000*0.0287 = 574');
+  assert.equal(r.cells.nota, 'ok');
+  assert.equal(r.ingresos, 20000);
+  assert.equal(r.deducciones, 574);
+  assert.equal(r.neto, 19426);
+});
+
+test('compute: totales por columna y resumen del período', () => {
+  const emps = [{ id: 'e1' }, { id: 'e2' }];
+  const entries = [
+    { employee_id: 'e1', values: { sueldo: 20000, horas_extra: 0 } },
+    { employee_id: 'e2', values: { sueldo: 10000, horas_extra: 0 } },
+  ];
+  const out = computePeriod(COLS, emps, entries);
+  assert.equal(out.rows.length, 2);
+  assert.equal(out.totals.sueldo, 30000);
+  assert.equal(out.totals.afp, round2(574 + 287));
+  assert.equal(out.summary.ingresos, 30000);
+  assert.equal(out.summary.deducciones, round2(574 + 287));
+  assert.equal(out.summary.neto, round2(30000 - 574 - 287));
+});
+
+test('compute: empleado sin valores no rompe (columnas ausentes = 0)', () => {
+  const out = computePeriod(COLS, [{ id: 'e1' }], []);
+  assert.equal(out.rows[0].neto, 0);
+  assert.equal(out.summary.neto, 0);
+});

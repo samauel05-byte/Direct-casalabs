@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — en una factura repetida, puedes eliminar cualquiera de las dos**: el aviso de comprobante repetido ahora enmarca que **hay dos copias** y ofrece **«🗑 Descartar esta»** y **«🗑 Descartar la otra»** (además de **«Ver la otra»** para abrirla). Así eliges cuál conservar sin tener que ir a buscarla; al descartar una, la que queda deja de marcarse como repetida automáticamente. Disponible en la lista y en el detalle.
+
 - **NALA — al marcar una factura repetida, dice exactamente cuál es la otra**: el aviso de comprobante repetido ahora identifica la otra copia con su **lote, período, archivo y página** (ej.: «…ya está en revisión en el lote «MODELO 606» (09/2026), archivo "FACTURAS.pdf", pág. 3»), además del botón **«Ver la original»** que ya abría la otra factura. Para los comprobantes ya leídos, basta pulsar **«Revalidar»** en el lote para refrescar el mensaje.
 
 - **NALA — el ITBIS menor al 18% ya no da aviso (partidas exentas)**: en facturas de súper/farmacia parte de los artículos son **exentos**, así que el ITBIS es **menor** al 18% del monto — y eso es correcto. Antes el sistema avisaba «El ITBIS no corresponde a 18% ni 16%» y estorbaba al aprobar. Ahora **solo avisa si el ITBIS SUPERA el 18%** del monto (lo único que no puede pasar: más impuesto que base); cualquier valor por debajo se acepta sin avisos.

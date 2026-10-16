@@ -351,7 +351,7 @@
     const client=S.clients.find(c=>c.id===S.clientId)||{};
     const lines=arr=>arr.map(c=>`<tr><td>${esc(c.label)}</td><td class="n">${money2(r.cells[c.key])}</td></tr>`).join('');
     return `<div class="slip">
-      <div class="hd"><div class="co">${esc(client.legal_name||'')}</div><div class="rnc">RNC ${esc(client.rnc||client.cedula||'')}</div></div>
+      <div class="hd"><div class="br"><img class="logo" src="${location.origin}/img/direct-logo.png" alt="" onerror="this.style.display='none'"><div class="co">${esc(client.legal_name||'')}</div></div><div class="rnc">RNC ${esc(client.rnc||client.cedula||'')}</div></div>
       <div class="ti">VOLANTE DE PAGO</div><div class="pe">${esc(S.period.period.label)}</div>
       <table class="meta"><tr><td><b>Empleado:</b> ${esc(emp.full_name)}</td><td><b>Cédula:</b> ${esc(emp.identifier||'—')}</td></tr>
         <tr><td><b>Posición:</b> ${esc(emp.position||'—')}</td><td><b>Sueldo mensual:</b> ${money2(r.cells.sueldo_mensual)}</td></tr></table>
@@ -372,6 +372,7 @@
       .slip{page-break-after:always;padding:4px 2px;max-width:720px;margin:0 auto}
       .slip:last-child{page-break-after:auto}
       .hd{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid #111;padding-bottom:6px}
+      .br{display:flex;align-items:center;gap:10px}.logo{height:38px;width:auto}
       .co{font-size:18px;font-weight:800}.rnc{color:#555}
       .ti{text-align:center;font-weight:800;letter-spacing:2px;margin:10px 0 2px}.pe{text-align:center;color:#555;margin-bottom:10px}
       table{width:100%;border-collapse:collapse}.meta td{padding:3px 0;font-size:12px}

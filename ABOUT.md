@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Marca Casa Labs en todo, sin el logo de Direct**: se terminó de quitar el logo de Direct de los últimos sitios donde quedaba (referencias internas) y en el **PDF del recibo** la declaración ahora resalta en **negrita** los datos clave (nombre del empleado, cédula, empresa y el monto en letras), igual que en la versión para imprimir. La marca queda como **Casa Labs** en encabezados, reporte del período, recibo y login.
+
 - **Nómina — el volante ahora es un recibo firmable (con Casa Labs al pie)**: el volante de pago se rediseñó con el formato de un **recibo real**: arriba la empresa (razón social + RNC) y la fecha; luego el título **«RECIBO DE NÓMINA»** y la **declaración** de que el empleado recibió el pago («Yo, _Empleado_, he recibido de la compañía _Empresa_ la suma de _…en letras…_ (RD$ _monto_), correspondiente al pago de _período_»); el **desglose** con signo `(+)`/`(−)` y el **Total a cobrar**; y las firmas **«Entregado por» / «Recibido por»**. El monto se escribe en **letras** (p. ej. «Veintiocho mil cuatrocientos setenta y tres pesos dominicanos con 78/100»). La marca que antes iba arriba (logo) ahora va discreta **al pie como «Casa Labs»**. Aplica igual al imprimir y al PDF.
 
 - **Login — el logo de Direct ahora es marca de agua, no protagonista**: en la pantalla de inicio de sesión (y registro), el logo de Direct dejó de ir grande arriba de la tarjeta; ahora aparece como **marca de agua grande y tenue de fondo**, detrás del formulario. Así lo primero que ve la persona es el acceso, no el logo. Se mantiene en los encabezados internos.

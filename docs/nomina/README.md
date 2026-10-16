@@ -66,8 +66,15 @@ mensuales), una empresa puede tener una columna **`cobra_entero`** (tipo
 ley la usan como factor `(1+cobra_entero)`: con 0 van quincenales (sin cambio),
 con 1 pagan el mes completo y aplican las deducciones de mes entero. Para que el
 imponible no se duplique, su fórmula divide por `(1+cobra_entero)`:
-`round(sueldo_mensual-(sfs+pension)*p_div/(1+cobra_entero),2)`. La columna
-**`seguro`** (tipo `monto`, signo −1) es una deducción aparte (seguro médico).
+`round(sueldo_mensual-(sfs+pension)*p_div/(1+cobra_entero)+otros_mas*p_div,2)`.
+La columna **`seguro`** (tipo `monto`, signo −1) es una deducción aparte (seguro
+médico).
+
+El imponible también **suma los ingresos extra** de la columna `otros_mas`
+(Otros +) con `+otros_mas*p_div`, para que el ISR salga de todos los ingresos
+percibidos y no solo del sueldo. Como el imponible es mensual, el extra
+quincenal se anualiza con `p_div` igual que el sueldo (se trata como ingreso
+recurrente); por eso un extra sube tanto el neto como su ISR correspondiente.
 
 ## Reglas de cálculo
 

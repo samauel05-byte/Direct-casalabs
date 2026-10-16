@@ -167,10 +167,11 @@
         : (green ? '' : '<p class="muted" style="margin-top:8px">Esta observación no se corrige con un solo campo: abra el detalle para revisarla.</p>');
       const detailLink = `#/auditoria/${inv.id}?${new URLSearchParams(params)}`;
       td.innerHTML = `<div class="inline-editor">
-        <div class="stack" style="gap:4px">${dup ? `<div class="issue critical"><span class="ico">⛔</span><span><b>Factura repetida.</b> ${esc(dup.message)}</span>${dup.ref ? `<a class="btn sm" href="#/auditoria/${dup.ref}">Ver la original</a>` : ''}</div>` : notesHtml}</div>
+        <div class="stack" style="gap:4px">${dup ? `<div class="issue critical"><span class="ico">⛔</span><span><b>Factura repetida (dos copias).</b> ${esc(dup.message)} <b>Deja una y elimina la otra.</b></span>${dup.ref ? `<a class="btn sm" href="#/auditoria/${dup.ref}">Ver la otra</a>` : ''}</div>` : notesHtml}</div>
         ${dup ? '' : fieldsHtml}
         <div class="row" style="margin-top:10px;gap:8px;align-items:center">
-          ${dup && canExclude ? '<button class="btn sm danger" data-act="discard">Descartar esta copia</button>' : ''}
+          ${dup && canExclude ? '<button class="btn sm danger" data-act="discard">🗑 Descartar esta</button>' : ''}
+          ${dup && dup.ref && canExclude ? `<button class="btn sm danger" data-act="discard-other" data-other="${esc(dup.ref)}">🗑 Descartar la otra</button>` : ''}
           ${!dup && hasFields ? '<button class="btn sm primary" data-act="save">Guardar</button>' : ''}
           ${!dup && canApprove ? `<button class="btn sm ok" data-act="approve" ${green ? '' : 'disabled'} title="${green ? 'Aprobar este comprobante' : 'Primero corrija lo señalado'}">✓ Aprobar</button>` : ''}
           <a class="btn sm" href="${detailLink}">Abrir detalle ▸</a>
@@ -180,6 +181,7 @@
       td.querySelector('[data-act="save"]')?.addEventListener('click', e => doSave(e.target, td, inv));
       td.querySelector('[data-act="approve"]')?.addEventListener('click', e => doApprove(e.target, inv));
       td.querySelector('[data-act="discard"]')?.addEventListener('click', e => doDiscard(e.target, inv));
+      td.querySelector('[data-act="discard-other"]')?.addEventListener('click', e => doDiscardOther(e.target, inv));
       td.querySelectorAll('[data-k]').forEach(el => el.addEventListener('keydown', ev => { if (ev.key === 'Enter' && el.tagName !== 'SELECT') { ev.preventDefault(); td.querySelector('[data-act="save"]')?.click(); } }));
     }
     const expand = id => { const er = editorRow(id); if (!er) return; buildEditor(er.querySelector('td'), byId[id]); er.hidden = false; root.querySelector(`[data-fix="${id}"]`)?.classList.add('active'); er.querySelector('[data-k]')?.focus(); };
@@ -228,6 +230,14 @@
       const dup = inv.issues.find(x => x.code === 'DUPLICADO');
       btn.disabled = true;
       try { const r = await NALA.api('POST', `invoices/${inv.id}/exclude`, { reason: `Factura repetida. ${dup?.message || ''}`.slice(0, 500) }); applyUpdate(r.invoice); NALA.toast('Copia descartada', 'ok'); collapse(inv.id); } catch (e) { handleInlineError(e); }
+    }
+    // Descarta la OTRA copia (la del otro lote) y conserva ésta.
+    async function doDiscardOther(btn, inv) {
+      const dup = inv.issues.find(x => x.code === 'DUPLICADO');
+      if (!dup?.ref) return;
+      if (!confirm('¿Descartar la OTRA copia (la del otro lote) y conservar ésta? Se excluye la otra factura, no la que ves aquí.')) return;
+      btn.disabled = true;
+      try { await NALA.api('POST', `invoices/${dup.ref}/exclude`, { reason: 'Factura repetida; se conserva la otra copia.' }); NALA.toast('La otra copia fue descartada', 'ok'); NALA.route(); } catch (e) { btn.disabled = false; handleInlineError(e); }
     }
 
     // Aprobación masiva (sólo cotejo verde).
@@ -411,8 +421,8 @@
       <div class="row"><button class="btn" data-href="${back}">← Volver a la lista</button><button class="btn" id="prev">◀ Anterior</button><span class="muted" id="nav-count"></span><button class="btn" id="next">Siguiente ▶</button>
         <label class="muted" style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer" title="Salta las facturas que ya están completas (sin errores ni avisos)"><input type="checkbox" id="skip-complete" checked> Solo incompletas</label>
         <span class="spacer" style="flex:1"></span>${NALA.badge(inv.status)} <span class="badge">${inv.format}</span> <span class="muted">${esc(d.client.legal_name)} · ${period(inv.period)}${d.batch ? ` · lote <a href="#/lotes/${d.batch.id}">${esc(d.batch.name)}</a>` : ''}${d.reallocated ? ' · <span class="badge info">Reubicada</span>' : ''}</span></div>
-      ${inv.issues.some(i => i.code === 'DUPLICADO') && inv.status !== 'excluded' ? `<div class="issue critical" style="font-size:14px;padding:12px"><span class="ico">⛔</span><span><b>Factura repetida.</b> ${esc(inv.issues.find(i => i.code === 'DUPLICADO').message)}</span>
-        <a class="btn sm" href="#/auditoria/${inv.issues.find(i => i.code === 'DUPLICADO').ref}">Ver la original</a>${NALA.can('exclude') && inv.status !== 'approved' ? '<button class="btn sm danger" id="discard-copy">Descartar esta copia</button>' : ''}</div>` : ''}
+      ${(() => { const dup = inv.issues.find(i => i.code === 'DUPLICADO'); if (!dup || inv.status === 'excluded') return ''; return `<div class="issue critical" style="font-size:14px;padding:12px;flex-wrap:wrap"><span class="ico">⛔</span><span><b>Factura repetida: hay dos copias del mismo NCF.</b> ${esc(dup.message)} <b>Deja una y elimina la otra:</b></span>
+        ${dup.ref ? `<a class="btn sm" href="#/auditoria/${dup.ref}">Ver la otra</a>` : ''}${NALA.can('exclude') && inv.status !== 'approved' ? '<button class="btn sm danger" id="discard-copy">🗑 Descartar esta</button>' : ''}${dup.ref && NALA.can('exclude') ? `<button class="btn sm danger" id="discard-other" data-other="${esc(dup.ref)}">🗑 Descartar la otra</button>` : ''}</div>`; })()}
       ${d.lock.locked_by_other ? '<div class="issue warning"><span class="ico">🔒</span>Otro usuario está editando este comprobante. Se muestra en sólo lectura hasta que lo libere.</div>' : ''}
       ${inv.status === 'approved' ? `<div class="issue info"><span class="ico">✓</span>Aprobado ${NALA.dateTime(inv.approved_at)}${inv.approval_reason ? ` · motivo: ${esc(inv.approval_reason)}` : ''}. Para editar, revierta la aprobación.</div>` : ''}
       <div class="audit">
@@ -546,6 +556,11 @@
     });
     root.querySelector('#discard-copy')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `invoices/${inv.id}/exclude`, { reason: `Factura repetida. ${inv.issues.find(i => i.code === 'DUPLICADO').message}`.slice(0, 500) }); NALA.dirty = false; NALA.toast('Copia descartada', 'ok'); if (ids[pos + 1]) navTo(1); else NALA.route(); } catch (e) { handleConflict(e); }
+    });
+    root.querySelector('#discard-other')?.addEventListener('click', async (ev) => {
+      const other = ev.currentTarget.dataset.other;
+      if (!confirm('¿Descartar la OTRA copia (la del otro lote) y conservar ésta? Se excluye la otra factura, no la que ves aquí.')) return;
+      try { await NALA.api('POST', `invoices/${other}/exclude`, { reason: 'Factura repetida; se conserva la otra copia.' }); NALA.dirty = false; NALA.toast('La otra copia fue descartada', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });
     root.querySelector('#restore')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `invoices/${inv.id}/restore`, { reason: '' }); NALA.toast('Restaurado', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }

@@ -14,6 +14,7 @@ const ROUTES = [
   ['DELETE', /^columns\/([^/]+)$/, (ctx, q, b, m) => api.deleteColumn(ctx, m[1])],
 
   ['GET', /^clients\/([^/]+)\/employees$/, (ctx, q, b, m) => api.listEmployees(ctx, m[1])],
+  ['GET', /^employees\/([^/]+)\/history$/, (ctx, q, b, m) => api.employeeHistory(ctx, m[1])],
   ['POST', /^clients\/([^/]+)\/employees$/, (ctx, q, b, m) => api.createEmployee(ctx, m[1], b)],
   ['PATCH', /^employees\/([^/]+)$/, (ctx, q, b, m) => api.updateEmployee(ctx, m[1], b)],
   ['DELETE', /^employees\/([^/]+)$/, (ctx, q, b, m) => api.deleteEmployee(ctx, m[1])],

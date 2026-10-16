@@ -56,6 +56,15 @@ sumando las de signo + y restando las de signo −. Montos redondeados a 2
 decimales. La misma lógica corre en el servidor (`compute.js`, autoritativa al
 guardar/exportar) y en el navegador (para el neto en vivo).
 
+## Ficha del empleado (historial)
+
+`GET /api/nomina/employees/:id/history` (`api.employeeHistory`) devuelve el
+empleado y, por cada período en que aparece, sus ingresos/deducciones/neto ya
+calculados (con `computeRow`) más los acumulados. El frontend lo muestra como
+«Ficha»: datos del empleado, KPIs acumulados y la tabla de períodos (cada fila
+abre su período). Préstamos, descuentos y adicionales son simples **columnas**
+(tipo monto, signo − o +) que se capturan en la celda del empleado en el período.
+
 ## Pruebas
 
 ```bash

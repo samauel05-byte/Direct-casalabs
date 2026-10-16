@@ -176,9 +176,10 @@
     view.innerHTML = `<div class="card"><div class="row"><h2>Empleados</h2><span class="spacer"></span><button class="btn primary" id="add">+ Empleado</button></div>
       ${S.employees.length ? `<div class="table-wrap"><table><tr><th>Nombre</th><th>Cédula</th><th>Puesto</th><th>Estado</th><th></th></tr>
         ${S.employees.map(e=>`<tr><td><b>${esc(e.full_name)}</b></td><td class="mono">${esc(e.identifier||'—')}</td><td>${esc(e.position||'—')}</td><td>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}</td>
-          <td class="num"><button class="btn sm" data-ed="${e.id}">Editar</button> <button class="btn sm danger" data-del="${e.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+          <td class="num"><button class="btn sm" data-ficha="${e.id}">Ficha</button> <button class="btn sm" data-ed="${e.id}">Editar</button> <button class="btn sm danger" data-del="${e.id}">Borrar</button></td></tr>`).join('')}</table></div>`
         : '<div class="empty">Aún no hay empleados. Agregue el primero.</div>'}</div>`;
     $('#add').onclick = () => employeeModal(null);
+    view.querySelectorAll('[data-ficha]').forEach(b=> b.onclick=()=> openEmployee(b.dataset.ficha));
     view.querySelectorAll('[data-ed]').forEach(b=> b.onclick=()=> employeeModal(S.employees.find(x=>x.id===b.dataset.ed)));
     view.querySelectorAll('[data-del]').forEach(b=> b.onclick=async()=>{ if(!confirm('¿Borrar este empleado? Se quitará de los períodos.'))return; try{ await api('DELETE',`employees/${b.dataset.del}`); await loadClient(); render(); toast('Empleado borrado','ok'); }catch(e){ fail(e);} });
   }
@@ -195,6 +196,27 @@
         catch(e){ fail(e); return false; }
       });
     return m;
+  }
+
+  // ── FICHA DEL EMPLEADO (historial de nómina) ──
+  async function openEmployee(id){
+    let d; try{ d=await api('GET',`employees/${id}/history`); }catch(e){ return fail(e); }
+    const e=d.employee; const H=d.history||[]; const t=d.totals||{ingresos:0,deducciones:0,neto:0};
+    view.innerHTML = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Empleados</button><h2 style="margin:0">${esc(e.full_name)}</h2>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}<span class="spacer"></span><button class="btn sm" id="edit">Editar</button></div>
+      <div class="muted" style="margin-top:4px">${esc(e.position||'—')} · Cédula ${esc(e.identifier||'—')}${e.notes?' · '+esc(e.notes):''}</div>
+      <div class="total-kpis" style="margin-top:12px">
+        <div class="k"><div class="muted">Períodos pagados</div><div class="v">${d.periods_count}</div></div>
+        <div class="k"><div class="muted">Ingresos acum.</div><div class="v">${money(t.ingresos)}</div></div>
+        <div class="k"><div class="muted">Deducciones acum.</div><div class="v">${money(t.deducciones)}</div></div>
+        <div class="k neto"><div class="muted">Neto acum.</div><div class="v">${money(t.neto)}</div></div>
+      </div></div>
+      <div class="card"><h2>Historial de nómina</h2>
+      ${H.length?`<div class="table-wrap"><table><tr><th>Período</th><th>Estado</th><th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th></tr>
+        ${H.map(r=>`<tr class="clickable" data-per="${r.period.id}" title="Abrir período"><td><b>${esc(r.period.label)}</b></td><td>${r.period.status==='closed'?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}</td><td class="num">${money(r.ingresos)}</td><td class="num">${money(r.deducciones)}</td><td class="num"><b>${money(r.neto)}</b></td></tr>`).join('')}</table></div>`
+        :'<div class="empty">Este empleado aún no aparece en ningún período.</div>'}</div>`;
+    $('#back').onclick=()=>{ S.tab='empleados'; render(); };
+    $('#edit').onclick=()=> employeeModal(S.employees.find(x=>x.id===e.id)||e);
+    view.querySelectorAll('[data-per]').forEach(tr=> tr.onclick=()=> openPeriod(tr.dataset.per));
   }
 
   // ── COLUMNAS ──

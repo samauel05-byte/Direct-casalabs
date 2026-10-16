@@ -110,9 +110,10 @@ Los trabajos avanzan:
    | `NALA_OCR_TESSERACT` | `1`/`true` activa un OCR previo con Tesseract (`tesseract.js`, WASM) que se envía al modelo como texto de referencia para cotejar montos/NCF/RNC. Apagado por defecto; experimental. | opcional |
    | `NALA_OCR_LANGS` | idiomas del OCR (por defecto `spa+eng`) | opcional |
 
-   El OCR es un **apoyo**, no un motor aparte: corre en el trabajo `extract` y
-   también en el **Asistente** (`/api/nala/analyze`, al soltar fotos o páginas
-   de PDF escaneadas), sólo sobre páginas-imagen, le da al modelo
+   El OCR es un **apoyo**, no un motor aparte: corre **sólo en el Asistente**
+   (`/api/nala/analyze`, al soltar fotos o páginas de PDF escaneadas) — en el
+   procesamiento por lotes se desactivó porque el OCR por página es muy pesado
+   para el presupuesto por trabajo del worker. Sólo sobre páginas-imagen, le da al modelo
    de visión una capa de texto para no dejar vacíos los números difíciles, y la
    imagen sigue mandando. Nunca interrumpe la lectura (si falla, se ignora). Baja
    los datos de idioma a `/tmp` en el primer uso, así que la primera lectura tras

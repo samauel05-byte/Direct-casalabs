@@ -30,26 +30,42 @@
     </div>`;
   }
 
-  // Grouped bars (2 series), legend + per-bar tooltip + table toggle.
+  // Escala con paso "bonito" (1/2/2.5/5 × 10ⁿ) para ~5 intervalos, de modo que
+  // las marcas del eje Y sean números redondos (0, 50, 100, …).
+  function niceScale(raw) {
+    const rough = Math.max(1, raw) / 5;
+    const pow = Math.pow(10, Math.floor(Math.log10(rough)));
+    const step = [1, 2, 2.5, 5, 10].map(m => m * pow).find(c => c >= rough) || 10 * pow;
+    return { max: Math.max(step, Math.ceil(raw / step) * step), step };
+  }
+
+  // Barras agrupadas (2 series) con etiqueta de valor, leyenda, tooltip por
+  // columna y tabla. Compacto y centrado para que no quede alto y vacío.
   function trendChart(rows, periods) {
     const data = periods.map(p => {
       const r = rows.filter(x => x.period === p);
       return { p, approved: r.reduce((s, x) => s + x.approved, 0), pending: r.reduce((s, x) => s + x.pending, 0), total: r.reduce((s, x) => s + Number(x.approved_total_dop || 0), 0) };
     });
-    const max = Math.max(1, ...data.map(d => Math.max(d.approved, d.pending)));
-    const W = 720; const H = 220; const left = 34; const bottom = 24; const top = 8; const plotH = H - bottom - top;
-    const step = (W - left) / data.length; const bw = Math.max(4, Math.min(18, step / 3));
-    const y = v => top + plotH - (v / max) * plotH;
-    const ticks = [0, Math.round(max / 2), max];
+    const { max, step } = niceScale(Math.max(1, ...data.map(d => Math.max(d.approved, d.pending))));
+    const W = 820, H = 300, padL = 42, padR = 10, padT = 22, padB = 30;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const n = data.length, slot = plotW / n;
+    const bw = Math.max(8, Math.min(26, slot * 0.34)), gap = 3, r = 3;
+    const y = v => padT + plotH - (v / max) * plotH;
+    const ticks = []; for (let t = 0; t <= max + 1e-9; t += step) ticks.push(t);
+    const grid = ticks.map(t => `<line class="grid-line" x1="${padL}" x2="${W - padR}" y1="${y(t)}" y2="${y(t)}"/><text class="axis" x="${padL - 8}" y="${y(t) + 4}" text-anchor="end">${int(Math.round(t))}</text>`).join('');
+    const bar = (bx, val, color) => {
+      if (val <= 0) return '';
+      const h = (val / max) * plotH, topY = padT + plotH - h, rr = Math.min(r, h, bw / 2);
+      return `<path d="M${bx},${padT + plotH} V${topY + rr} a${rr},${rr} 0 0 1 ${rr},${-rr} h${bw - 2 * rr} a${rr},${rr} 0 0 1 ${rr},${rr} V${padT + plotH} Z" fill="${color}"/>`
+        + `<text class="cval" x="${bx + bw / 2}" y="${topY - 5}" text-anchor="middle">${int(val)}</text>`;
+    };
     const bars = data.map((d, i) => {
-      const x = left + i * step + step / 2;
-      const hA = top + plotH - y(d.approved); const hP = top + plotH - y(d.pending);
-      const bar = (bx, h, color) => (h > 0 ? `<path d="M${bx},${top + plotH} v${-(h - 4)} q0,-4 4,-4 h${bw - 8} q4,0 4,4 v${h - 4} z" fill="${color}"/>` : '');
-      return `<g data-i="${i}">${bar(x - bw - 1, hA, 'var(--series-1)')}${bar(x + 1, hP, 'var(--series-2)')}
-        <rect x="${x - step / 2}" y="${top}" width="${step}" height="${plotH}" fill="transparent"/>
-        <text class="axis" x="${x}" y="${H - 6}" text-anchor="middle">${d.p.slice(4)}/${d.p.slice(2, 4)}</text></g>`;
+      const cx = padL + slot * i + slot / 2;
+      return `<g data-i="${i}">${bar(cx - bw - gap / 2, d.approved, 'var(--series-1)')}${bar(cx + gap / 2, d.pending, 'var(--series-2)')}
+        <rect x="${cx - slot / 2}" y="${padT}" width="${slot}" height="${plotH}" fill="transparent"/>
+        <text class="axis" x="${cx}" y="${H - 10}" text-anchor="middle">${d.p.slice(4)}/${d.p.slice(2, 4)}</text></g>`;
     }).join('');
-    const grid = ticks.map(t => `<line class="grid-line" x1="${left}" x2="${W}" y1="${y(t)}" y2="${y(t)}"/><text class="axis" x="${left - 6}" y="${y(t) + 3}" text-anchor="end">${t}</text>`).join('');
     const table = `<div class="table-wrap" style="display:none;margin-top:8px"><table><tr><th>Período</th><th class="num">Aprobadas</th><th class="num">Pendientes</th><th class="num">Total aprobado (DOP)</th></tr>
       ${data.map(d => `<tr><td>${period(d.p)}</td><td class="num">${int(d.approved)}</td><td class="num">${int(d.pending)}</td><td class="num">${money(d.total)}</td></tr>`).join('')}</table></div>`;
     return { html: `<div class="legend"><span><i style="background:var(--series-1)"></i>Aprobadas</span><span><i style="background:var(--series-2)"></i>Pendientes de aprobar</span>

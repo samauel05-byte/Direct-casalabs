@@ -170,9 +170,10 @@ tr.inline-edit > td { background: var(--surface-2); padding: 0; border-top: 0; }
 .tabs button.active { color: var(--accent); border-color: var(--accent); }
 
 /* Charts */
-.chart { position: relative; }
+.chart { position: relative; max-width: 900px; margin: 4px auto 0; }
 .chart svg { width: 100%; height: auto; display: block; }
 .chart .axis { fill: var(--muted); font-size: 10px; }
+.chart .cval { fill: var(--text); font-size: 11px; font-weight: 700; }
 .chart .grid-line { stroke: var(--border); stroke-width: 1; }
 .chart .tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font-size: 11px; box-shadow: var(--shadow); display: none; white-space: nowrap; z-index: 2; }
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-bottom: 6px; }

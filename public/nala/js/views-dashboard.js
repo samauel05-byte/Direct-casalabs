@@ -7,8 +7,27 @@
   const shiftPeriod = (p, months) => { const d = new Date(Number(p.slice(0, 4)), Number(p.slice(4)) - 1 + months, 1); return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}`; };
   const q = obj => Object.entries(obj).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 
-  function kpi(label, value, sub = '', href = '') {
-    return `<div class="card kpi ${href ? 'clickable' : ''}" ${href ? `data-href="${href}"` : ''}><div class="label">${esc(label)}</div><div class="value">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+  function kpi(label, value, sub = '', href = '', tone = '') {
+    return `<div class="card kpi ${tone ? 'kpi--' + tone : ''} ${href ? 'clickable' : ''}" ${href ? `data-href="${href}"` : ''}><div class="label">${esc(label)}</div><div class="value">${value}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+  }
+
+  // Banner de estado del período: avance de aprobación + acciones sugeridas.
+  function heroResumen(st, auditBase) {
+    const inv = Number(st.invoices) || 0, ap = Number(st.approved) || 0, pend = Number(st.pending) || 0;
+    const err = Number(st.with_errors) || 0, warn = Number(st.with_warnings) || 0;
+    const pct = inv ? Math.round((ap / inv) * 100) : 0;
+    const acts = [];
+    if (pend) acts.push(`<button class="btn" data-href="${auditBase}&status=pending_review,reviewed">Revisar ${int(pend)} pendiente${pend === 1 ? '' : 's'}</button>`);
+    if (err) acts.push(`<button class="btn" data-href="${auditBase}&has=errors">Corregir ${int(err)} con error${err === 1 ? '' : 'es'}</button>`);
+    if (ap) acts.push(`<button class="btn primary" data-href="#/exportar">Exportar 606/607</button>`);
+    return `<div class="card hero-sum">
+      <div class="hs-pct"><div class="label">Avance de aprobación</div><div class="hs-num">${pct}<span>%</span></div></div>
+      <div class="hs-bar">
+        <div class="progress" style="height:10px"><div style="width:${pct}%;background:var(--ok)"></div></div>
+        <div class="muted hs-line">${inv ? `<b>${int(ap)}</b> de ${int(inv)} aprobadas · ${int(pend)} pendientes · <span style="color:var(--crit)">${int(err)}</span> con errores · ${int(warn)} con advertencias` : 'Sin comprobantes en este período.'}</div>
+      </div>
+      ${acts.length ? `<div class="hs-acts">${acts.join('')}</div>` : ''}
+    </div>`;
   }
 
   // Grouped bars (2 series), legend + per-bar tooltip + table toggle.
@@ -77,13 +96,14 @@
       const byClient = [...(cur.stats.by_client || [])].sort((a, b) => b.pending - a.pending);
       root.innerHTML = `<div class="stack">
         <div class="muted">Período ${period(s.period)} · ${scopeLabel}${s.format ? ` · formato ${s.format}` : ''}</div>
+        ${heroResumen(st, auditBase)}
         <div class="grid kpis">
           ${kpi('Comprobantes', int(st.invoices), `${int(st.excluded)} excluidos`, auditBase)}
-          ${kpi('Pendientes de aprobar', int(st.pending), `${int(st.reviewed)} revisados`, `${auditBase}&status=pending_review,reviewed`)}
-          ${kpi('Con errores críticos', `<span style="color:var(--crit)">${int(st.with_errors)}</span>`, `${int(st.duplicates)} duplicados`, `${auditBase}&has=errors`)}
-          ${kpi('Con advertencias', int(st.with_warnings), `${int(st.foreign_currency)} en moneda extranjera`, `${auditBase}&has=warnings`)}
-          ${kpi('Aprobados', `<span style="color:var(--ok)">${int(st.approved)}</span>`, 'listos para exportar', `${auditBase}&status=approved`)}
-          ${kpi('Total aprobado (DOP)', money(st.approved_total_dop), `ITBIS ${money(st.approved_itbis_dop)}`)}
+          ${kpi('Pendientes de aprobar', int(st.pending), `${int(st.reviewed)} revisados`, `${auditBase}&status=pending_review,reviewed`, 'warn')}
+          ${kpi('Con errores críticos', `<span style="color:var(--crit)">${int(st.with_errors)}</span>`, `${int(st.duplicates)} duplicados`, `${auditBase}&has=errors`, 'crit')}
+          ${kpi('Con advertencias', int(st.with_warnings), `${int(st.foreign_currency)} en moneda extranjera`, `${auditBase}&has=warnings`, 'warn')}
+          ${kpi('Aprobados', `<span style="color:var(--ok)">${int(st.approved)}</span>`, 'listos para exportar', `${auditBase}&status=approved`, 'ok')}
+          ${kpi('Total aprobado (DOP)', money(st.approved_total_dop), `ITBIS ${money(st.approved_itbis_dop)}`, '', 'accent')}
           ${kpi('Lotes', int(st.batches), `${int(st.batches_active)} en proceso · ${int(st.batches_failed)} fallidos`, '#/lotes')}
           ${kpi('Exportaciones', int(st.exports), `${int(st.exports_submitted)} enviadas · ${int(st.exports_accepted)} aceptadas`, '#/exportar')}
         </div>

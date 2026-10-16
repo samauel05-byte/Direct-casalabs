@@ -668,7 +668,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
     </div>
   </div>
 
-  <div class="nav-item" style="margin:8px 0 2px;cursor:pointer" title="Volver a Accesos" onclick="try{parent.postMessage({action:'showPortals'},location.origin)}catch(e){}"><div class="ni-icon">‹</div><span>Volver a Accesos</span></div>
+  <div class="nav-item" style="margin:8px 0 2px;cursor:pointer" title="Volver a Accesos" onclick="(function(){try{if(window.parent&&window.parent!==window){parent.postMessage({action:'showPortals'},location.origin);return;}}catch(e){} location.href='/';})()"><div class="ni-icon">‹</div><span>Volver a Accesos</span></div>
 
   <div class="nav-section">
     <div class="nav-label">Registros fiscales</div>

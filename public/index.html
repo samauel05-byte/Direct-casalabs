@@ -132,8 +132,13 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* auth */
 .auth-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:20px;position:relative;z-index:1}
-.auth-card{background:linear-gradient(145deg,rgba(15,30,56,.97) 0%,rgba(11,21,40,.97) 100%);border:1px solid var(--border);border-radius:var(--rl);padding:40px 34px;width:100%;max-width:390px;box-shadow:var(--sc);position:relative;overflow:hidden}
+.auth-card{background:linear-gradient(145deg,rgba(15,30,56,.97) 0%,rgba(11,21,40,.97) 100%);border:1px solid var(--border);border-radius:var(--rl);padding:40px 34px;width:100%;max-width:390px;box-shadow:var(--sc);position:relative;overflow:hidden;z-index:1}
 .auth-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent 0%,rgba(61,139,255,.55) 50%,transparent 100%)}
+/* Marca de agua: el logo de Direct grande, tenue y detrás de la tarjeta, en vez
+   de protagonista arriba. El PNG trae fondo negro; mix-blend-mode:screen lo
+   vuelve transparente (igual que .brand-logo), así en claro queda casi invisible
+   sin dejar un recuadro negro. */
+.auth-wrap::before{content:'';position:absolute;inset:0;background:url('/img/direct-logo.png') center 44% / min(78%,560px) auto no-repeat;mix-blend-mode:screen;opacity:.12;pointer-events:none;z-index:0}
 .auth-logo{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:26px}
 .auth-logo-ico{width:44px;height:44px;background:linear-gradient(135deg,var(--p1),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 20px rgba(0,96,224,.45)}
 .auth-logo-ico svg{color:#fff}
@@ -365,9 +370,6 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 <!-- Setup -->
 <div id="view-setup" class="layer auth-wrap" hidden>
   <div class="auth-card">
-    <div class="auth-logo" style="margin-bottom:18px">
-      <img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="width:100%;max-width:280px">
-    </div>
     <p class="auth-ttl">Crear cuenta de administrador</p>
     <p class="auth-sub">Primera configuración — crea tu cuenta de acceso. No podrás recuperar esta contraseña si la olvidas.</p>
     <div class="field"><label>Usuario</label><input id="setup-username" type="text" placeholder="Ej: admin" autocomplete="username"></div>
@@ -380,9 +382,6 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 <!-- Login -->
 <div id="view-login" class="layer auth-wrap" hidden>
   <div class="auth-card">
-    <div class="auth-logo" style="margin-bottom:18px">
-      <img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="width:100%;max-width:280px">
-    </div>
     <p class="auth-ttl">Bienvenido de vuelta</p>
     <p class="auth-sub">Introduce tus credenciales para acceder al sistema.</p>
     <div class="field"><label>Usuario</label><input id="login-username" type="text" placeholder="Tu usuario" autocomplete="username"></div>

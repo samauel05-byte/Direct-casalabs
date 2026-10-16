@@ -71,6 +71,18 @@ label.f > span { text-transform: uppercase; letter-spacing: .3px; }
 .kpi .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
 .kpi.clickable { cursor: pointer; }
 .kpi.clickable:hover { border-color: var(--accent); }
+/* Acento superior por tono para escanear el panel de un vistazo. */
+.kpi--ok { box-shadow: inset 0 3px 0 var(--ok); }
+.kpi--warn { box-shadow: inset 0 3px 0 var(--warn); }
+.kpi--crit { box-shadow: inset 0 3px 0 var(--crit); }
+.kpi--accent { box-shadow: inset 0 3px 0 var(--accent); }
+/* Banner "estado del período" del panel de control. */
+.hero-sum { display: flex; align-items: center; gap: 16px 24px; flex-wrap: wrap; }
+.hero-sum .hs-pct .hs-num { font-size: 34px; font-weight: 850; line-height: 1; font-variant-numeric: tabular-nums; }
+.hero-sum .hs-pct .hs-num span { font-size: 18px; color: var(--muted); margin-left: 2px; }
+.hero-sum .hs-bar { flex: 1; min-width: 240px; }
+.hero-sum .hs-line { margin-top: 8px; font-size: 12px; }
+.hero-sum .hs-acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .muted { color: var(--muted); }
 .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; }
 .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }

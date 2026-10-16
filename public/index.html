@@ -1768,7 +1768,7 @@ function renderPortalGrid() {
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
-  if (currentUser?.access_nomina) allowed.push('nomina');
+  if (currentUser?.access_nomina || currentUser?.role==='admin') allowed.push('nomina');
   if (currentUser?.access_ir2) allowed.push('ir2');
   if (currentUser?.access_estimacion) allowed.push('dgii-modulos');
   allowed.push('clients');

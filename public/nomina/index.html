@@ -49,7 +49,10 @@
   .hint{ font-size:12px; color:var(--muted); }
   .total-kpis{ display:flex; gap:18px; flex-wrap:wrap; margin:4px 0 12px; }
   .total-kpis .k{ background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-width:130px; }
-  .total-kpis .k .v{ font-size:18px; font-weight:800; } .total-kpis .k.neto .v{ color:var(--accent); }
+  .total-kpis .k .v{ font-size:18px; font-weight:800; } .total-kpis .k.neto .v{ color:var(--accent); } .total-kpis .k.aportes .v{ color:#60a5fa; }
+  .emp{ display:flex; align-items:center; gap:9px; }
+  .av{ width:32px; height:32px; border-radius:50%; background:var(--accent); color:var(--accentink); font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .emp .en{ font-weight:700; } .emp .sub{ font-size:12px; color:var(--muted); } .emp .cid{ font-size:11px; color:#5f7399; }
 </style>
 </head>
 <body>
@@ -74,6 +77,9 @@
   const esc = v => String(v==null?'':v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => (v==null||v===''||!isFinite(Number(v))) ? '0.00' : Number(v).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
   const numfmt = v => (v==null||v==='') ? '' : Number(v).toLocaleString('es-DO',{maximumFractionDigits:2});
+  const initials = s => { const w=String(s||'').trim().split(/\s+/).filter(Boolean); return (((w[0]||'')[0]||'?')+((w[1]||'')[0]||'')).toUpperCase(); };
+  // Aportes del empleador (espejo de lib/nomina/compute.js), con las tasas de Ajustes.
+  function empAportes(base, exempt){ const st=S.period&&S.period.settings; if(!st||exempt) return 0; const b=Number(base)||0; const f=(st.period_type==='mensual')?1:0.5; const e=st.empleador||{}, em=st.empleado||{}; const ts=Number(em.tope_sfs)||b, ta=Number(em.tope_afp)||b; const afp=round2(Math.min(b,ta)*(e.afp||0)*f), sfs=round2(Math.min(b,ts)*(e.sfs||0)*f), srl=round2(Math.min(b,ts)*(e.srl||0)*f), inf=round2(b*(e.infotep||0)*f); return round2(afp+sfs+srl+inf); }
 
   // ── sesión (misma que SERP; el JWT nunca va en la URL) ──
   function authHeaders(){
@@ -294,7 +300,7 @@
     (d.rows||[]).forEach(r=>{ editable.forEach(c=>{ const v=r.cells[c.key]; vals[r.employee.id][c.key] = (c.type==='texto')? (v||'') : (v===0?'' : v); }); });
 
     const head = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Períodos</button><h2 style="margin:0">${esc(p.label)}</h2>
-      ${closed?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}<span class="spacer"></span>
+      ${closed?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}${d.settings?`<span class="pill">${d.settings.period_type==='mensual'?'Mensual':'Quincenal'}</span>`:''}<span class="spacer"></span>
       <button class="btn sm" id="volantes">🧾 Imprimir volantes</button>
       <button class="btn sm" id="pdf-all">⤓ Descargar PDF</button>
       <button class="btn sm" id="export">⇩ Exportar Excel</button>
@@ -304,10 +310,13 @@
 
     if(!(d.rows||[]).length){ view.innerHTML = head + '<div class="card empty">No hay empleados activos. Agregue empleados para capturar la nómina.</div>'; wirePeriodTop(); return; }
 
-    const body = `<div class="card"><div class="table-wrap"><table id="grid"><tr><th>Empleado</th>
+    const body = `<div class="card"><div class="row" style="margin-bottom:10px"><input id="f-emp" placeholder="🔎 Buscar empleado…" style="max-width:280px"><span class="muted" id="f-count"></span></div>
+      <div class="table-wrap"><table id="grid"><tr><th>Empleado</th>
       ${cols.map(c=>`<th class="num" title="${esc(c.key)}">${esc(c.label)}${c.type==='formula'?' <span class="pill calc">fx</span>':''}</th>`).join('')}
       <th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th></tr>
-      ${(d.rows||[]).map(r=>`<tr data-emp="${r.employee.id}"><td><button class="btn sm" data-slip="${r.employee.id}" title="Imprimir volante">🧾</button> <button class="btn sm" data-pdf="${r.employee.id}" title="Descargar PDF">⤓</button> <b>${esc(r.employee.full_name)}</b><div class="muted mono">${esc(r.employee.identifier||'')}</div></td>
+      ${(d.rows||[]).map(r=>`<tr data-emp="${r.employee.id}" data-name="${esc(String(r.employee.full_name||'').toLowerCase())} ${esc(String(r.employee.position||'').toLowerCase())}"><td>
+        <div class="emp"><span class="av">${esc(initials(r.employee.full_name))}</span><div><div class="en">${esc(r.employee.full_name)}</div><div class="sub">${esc(r.employee.position||'—')}${r.employee.forma_pago?' · '+esc(r.employee.forma_pago):''}</div><div class="cid mono">${esc(r.employee.identifier||'')}</div></div></div>
+        <div class="row" style="gap:4px;margin-top:5px"><button class="btn sm" data-slip="${r.employee.id}" title="Imprimir volante">🧾</button><button class="btn sm" data-pdf="${r.employee.id}" title="Descargar PDF">⤓</button></div></td>
         ${cols.map(c=>{
           if(c.type==='formula') return `<td class="num" data-calc="${c.key}">${money(r.cells[c.key])}</td>`;
           const v = vals[r.employee.id][c.key];
@@ -321,7 +330,7 @@
     view.innerHTML = head + body;
     wirePeriodTop();
     const recompute = () => {
-      const totals={}; cols.forEach(c=> totals[c.key]=0); let tIng=0,tDed=0,tNeto=0;
+      const totals={}; cols.forEach(c=> totals[c.key]=0); let tIng=0,tDed=0,tNeto=0,tApo=0;
       view.querySelectorAll('tr[data-emp]').forEach(tr=>{
         const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const c=cols.find(x=>x.key===inp.dataset.k); values[inp.dataset.k] = c&&c.type==='texto'? inp.value : inp.value; });
         const res = computeRow(cols, values);
@@ -329,16 +338,19 @@
         tr.querySelector('[data-ing]').textContent=money(res.ingresos); tr.querySelector('[data-ded]').textContent=money(res.deducciones); tr.querySelector('[data-neto]').innerHTML='<b>'+money(res.neto)+'</b>';
         cols.forEach(c=>{ if(c.type!=='texto') totals[c.key]+= Number(res.cells[c.key])||0; });
         tIng+=res.ingresos; tDed+=res.deducciones; tNeto+=res.neto;
+        tApo+=empAportes(res.cells['sueldo_mensual'], Number(res.cells['exento_tss'])||0);
       });
       cols.forEach(c=>{ const el=view.querySelector(`[data-tot="${c.key}"]`); if(el) el.textContent = c.type==='texto'?'':(c.type==='numero'?numfmt(round2(totals[c.key])):money(round2(totals[c.key]))); });
       view.querySelector('[data-tot-ing]').textContent=money(round2(tIng)); view.querySelector('[data-tot-ded]').textContent=money(round2(tDed)); view.querySelector('[data-tot-neto]').innerHTML='<b>'+money(round2(tNeto))+'</b>';
       $('#kpis').innerHTML = `<div class="k"><div class="muted">Empleados</div><div class="v">${(d.rows||[]).length}</div></div>
-        <div class="k"><div class="muted">Ingresos</div><div class="v">${money(round2(tIng))}</div></div>
-        <div class="k"><div class="muted">Deducciones</div><div class="v">${money(round2(tDed))}</div></div>
-        <div class="k neto"><div class="muted">Neto a pagar</div><div class="v">${money(round2(tNeto))}</div></div>`;
+        <div class="k"><div class="muted">Total bruto</div><div class="v">${money(round2(tIng))}</div></div>
+        <div class="k"><div class="muted">Total deducciones</div><div class="v">${money(round2(tDed))}</div></div>
+        <div class="k neto"><div class="muted">Total neto</div><div class="v">${money(round2(tNeto))}</div></div>
+        <div class="k aportes"><div class="muted">Aportes empleador</div><div class="v">${money(round2(tApo))}</div></div>`;
     };
     view.querySelectorAll('input[data-k]').forEach(inp=> inp.addEventListener('input', recompute));
     recompute();
+    const fe=$('#f-emp'); if(fe) fe.addEventListener('input', ()=>{ const q=fe.value.trim().toLowerCase(); let shown=0; view.querySelectorAll('tr[data-emp]').forEach(tr=>{ const ok=!q||(tr.dataset.name||'').includes(q); tr.style.display=ok?'':'none'; if(ok)shown++; }); $('#f-count').textContent=q?`${shown} de ${(d.rows||[]).length}`:''; });
 
     view.querySelector('#volantes')?.addEventListener('click', ()=> printPayslips((d.rows||[]).map(r=>r.employee.id)));
     view.querySelectorAll('[data-slip]').forEach(b=> b.addEventListener('click', ()=> printPayslips([b.dataset.slip])));

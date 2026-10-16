@@ -58,6 +58,17 @@ con totales/neto → Excel.
 - **`nomina_entries`** — valores capturados por empleado y período (`values`
   jsonb: clave→valor). Las columnas de fórmula **no** se guardan: se calculan.
 
+## Pago de mes completo ("cobra entero") y seguro
+
+Para empleados que cobran el **mes entero en una quincena** (socios, pagos
+mensuales), una empresa puede tener una columna **`cobra_entero`** (tipo
+`numero`, 0/1; en el grid se muestra como interruptor Sí/No). Las fórmulas de
+ley la usan como factor `(1+cobra_entero)`: con 0 van quincenales (sin cambio),
+con 1 pagan el mes completo y aplican las deducciones de mes entero. Para que el
+imponible no se duplique, su fórmula divide por `(1+cobra_entero)`:
+`round(sueldo_mensual-(sfs+pension)*p_div/(1+cobra_entero),2)`. La columna
+**`seguro`** (tipo `monto`, signo −1) es una deducción aparte (seguro médico).
+
 ## Reglas de cálculo
 
 Las tasas de ley no van fijas en las fórmulas: `paramsFromSettings` inyecta los

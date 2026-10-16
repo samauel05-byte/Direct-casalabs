@@ -445,6 +445,8 @@
         ${cols.map(c=>{
           if(c.type==='formula') return `<td class="num" data-calc="${c.key}">${money(r.cells[c.key])}</td>`;
           const v = vals[r.employee.id][c.key];
+          // "Cobra entero": interruptor Sí/No (vale 1 = mes completo esta quincena).
+          if(c.key==='cobra_entero') return `<td class="num"><select class="cell-in" data-k="${c.key}" ${closed?'disabled':''}><option value="0"${String(v)==='1'?'':' selected'}>No</option><option value="1"${String(v)==='1'?' selected':''}>Sí</option></select></td>`;
           if(c.type==='texto') return `<td><input class="cell-in txt" data-k="${c.key}" value="${esc(v||'')}" ${closed?'disabled':''}></td>`;
           return `<td class="num"><input class="cell-in" inputmode="decimal" data-k="${c.key}" value="${v===''||v==null?'':esc(v)}" ${closed?'disabled':''}></td>`;
         }).join('')}
@@ -457,7 +459,7 @@
     const recompute = () => {
       const totals={}; cols.forEach(c=> totals[c.key]=0); let tIng=0,tDed=0,tNeto=0,tApo=0;
       view.querySelectorAll('tr[data-emp]').forEach(tr=>{
-        const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const c=cols.find(x=>x.key===inp.dataset.k); values[inp.dataset.k] = c&&c.type==='texto'? inp.value : inp.value; });
+        const values={}; tr.querySelectorAll('[data-k]').forEach(inp=>{ const c=cols.find(x=>x.key===inp.dataset.k); values[inp.dataset.k] = c&&c.type==='texto'? inp.value : inp.value; });
         const res = computeRow(cols, values);
         cols.forEach(c=>{ if(c.type==='formula'){ const cell=tr.querySelector(`[data-calc="${c.key}"]`); if(cell) cell.textContent=money(res.cells[c.key]); } });
         tr.querySelector('[data-ing]').textContent=money(res.ingresos); tr.querySelector('[data-ded]').textContent=money(res.deducciones); tr.querySelector('[data-neto]').innerHTML='<b>'+money(res.neto)+'</b>';
@@ -473,7 +475,7 @@
         <div class="k neto"><div class="muted">Total neto</div><div class="v">${money(round2(tNeto))}</div></div>
         <div class="k aportes"><div class="muted">Aportes empleador</div><div class="v">${money(round2(tApo))}</div></div>`;
     };
-    view.querySelectorAll('input[data-k]').forEach(inp=> inp.addEventListener('input', recompute));
+    view.querySelectorAll('[data-k]').forEach(inp=>{ inp.addEventListener('input', recompute); inp.addEventListener('change', recompute); });
     recompute();
     const fe=$('#f-emp'); if(fe) fe.addEventListener('input', ()=>{ const q=fe.value.trim().toLowerCase(); let shown=0; view.querySelectorAll('tr[data-emp]').forEach(tr=>{ const ok=!q||(tr.dataset.name||'').includes(q); tr.style.display=ok?'':'none'; if(ok)shown++; }); $('#f-count').textContent=q?`${shown} de ${(d.rows||[]).length}`:''; });
     $('#kpis').addEventListener('click', e=>{ if(e.target.closest('.k.aportes')) aportesModal(); });
@@ -486,7 +488,7 @@
 
     $('#save') && ($('#save').onclick = async () => {
       const entries = [...view.querySelectorAll('tr[data-emp]')].map(tr=>{
-        const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; });
+        const values={}; tr.querySelectorAll('[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; });
         return { employee_id: tr.dataset.emp, values };
       });
       try{ const d2 = await api('PUT',`periods/${p.id}/entries`, { entries }); S.period = d2; render(); toast('Nómina guardada','ok'); }catch(e){ fail(e); }
@@ -541,7 +543,7 @@
     modal('Procesar nómina', `<p>Vas a <b>procesar y cerrar</b> la nómina <b>${esc(d.period.label)}</b>. Luego podrás reabrirla si necesitas corregir.</p>
       <div class="nvtot"><span>Empleados <b>${(d.rows||[]).length}</b></span><span class="neto">Neto a pagar <b>${money(neto)}</b></span></div>
       <p class="hint">Al confirmar se guardan los valores capturados y el período queda cerrado. Después puedes descargar volantes, Excel, reporte PDF y el CSV del banco.</p>`,
-      async()=>{ const entries=[...view.querySelectorAll('tr[data-emp]')].map(tr=>{ const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; }); return { employee_id:tr.dataset.emp, values }; });
+      async()=>{ const entries=[...view.querySelectorAll('tr[data-emp]')].map(tr=>{ const values={}; tr.querySelectorAll('[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; }); return { employee_id:tr.dataset.emp, values }; });
         try{ await api('PUT',`periods/${d.period.id}/entries`, { entries }); await api('PATCH',`periods/${d.period.id}`, { status:'closed' }); await openPeriod(d.period.id); toast('Nómina procesada ✓','ok'); return true; }catch(e){ fail(e); return false; } });
   }
 
@@ -552,7 +554,7 @@
 
   // ── volante de pago (desglose imprimible por empleado) ──
   function money2(v){ return (Number(v)||0).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  function readRowValues(empId){ const tr=view.querySelector(`tr[data-emp="${empId}"]`); const values={}; if(tr) tr.querySelectorAll('input[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; }); return values; }
+  function readRowValues(empId){ const tr=view.querySelector(`tr[data-emp="${empId}"]`); const values={}; if(tr) tr.querySelectorAll('[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; }); return values; }
   function payslipHTML(emp, cols, values){
     const r=computeRow(cols, values);
     const earn=cols.filter(c=>(c.type==='monto'||c.type==='formula')&&c.include_total&&c.sign>0);
@@ -658,7 +660,7 @@
     const st=S.period&&S.period.settings; const res={ emp:{afp:0,sfs:0}, patr:{afp:0,sfs:0,srl:0,infotep:0} };
     if(!st) return res;
     const f=(st.period_type==='mensual')?1:0.5; const e=st.empleador||{}, em=st.empleado||{}; const cols=S.period.columns||[];
-    view.querySelectorAll('tr[data-emp]').forEach(tr=>{ const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ values[inp.dataset.k]=inp.value; });
+    view.querySelectorAll('tr[data-emp]').forEach(tr=>{ const values={}; tr.querySelectorAll('[data-k]').forEach(inp=>{ values[inp.dataset.k]=inp.value; });
       const r=computeRow(cols, values); if(Number(r.cells['exento_tss'])||0) return; const base=Number(r.cells['sueldo_mensual'])||0;
       const ts=Number(em.tope_sfs)||base, ta=Number(em.tope_afp)||base;
       res.emp.afp+=Math.min(base,ta)*(em.afp||0)*f; res.emp.sfs+=Math.min(base,ts)*(em.sfs||0)*f;

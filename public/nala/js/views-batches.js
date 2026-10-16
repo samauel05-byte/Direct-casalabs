@@ -192,13 +192,13 @@
     };
     root.innerHTML = `<div class="stack">
       <div class="card"><h2>${esc(b.name)} ${NALA.badge(b.status)}<span class="spacer"></span>
-        <button class="btn" id="refresh" title="Actualizar">↻ Actualizar</button>
-        ${NALA.can('upload') ? `<button class="btn" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
-        ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn" id="reproc">Reprocesar fallidos</button>' : ''}
-        ${NALA.can('reprocess') ? '<button class="btn" id="reproc-all" title="Vuelve a LEER todas las facturas con la IA (y el OCR si está activo). Conserva las correcciones hechas a mano y no toca las aprobadas ni las excluidas.">Reprocesar (re-leer)</button>' : ''}
-        ${NALA.can('reprocess') ? '<button class="btn" id="reval" title="Vuelve a validar los comprobantes con las reglas y la configuración actuales (sin re-escanear)">Revalidar</button>' : ''}
-        <button class="btn primary" data-href="#/auditoria?batch=${b.id}">Auditar lote</button>
-        ${NALA.can('reprocess') ? '<button class="btn danger" id="del-batch">Eliminar lote</button>' : ''}</h2>
+        <button class="btn primary" data-href="#/auditoria?batch=${b.id}">🧾 Auditar lote</button>
+        <button class="btn sm" id="refresh" title="Actualizar">↻ Actualizar</button>
+        ${NALA.can('upload') ? `<button class="btn sm" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
+        ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn sm" id="reproc">Reprocesar fallidos</button>' : ''}
+        ${NALA.can('reprocess') ? '<button class="btn sm" id="reproc-all" title="Vuelve a LEER todas las facturas con la IA. Conserva las correcciones hechas a mano y no toca las aprobadas ni las excluidas.">Reprocesar</button>' : ''}
+        ${NALA.can('reprocess') ? '<button class="btn sm" id="reval" title="Vuelve a validar los comprobantes con las reglas y la configuración actuales (sin re-escanear)">Revalidar</button>' : ''}
+        ${NALA.can('reprocess') ? '<button class="btn sm danger" id="del-batch">Eliminar</button>' : ''}</h2>
         <div class="muted">${esc(b.client_name)} · ${b.format} · ${period(b.period)} · creado ${NALA.dateTime(b.created_at)}</div>
         <div style="margin-top:10px" class="progress"><div style="width:${p.percent}%"></div></div>
         <div class="row muted" style="margin-top:6px;gap:16px"><span>${p.percent}% · ${p.jobs_done}/${p.jobs_total} trabajos</span><span>${p.jobs_running} en ejecución · ${p.jobs_queued} en cola · ${p.jobs_failed} fallidos</span>

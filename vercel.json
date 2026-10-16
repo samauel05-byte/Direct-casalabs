@@ -32,6 +32,7 @@
     "api/**/*.js": { "maxDuration": 60 }
   },
   "crons": [
-    { "path": "/api/nala/jobs/worker", "schedule": "17 6 * * *" }
+    { "path": "/api/nala/jobs/worker", "schedule": "17 6 * * *" },
+    { "path": "/api/nomina/cron", "schedule": "0 13 * * *" }
   ]
 }

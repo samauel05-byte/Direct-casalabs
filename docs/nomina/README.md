@@ -61,9 +61,38 @@ con totales/neto → Excel.
   identificador usado en las fórmulas (único por empresa). FK compuesta
   `(tenant_id, client_id)` → `nomina_companies`.
 - **`nomina_employees`** — empleados manuales (nombre, cédula, puesto, activo).
-- **`nomina_periods`** — períodos (`label`, año/mes, `status` draft/closed).
+- **`nomina_periods`** — períodos (`label`, año/mes, `status` draft/closed,
+  `cycle` p. ej. `2026-10-B`, `pay_date`, `novedades_locked`).
 - **`nomina_entries`** — valores capturados por empleado y período (`values`
   jsonb: clave→valor). Las columnas de fórmula **no** se guardan: se calculan.
+
+Campos para el automático: `nomina_companies.auto_nomina` (entra a la
+generación automática), `nomina_companies.pinned` (empresa fijada: sale primero
+en la lista), `nomina_columns.carry` (columna **fija**: su valor se arrastra a la
+próxima quincena; si es `false`, es **novedad** y arranca en 0).
+
+## Generación automática de nómina (quincenal)
+
+Un cron de Vercel (`/api/nomina/cron`, diario 09:00 RD) genera la nómina sola
+para todas las empresas **quincenales** con `auto_nomina = true`:
+
+- **Quincena 1** (se paga ~15): novedades abiertas hasta el **día 12**; se
+  **genera el 13**.
+- **Quincena 2** (se paga ~30): novedades hasta el **día 26**; se **genera el 28**.
+- Al pasar el corte, la nómina en curso se **bloquea** (`novedades_locked`) y se
+  abre la **siguiente** en borrador; lo que se capture después del corte cae
+  automáticamente en la próxima. Al llegar el día de generación, el período
+  bloqueado se **cierra** (`status = closed`).
+
+Al abrir la nueva quincena sólo se arrastran las columnas **fijas**
+(`carry = true`: por defecto `sueldo_mensual`, `cobra_entero`, `exento_tss`,
+`seguro`); las demás (bono, otros ±, préstamo) arrancan vacías. La lógica
+(`lib/nomina/cron.js`) es **idempotente** (índice único por `(tenant, client,
+cycle)` + chequeos), así repetir o saltar un día no duplica ni rompe nada; usa
+hora de RD (UTC−4). El cron se autentica por secreto de servidor
+(`NOMINA_CRON_SECRET` o `CRON_SECRET`), igual que el worker de NALA. En el grid,
+una nómina bloqueada se muestra en **solo lectura** con el aviso «🔒 Novedades
+cerradas (corte)» y un botón **Reabrir novedades** por si hay que corregir.
 
 ## Pago de mes completo ("cobra entero") y seguro
 

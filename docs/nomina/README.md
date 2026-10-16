@@ -1,24 +1,27 @@
 # Nómina (módulo de Direct/SERP)
 
-Cálculo de nómina por empresa, integrado en SERP. Reutiliza el login, los
-usuarios y las empresas (`direct_clients`) de SERP. Es el **núcleo**: empresas →
-columnas dinámicas → empleados → períodos editables con totales/neto → Excel.
+Cálculo de nómina por empresa, integrado en SERP. Reutiliza el login y los
+usuarios de SERP; **las empresas son propias del módulo** (`nomina_companies`):
+el usuario las crea dentro de Nómina (pestaña **Empresas**) y les sube la nómina.
+Es el **núcleo**: empresas → columnas dinámicas → empleados → períodos editables
+con totales/neto → Excel.
 
 ## Acceso y alcance
 
 - Permiso propio **`access_nomina`** en `direct_profiles` (como `access_nala`).
   Lo concede el administrador por usuario (formulario de usuarios en SERP).
-- El alcance por empresa reutiliza `companies_direct` del perfil (null = todas),
-  igual que el resto de Direct: un usuario limitado no ve ni toca la nómina de
-  empresas que no le corresponden. Todo filtra por `tenant_id` en el servidor.
+- Las empresas de Nómina son propias del módulo y **por tenant**: cualquier
+  usuario con `access_nomina` ve y gestiona las empresas que se hayan creado en
+  Nómina (ya no se reutiliza `companies_direct`, que refería a clientes de
+  Direct). Todo filtra por `tenant_id` en el servidor.
 
 ## Piezas
 
 - `api/nomina.js` — único punto de entrada (una función Vercel, como NALA).
   `vercel.json` reescribe `/api/nomina/<ruta>` → `/api/nomina?route=<ruta>`.
 - `lib/nomina/context.js` — autenticación (reusa `lib/auth`) y puerta `access_nomina`.
-- `lib/nomina/api.js` — manejadores: empresas, columnas, empleados, períodos,
-  guardado de valores y exportación.
+- `lib/nomina/api.js` — manejadores: empresas (crear/editar/borrar/listar),
+  columnas, empleados, períodos, guardado de valores y exportación.
 - `lib/nomina/formula.js` — **evaluador de fórmulas seguro** (parser propio, sin
   `eval`/`Function`): números, `+ - * /`, paréntesis, referencias a columnas por
   su clave y funciones `round/abs/min/max/floor/ceil`. Lo demás es error.
@@ -26,7 +29,9 @@ columnas dinámicas → empleados → períodos editables con totales/neto → E
   ingresos/deducciones/neto por empleado, totales por columna y resumen.
 - `lib/nomina/excel.js` — exportación a `.xlsx` (ExcelJS).
 - `public/nomina/index.html` — app de una sola página (iframe, igual que NALA):
-  pestañas Empleados / Columnas / Períodos; la tabla del período recalcula el
+  pestañas **Empresas** / Nómina / Empleados / Columnas / Ajustes (la empresa
+  activa se elige y crea desde la pestaña Empresas; se recuerda en el navegador).
+  La tabla del período recalcula el
   neto en vivo con un espejo del evaluador de fórmulas. Incluye el **volante de
   pago** por empleado (ingresos/deducciones/neto + firma): **🧾 Imprimir**
   (abre una ventana con uno o todos los volantes del período y lanza la
@@ -37,11 +42,17 @@ columnas dinámicas → empleados → períodos editables con totales/neto → E
 
 ## Modelo de datos (`nomina_*`, por tenant)
 
+- **`nomina_companies`** — empresas del módulo (nombre/razón social, `rnc`,
+  `active`). El usuario las crea en la pestaña Empresas. `columns`/`employees`/
+  `periods` apuntan a ella por FK compuesta `(tenant_id, client_id)`. La
+  migración `202610170001_nomina_companies.sql` la crea, siembra las empresas
+  que ya tenían datos (conservando su id) y repunta las FKs desde
+  `direct_clients`.
 - **`nomina_columns`** — conceptos de cada empresa. `type`: `monto` (dinero),
   `numero` (cantidad), `texto` (nota), `formula` (se calcula). `sign` (+1 ingreso,
   −1 deducción, 0 neutro) e `include_total` definen el neto. `key` es el
   identificador usado en las fórmulas (único por empresa). FK compuesta
-  `(tenant_id, client_id)` → `direct_clients`.
+  `(tenant_id, client_id)` → `nomina_companies`.
 - **`nomina_employees`** — empleados manuales (nombre, cédula, puesto, activo).
 - **`nomina_periods`** — períodos (`label`, año/mes, `status` draft/closed).
 - **`nomina_entries`** — valores capturados por empleado y período (`values`

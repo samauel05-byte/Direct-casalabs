@@ -90,3 +90,16 @@ test('compute: empleado sin valores no rompe (columnas ausentes = 0)', () => {
   assert.equal(out.rows[0].neto, 0);
   assert.equal(out.summary.neto, 0);
 });
+
+const { paramsFromSettings } = require('../../lib/nomina/compute');
+test('compute: fórmulas con tasas de ajustes (p_*)', () => {
+  const st = { period_type:'quincenal', empleado:{afp:0.0287,sfs:0.0304,tope_sfs:134820,tope_afp:404460}, isr:{exento:416220,tramo2:624329,tramo3:867123}, empleador:{} };
+  const p = paramsFromSettings(st);
+  assert.equal(p.p_div, 2); assert.equal(p.p_afp, 0.0287);
+  const cols=[{key:'sueldo',type:'monto',sign:0,include_total:false,position:1},{key:'afp',type:'formula',formula:'round(sueldo*p_afp/p_div,2)',sign:-1,include_total:true,position:2}];
+  const r = computeRow(cols, {sueldo:55000}, p);
+  assert.equal(r.cells.afp, 789.25, 'AFP quincenal 55000*0.0287/2');
+  // período mensual: divisor 1
+  const pm = paramsFromSettings({ ...st, period_type:'mensual' });
+  assert.equal(computeRow(cols, {sueldo:55000}, pm).cells.afp, 1578.5);
+});

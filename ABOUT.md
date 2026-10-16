@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — el Asistente es solo para administradores**: el ítem **«Asistente NALA (chat, IR-17)»** del menú (Herramientas) ahora solo lo ven los administradores; para el resto se oculta y el acceso directo por URL redirige al panel.
+
 - **Marca — tipografías y logo en el inicio de sesión**: la interfaz adopta la tipografía de marca: **Josefin Sans** para títulos y cosas importantes, **Poppins** para el texto general. Además, la pantalla de **inicio de sesión** vuelve a mostrar el **logo de Direct** (versión clara u oscura según el tema).
 
 - **Nómina — salario visible en la ficha del empleado**: la ficha ahora muestra arriba el **salario mensual** del empleado (antes solo se veían los acumulados, que se confundían con el salario). El ISR de las empresas que lo calculan por fórmula ahora toma correctamente los ingresos extra.

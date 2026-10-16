@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Nómina — el volante ahora es un recibo firmable (con Casa Labs al pie)**: el volante de pago se rediseñó con el formato de un **recibo real**: arriba la empresa (razón social + RNC) y la fecha; luego el título **«RECIBO DE NÓMINA»** y la **declaración** de que el empleado recibió el pago («Yo, _Empleado_, he recibido de la compañía _Empresa_ la suma de _…en letras…_ (RD$ _monto_), correspondiente al pago de _período_»); el **desglose** con signo `(+)`/`(−)` y el **Total a cobrar**; y las firmas **«Entregado por» / «Recibido por»**. El monto se escribe en **letras** (p. ej. «Veintiocho mil cuatrocientos setenta y tres pesos dominicanos con 78/100»). La marca que antes iba arriba (logo) ahora va discreta **al pie como «Casa Labs»**. Aplica igual al imprimir y al PDF.
+
 - **Login — el logo de Direct ahora es marca de agua, no protagonista**: en la pantalla de inicio de sesión (y registro), el logo de Direct dejó de ir grande arriba de la tarjeta; ahora aparece como **marca de agua grande y tenue de fondo**, detrás del formulario. Así lo primero que ve la persona es el acceso, no el logo. Se mantiene en los encabezados internos.
 
 - **Nómina — la tarjeta de acceso muestra la cantidad de empresas**: en la pantalla de Accesos, el mosaico de **Nómina** mostraba "606/607 · IT-1" (heredado de otras herramientas). Ahora muestra **cuántas empresas** tienes en Nómina (p. ej. "28 empresas"), igual que la tarjeta de Clientes muestra su conteo. El número se consulta al abrir Accesos.

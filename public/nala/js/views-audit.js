@@ -249,7 +249,24 @@
       const avail = Math.max(200, canvasBox.clientWidth - 24);
       if (doc.kind === 'image') {
         let img = canvasBox.querySelector('img');
-        if (!img) { img = document.createElement('img'); img.alt = doc.name; img.src = info.url; canvasBox.appendChild(img); await new Promise(r => { img.onload = r; img.onerror = r; }); st.base = img.naturalWidth || 800; st.baseH = img.naturalHeight || 800; }
+        if (!img) {
+          // Primero la previsualización (ligera); si falla, el original. Un
+          // aviso de carga evita que el visor se vea congelado mientras llega.
+          if (!canvasBox.querySelector('img')) canvasBox.innerHTML = '<div class="muted" style="padding:16px">Cargando imagen…</div>';
+          img = document.createElement('img'); img.alt = doc.name; img.decoding = 'async';
+          const full = info.url;
+          // Si la previsualización ya falló antes en esta sesión (transformación
+          // no disponible), se va directo al original y no se pierde una petición.
+          const preview = (NALA.cache.imgPreviewBroken || !info.preview_url) ? full : info.preview_url;
+          await new Promise(resolve => {
+            let usedPreview = preview !== full;
+            img.onload = resolve;
+            img.onerror = () => { if (usedPreview) { usedPreview = false; NALA.cache.imgPreviewBroken = true; img.src = full; } else resolve(); };
+            img.src = preview;
+          });
+          canvasBox.innerHTML = ''; canvasBox.appendChild(img);
+          st.base = img.naturalWidth || 800; st.baseH = img.naturalHeight || 800;
+        }
         const sideways = st.rot % 180 !== 0;
         if (st.fit) st.zoom = Math.min(4, avail / (sideways ? st.baseH : st.base));
         img.style.width = `${st.base * st.zoom}px`;

@@ -1,0 +1,49 @@
+// Único punto de entrada de Nómina (una sola función Vercel, como NALA).
+// vercel.json reescribe /api/nomina/<ruta> → /api/nomina?route=<ruta>.
+const { nominaContext } = require('../lib/nomina/context');
+const { HttpError } = require('../lib/nala/http');
+const api = require('../lib/nomina/api');
+
+const ROUTES = [
+  ['GET', /^me$/, ctx => api.me(ctx)],
+  ['GET', /^clients$/, ctx => api.listClients(ctx)],
+
+  ['GET', /^clients\/([^/]+)\/columns$/, (ctx, q, b, m) => api.listColumns(ctx, m[1])],
+  ['POST', /^clients\/([^/]+)\/columns$/, (ctx, q, b, m) => api.createColumn(ctx, m[1], b)],
+  ['PATCH', /^columns\/([^/]+)$/, (ctx, q, b, m) => api.updateColumn(ctx, m[1], b)],
+  ['DELETE', /^columns\/([^/]+)$/, (ctx, q, b, m) => api.deleteColumn(ctx, m[1])],
+
+  ['GET', /^clients\/([^/]+)\/employees$/, (ctx, q, b, m) => api.listEmployees(ctx, m[1])],
+  ['POST', /^clients\/([^/]+)\/employees$/, (ctx, q, b, m) => api.createEmployee(ctx, m[1], b)],
+  ['PATCH', /^employees\/([^/]+)$/, (ctx, q, b, m) => api.updateEmployee(ctx, m[1], b)],
+  ['DELETE', /^employees\/([^/]+)$/, (ctx, q, b, m) => api.deleteEmployee(ctx, m[1])],
+
+  ['GET', /^clients\/([^/]+)\/periods$/, (ctx, q, b, m) => api.listPeriods(ctx, m[1])],
+  ['POST', /^clients\/([^/]+)\/periods$/, (ctx, q, b, m) => api.createPeriod(ctx, m[1], b)],
+  ['GET', /^periods\/([^/]+)$/, (ctx, q, b, m) => api.periodDetail(ctx, m[1])],
+  ['PATCH', /^periods\/([^/]+)$/, (ctx, q, b, m) => api.updatePeriod(ctx, m[1], b)],
+  ['DELETE', /^periods\/([^/]+)$/, (ctx, q, b, m) => api.deletePeriod(ctx, m[1])],
+  ['PUT', /^periods\/([^/]+)\/entries$/, (ctx, q, b, m) => api.saveEntries(ctx, m[1], b)],
+  ['GET', /^periods\/([^/]+)\/export$/, (ctx, q, b, m) => api.exportPeriod(ctx, m[1])],
+];
+
+const CREATED = /\/(columns|employees|periods)$/;
+
+module.exports = async (req, res) => {
+  const route = String(req.query?.route || '').replace(/^\/+|\/+$/g, '');
+  res.setHeader('Cache-Control', 'no-store');
+  try {
+    const match = ROUTES.map(([method, re, fn]) => ({ method, m: re.exec(route), fn })).filter(r => r.m);
+    if (!match.length) return res.status(404).json({ error: 'Ruta no encontrada' });
+    const handler = match.find(r => r.method === req.method);
+    if (!handler) return res.status(405).json({ error: 'Método no permitido' });
+    const ctx = await nominaContext(req);
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const result = await handler.fn(ctx, req.query || {}, body, handler.m);
+    return res.status(req.method === 'POST' && CREATED.test(route) ? 201 : 200).json({ ok: true, ...result });
+  } catch (error) {
+    if (error instanceof HttpError) return res.status(error.status).json({ error: error.message, ...error.extra });
+    console.error('[nomina]', route, error);
+    return res.status(500).json({ error: 'Error interno de Nómina. Intente nuevamente.' });
+  }
+};

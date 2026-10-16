@@ -37,6 +37,7 @@ module.exports = async (req, res) => {
         access_direct: true,
         access_cami: true,
         access_nala: true,
+        access_nomina: true,
         access_ir2: true,
         access_estimacion: true,
         access_clientes: true,

@@ -543,6 +543,25 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
   <iframe id="nala-frame" src="" style="width:100%;height:calc(100vh - 56px);border:none;display:block;"></iframe>
 </div>
 
+<!-- Nómina -->
+<div id="view-nomina" class="layer" hidden>
+  <header class="hdr">
+    <div class="hdr-brand">
+      <img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px">
+    </div>
+    <div class="hdr-right">
+      <button class="back-btn" style="margin:0" onclick="showPortals()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Volver
+      </button>
+      <button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      </button>
+    </div>
+  </header>
+  <iframe id="nomina-frame" src="" style="width:100%;height:calc(100vh - 56px);border:none;display:block;"></iframe>
+</div>
+
 <!-- IR-2 -->
 <div id="view-ir2" class="layer" hidden style="padding:0">
   <iframe id="ir2-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
@@ -668,6 +687,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
       <div id="u-companies-section" style="margin-left:24px"></div>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-cami"> CAMI — Análisis 606/607 e IT-1</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-nala"> NALA — Chat IA · Facturas 606/607</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-nomina"> Nómina — nómina por empresa</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-ir2"> IR-2 — Declaración de renta</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-estimacion"> Estimación Fiscal — Anexos DGII</label>
       <div class="ferr" id="user-err" hidden></div>
@@ -936,6 +956,7 @@ const INST = {
              url:'https://ecf.citrus.com.do/', uf:'usuario', pf:'contrasena' },
   cami:    { name:'CAMI',        desc:'Acceso contable · Análisis 606/607 e IT-1',   grad:'linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%)', abbr:'CAMI',    tool:true },
   nala:    { name:'NALA',        desc:'Acceso contable · Chat IA Facturas 606/607',  grad:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', abbr:'NALA',    tool:true, url:'https://chatbot-save.vercel.app' },
+  nomina:  { name:'Nómina',      desc:'Nómina por empresa · columnas, empleados y períodos', grad:'linear-gradient(135deg,#b45309 0%,#f59e0b 100%)', abbr:'NÓM', tool:true },
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
   'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
   clients: { name:'Clientes', desc:'Gestión de clientes por empresa', grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'CLI', tool:true },
@@ -1131,7 +1152,7 @@ async function boot() {
         if(refreshToken && tokenExpiresAt && tokenExpiresAt < Date.now()+60000) await refreshSession();
         scheduleRefresh();
         const s = JSON.parse(storedSess);
-        currentUser = {username:s.username||'', role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_clientes:s.access_clientes, portals:s.portals};
+        currentUser = {username:s.username||'', role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_nomina:s.access_nomina, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_clientes:s.access_clientes, portals:s.portals};
         const v = JSON.parse(storedVault);
         vaultSecret = C._u8(v.secret);
         const homeData = fetchHomeData();
@@ -1187,7 +1208,7 @@ async function handleSetup() {
     sessionStorage.setItem('dtoken', sessionToken);
     storeSession(signIn);
 
-    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
+    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_nomina:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
     vaultSecret = vaultSecretBytes;
     appConfig = { vaultSalt, verifierIv:verIv, verifierCt:verCt };
 
@@ -1195,7 +1216,7 @@ async function handleSetup() {
     await A.post('/api/config',{key:'verifierIv',value:verIv});
     await A.post('/api/config',{key:'verifierCt',value:verCt});
 
-    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla']}));
+    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, access_nomina:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla']}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecretBytes)}));
     await loadHome();
   } catch(e){ err.textContent='Error: '+e.message; err.hidden=false; }
@@ -1245,7 +1266,7 @@ async function handleLogin() {
     activeSessionId = res.session_id || null;
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     storeSession(res);
-    currentUser = { username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals };
+    currentUser = { username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals };
 
     // 2. Home data only needs the token: fetch it while the vault keys are derived.
     const homeData = fetchHomeData();
@@ -1263,7 +1284,7 @@ async function handleLogin() {
       masterKey=null; sessionToken=null; vaultSecret=null; return;
     }
     sessionStorage.setItem('dtoken', sessionToken);
-    sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals}));
+    sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
     await loadHome(homeData);
   } catch(e){ err.textContent=e.message; err.hidden=false; }
@@ -1312,7 +1333,7 @@ function confirmLogout() {
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-ir2','view-dgii-modulos','view-monitor','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-nomina','view-ir2','view-dgii-modulos','view-monitor','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 let _sessionTracked=false;
@@ -1404,11 +1425,12 @@ async function renderUsersList() {
       if (user.access_direct) modules.push('Direct');
       if (user.access_cami) modules.push('CAMI');
       if (user.access_nala) modules.push('NALA');
+      if (user.access_nomina) modules.push('Nómina');
       if (user.access_ir2) modules.push('IR-2');
       if (user.access_estimacion) modules.push('Estimación');
       const uname=(user.username||user.email||'?').replace('@direct.local','');
       const initials=uname.charAt(0).toUpperCase();
-      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,companies_direct:user.companies_direct??null,access_cami:user.access_cami,access_nala:user.access_nala,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion}).replace(/"/g,'&quot;');
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,companies_direct:user.companies_direct??null,access_cami:user.access_cami,access_nala:user.access_nala,access_nomina:user.access_nomina,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
@@ -1463,6 +1485,7 @@ async function openUserModal(userData=null) {
   DIRECT_PORTALS.forEach(p => { const el=document.getElementById('u-portal-'+p); if(el) el.checked = portals.includes(p); });
   document.getElementById('u-access-cami').checked = userData?.access_cami || false;
   document.getElementById('u-access-nala').checked = userData?.access_nala || false;
+  document.getElementById('u-access-nomina').checked = userData?.access_nomina || false;
   document.getElementById('u-access-ir2').checked = userData?.access_ir2 || false;
   document.getElementById('u-access-estimacion').checked = userData?.access_estimacion || false;
   document.getElementById('user-err').hidden=true;
@@ -1480,6 +1503,7 @@ async function saveUser() {
   const portals_direct=access_direct?DIRECT_PORTALS.filter(p=>document.getElementById('u-portal-'+p)?.checked):[];
   const access_cami=document.getElementById('u-access-cami').checked;
   const access_nala=document.getElementById('u-access-nala').checked;
+  const access_nomina=document.getElementById('u-access-nomina').checked;
   const access_ir2=document.getElementById('u-access-ir2').checked;
   const access_estimacion=document.getElementById('u-access-estimacion').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
@@ -1494,7 +1518,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_ir2, access_estimacion};
+    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion};
     if (window.DX) body.companies_direct = DX.readUserCompanies();
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
@@ -1553,6 +1577,14 @@ function openNala() {
     frame.src='/nala/index.html';
   }
   show('view-nala');
+}
+
+function openNomina() {
+  const frame=document.getElementById('nomina-frame');
+  if (!frame.src || frame.src==='about:blank' || !frame.src.includes('nomina')) {
+    frame.src='/nomina/index.html';
+  }
+  show('view-nomina');
 }
 
 function openIr2() {
@@ -1736,6 +1768,7 @@ function renderPortalGrid() {
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');
+  if (currentUser?.access_nomina) allowed.push('nomina');
   if (currentUser?.access_ir2) allowed.push('ir2');
   if (currentUser?.access_estimacion) allowed.push('dgii-modulos');
   allowed.push('clients');
@@ -1747,11 +1780,11 @@ function renderPortalGrid() {
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Otros accesos',            keys:['digisign','gdmail','nexo'] },
-    { label:'Herramientas contables',   keys:['nala','cami','ir2','dgii-modulos','clients','monitor'] },
+    { label:'Herramientas contables',   keys:['nala','nomina','cami','ir2','dgii-modulos','clients','monitor'] },
   ];
 
   const PLAY='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
-  const TOOL_OPEN={nala:openNala, ir2:openIr2, 'dgii-modulos':openDgiiModulos, clients:openClients, cami:openCami, monitor:openMonitor};
+  const TOOL_OPEN={nala:openNala, nomina:openNomina, ir2:openIr2, 'dgii-modulos':openDgiiModulos, clients:openClients, cami:openCami, monitor:openMonitor};
   function makeCard(key,inst){
     const isTool=!!inst.tool||!!inst.openRelay||!!inst.openDirect;
     const cos=isTool?[]:getCompanies(key);

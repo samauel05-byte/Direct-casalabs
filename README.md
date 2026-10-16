@@ -100,6 +100,7 @@ Contraseña del usuario (solo en memoria del navegador)
 | **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos de contraseña, historial de entradas y permisos por empresa |
 | **CAMI** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 e IT-1 |
 | **NALA** | Flujo fiscal 606 y 607: carga masiva, extracción OCR/IA, validación, auditoría, aprobación y exportación DGII; chat IA e IR-17 (ver `docs/nala/README.md`) |
+| **Nómina** | Nómina por empresa: columnas dinámicas (monto/número/texto/fórmula sin `eval`), empleados, períodos editables con totales/neto y exportación a Excel (ver `docs/nomina/README.md`) |
 | **IR-2** | Declaración de renta |
 | **Estimación Fiscal** | Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA |
 | **Clientes** | Gestión de los clientes de la empresa operadora mediante Excel |
@@ -119,7 +120,7 @@ Los nombres de empresa de la **bóveda de credenciales** (lista de empresas de u
 
 El admin puede:
 - Crear y desactivar usuarios
-- Asignar acceso a módulos (Direct / CAMI / NALA / IR-2 / Estimación Fiscal)
+- Asignar acceso a módulos (Direct / CAMI / NALA / Nómina / IR-2 / Estimación Fiscal)
 - Asignar portales individuales a cada usuario
 - **Asignar empresas (clientes) concretas a cada usuario**: un empleado ve solo las empresas que se le asignan (vacío = todas)
 - Restablecer la contraseña de cualquier usuario
@@ -252,15 +253,16 @@ Detalle en `docs/nala/README.md` y `docs/nala/dgii-606-607.md`.
 
 ```
 SERP/
-├── api/                   — Funciones serverless (auth, credentials, clients, users, nala)
-├── lib/                   — Núcleo: auth, tenant, db/supabase y librerías NALA (formats, dgii-template, …)
+├── api/                   — Funciones serverless (auth, credentials, clients, users, nala, nomina)
+├── lib/                   — Núcleo: auth, tenant, db/supabase y librerías NALA y Nómina
 ├── public/
 │   ├── index.html         — App Direct (HTML + CSS + JS)
 │   ├── js/                — direct-extras (inicio, historial, tarjetas, permisos)
-│   └── nala/              — App NALA (módulos + asistente)
+│   ├── nala/              — App NALA (módulos + asistente)
+│   └── nomina/            — App Nómina (empleados, columnas, períodos)
 ├── worker.js              — Relay Cloudflare Worker de los portales
-├── supabase/migrations/   — Migraciones SQL (tenants, sesión única, NALA, eventos Direct, …)
-├── tests/                 — Pruebas Node (test:direct, test:nala)
+├── supabase/migrations/   — Migraciones SQL (tenants, sesión única, NALA, Nómina, eventos Direct, …)
+├── tests/                 — Pruebas Node (test:direct, test:nala, test:nomina)
 └── vercel.json            — Ruteo de API y archivos estáticos
 ```
 

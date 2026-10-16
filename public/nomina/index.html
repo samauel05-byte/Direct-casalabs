@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nómina</title>
+<style>
+  :root{ --bg:#0f172a; --panel:#111c33; --panel2:#0c1830; --line:#1e2d4a; --ink:#e7edf7; --muted:#8aa0c2; --accent:#f59e0b; --accentink:#1a1203; --ok:#10b981; --crit:#ef4444; --info:#3b82f6; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  h1,h2,h3{ margin:0 0 .4em; } h1{ font-size:20px; } h2{ font-size:16px; }
+  .muted{ color:var(--muted); } .mono{ font-family:ui-monospace,Menlo,Consolas,monospace; }
+  a{ color:var(--accent); }
+  header.top{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; padding:12px 16px; border-bottom:1px solid var(--line); background:var(--panel2); position:sticky; top:0; z-index:5; }
+  .brand{ font-weight:800; letter-spacing:.5px; }
+  .brand b{ color:var(--accent); }
+  .spacer{ flex:1; }
+  select,input,button,textarea{ font:inherit; color:var(--ink); background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+  input::placeholder,textarea::placeholder{ color:#5f7399; }
+  button{ cursor:pointer; background:var(--panel); }
+  button:hover{ border-color:#2c436d; }
+  .btn.primary{ background:var(--accent); color:var(--accentink); border-color:var(--accent); font-weight:700; }
+  .btn.sm{ padding:4px 8px; font-size:12px; }
+  .btn.danger{ color:#fff; background:#7f1d1d; border-color:#7f1d1d; }
+  .btn.ghost{ background:transparent; }
+  main{ padding:16px; max-width:1200px; margin:0 auto; }
+  .tabs{ display:flex; gap:6px; margin:4px 0 16px; flex-wrap:wrap; }
+  .tabs button{ border-radius:999px; }
+  .tabs button.active{ background:var(--accent); color:var(--accentink); border-color:var(--accent); font-weight:700; }
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:16px; }
+  .row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .grid{ display:grid; gap:10px; }
+  table{ width:100%; border-collapse:collapse; }
+  th,td{ text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th{ color:var(--muted); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.3px; }
+  td.num,th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .table-wrap{ overflow:auto; border:1px solid var(--line); border-radius:12px; }
+  tr.tot td{ font-weight:800; border-top:2px solid var(--line); background:var(--panel2); position:sticky; bottom:0; }
+  .cell-in{ width:110px; padding:5px 7px; text-align:right; }
+  .cell-in.txt{ text-align:left; width:150px; }
+  .pill{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; border:1px solid var(--line); color:var(--muted); }
+  .pill.ok{ color:var(--ok); border-color:#114b38; } .pill.calc{ color:var(--info); border-color:#1c3a66; }
+  .empty{ color:var(--muted); text-align:center; padding:28px; }
+  .modal-bg{ position:fixed; inset:0; background:rgba(2,6,18,.6); display:flex; align-items:center; justify-content:center; padding:16px; z-index:20; }
+  .modal{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px; width:100%; max-width:520px; max-height:90vh; overflow:auto; }
+  label.f{ display:flex; flex-direction:column; gap:4px; font-size:13px; } label.f span{ color:var(--muted); }
+  .toast{ position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#0b1221; border:1px solid var(--line); padding:10px 14px; border-radius:10px; z-index:40; box-shadow:0 10px 30px rgba(0,0,0,.4); }
+  .toast.err{ border-color:#7f1d1d; } .toast.ok{ border-color:#114b38; }
+  .hint{ font-size:12px; color:var(--muted); }
+  .total-kpis{ display:flex; gap:18px; flex-wrap:wrap; margin:4px 0 12px; }
+  .total-kpis .k{ background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:10px 14px; min-width:130px; }
+  .total-kpis .k .v{ font-size:18px; font-weight:800; } .total-kpis .k.neto .v{ color:var(--accent); }
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">LO<b>NÓMINA</b></span>
+  <label class="row" style="gap:6px"><span class="muted">Empresa</span><select id="client"></select></label>
+  <span class="spacer"></span>
+  <span class="muted mono" id="who"></span>
+</header>
+<main>
+  <div class="tabs" id="tabs">
+    <button data-tab="empleados" class="active">Empleados</button>
+    <button data-tab="columnas">Columnas</button>
+    <button data-tab="periodos">Períodos de nómina</button>
+  </div>
+  <div id="view"></div>
+</main>
+<script>
+(function(){
+  "use strict";
+  const $ = (sel, el=document) => el.querySelector(sel);
+  const esc = v => String(v==null?'':v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const money = v => (v==null||v===''||!isFinite(Number(v))) ? '0.00' : Number(v).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const numfmt = v => (v==null||v==='') ? '' : Number(v).toLocaleString('es-DO',{maximumFractionDigits:2});
+
+  // ── sesión (misma que SERP; el JWT nunca va en la URL) ──
+  function authHeaders(){
+    const h = {}; let token='', sid='';
+    try { token = window.parent.sessionStorage.getItem('dtoken') || sessionStorage.getItem('dtoken') || ''; } catch(_){}
+    try { sid = localStorage.getItem('direct_session_id') || ''; } catch(_){}
+    if (token) h.Authorization = 'Bearer '+token;
+    if (sid) h['X-Direct-Session'] = sid;
+    return h;
+  }
+  async function api(method, path, body){
+    const res = await fetch('/api/nomina/'+path, {
+      method, headers: { ...authHeaders(), ...(body!==undefined?{'Content-Type':'application/json'}:{}) },
+      body: body!==undefined ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(()=> ({}));
+    if (!res.ok){ const e = new Error(data.error || ('Error '+res.status)); e.status = res.status; throw e; }
+    return data;
+  }
+  let toastT;
+  function toast(msg, kind=''){ let t=$('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.className='toast '+kind; t.textContent=msg; clearTimeout(toastT); toastT=setTimeout(()=>t.remove(), 3200); }
+  function fail(e){ toast(e.message || 'Error', 'err'); }
+
+  // ── evaluador de fórmulas (espejo de lib/nomina/formula.js, para el neto en vivo) ──
+  const FUNCS = { round:(x,n=0)=>{const p=10**Math.trunc(n);return Math.round((Number(x)+Number.EPSILON)*p)/p;}, abs:Math.abs, floor:Math.floor, ceil:Math.ceil, min:(...a)=>Math.min(...a), max:(...a)=>Math.max(...a) };
+  function tokenize(s){ const t=[]; let i=0; s=String(s);
+    while(i<s.length){ const c=s[i];
+      if(c<=' '){ i++; continue; }
+      if('+-*/(),'.includes(c)){ t.push({t:c}); i++; continue; }
+      if((c>='0'&&c<='9')||(c==='.'&&s[i+1]>='0'&&s[i+1]<='9')){ let j=i+1; while(j<s.length&&((s[j]>='0'&&s[j]<='9')||s[j]==='.'))j++; t.push({t:'num',v:Number(s.slice(i,j))}); i=j; continue; }
+      if((c>='a'&&c<='z')||c==='_'){ let j=i+1; while(j<s.length&&((s[j]>='a'&&s[j]<='z')||(s[j]>='0'&&s[j]<='9')||s[j]==='_'))j++; t.push({t:'id',v:s.slice(i,j)}); i=j; continue; }
+      throw new Error('fórmula'); }
+    return t; }
+  function parse(tk){ let p=0; const peek=()=>tk[p]; const eat=t=>{const x=tk[p]; if(!x||(t&&x.t!==t))throw new Error('fórmula'); p++; return x;};
+    function expr(){ let n=term(); while(peek()&&(peek().t==='+'||peek().t==='-')){const o=eat().t; n={op:o,a:n,b:term()};} return n; }
+    function term(){ let n=factor(); while(peek()&&(peek().t==='*'||peek().t==='/')){const o=eat().t; n={op:o,a:n,b:factor()};} return n; }
+    function factor(){ const x=peek(); if(!x)throw new Error('fórmula');
+      if(x.t==='-'){eat();return{neg:factor()};} if(x.t==='+'){eat();return factor();}
+      if(x.t==='num'){eat();return{num:x.v};} if(x.t==='('){eat('(');const n=expr();eat(')');return n;}
+      if(x.t==='id'){ eat('id'); if(peek()&&peek().t==='('){ if(!FUNCS[x.v])throw new Error('fn'); eat('('); const a=[]; if(peek()&&peek().t!==')'){a.push(expr()); while(peek()&&peek().t===','){eat(',');a.push(expr());}} eat(')'); return{call:x.v,args:a}; } return{ref:x.v}; }
+      throw new Error('fórmula'); }
+    const n=expr(); if(p!==tk.length)throw new Error('fórmula'); return n; }
+  function ev(n,sc){ if(n.num!==undefined)return n.num; if(n.ref){const v=Number(sc[n.ref]);return isFinite(v)?v:0;} if(n.neg)return -ev(n.neg,sc); if(n.call)return FUNCS[n.call](...n.args.map(a=>ev(a,sc))); const a=ev(n.a,sc),b=ev(n.b,sc); return n.op==='+'?a+b:n.op==='-'?a-b:n.op==='*'?a*b:(b===0?0:a/b); }
+  function evalFormula(src, scope){ try{ return round2(ev(parse(tokenize(src||'0')), scope||{})); }catch(_){ return 0; } }
+  const round2 = x => { const n=Number(x); return isFinite(n) ? Math.round((n+Number.EPSILON)*100)/100 : 0; };
+
+  function computeRow(columns, values){
+    const sc={}; for(const c of columns) if(c.type==='monto'||c.type==='numero') sc[c.key]=Number(values[c.key])||0;
+    const cells={};
+    for(const c of columns){
+      if(c.type==='formula'){ const r=evalFormula(c.formula,sc); sc[c.key]=r; cells[c.key]=r; }
+      else if(c.type==='monto') cells[c.key]=round2(sc[c.key]);
+      else if(c.type==='numero') cells[c.key]=sc[c.key];
+      else cells[c.key]=values[c.key]!=null?String(values[c.key]):'';
+    }
+    let ing=0, ded=0;
+    for(const c of columns){ if((c.type==='monto'||c.type==='formula')&&c.include_total){ const n=Number(cells[c.key])||0; if(c.sign>0)ing+=n; else if(c.sign<0)ded+=n; } }
+    ing=round2(ing); ded=round2(ded);
+    return { cells, ingresos:ing, deducciones:ded, neto:round2(ing-ded) };
+  }
+
+  // ── estado ──
+  const S = { clients:[], clientId:'', tab:'empleados', columns:[], employees:[], periods:[], period:null };
+  const view = $('#view');
+  const TYPE_LABEL = { monto:'Monto (RD$)', numero:'Número', texto:'Texto', formula:'Fórmula' };
+
+  async function boot(){
+    try {
+      const me = await api('GET','me'); $('#who').textContent = me.tenant?.name || '';
+      const { clients } = await api('GET','clients'); S.clients = clients || [];
+    } catch(e){ view.innerHTML = '<div class="card empty"><b>Su sesión terminó o se abrió en otro equipo.</b><br>Vuelva a iniciar sesión en SERP.</div>'; return; }
+    const sel = $('#client');
+    sel.innerHTML = S.clients.length ? S.clients.map(c=>`<option value="${esc(c.id)}">${esc(c.legal_name)}</option>`).join('') : '<option value="">— Sin empresas —</option>';
+    S.clientId = S.clients[0]?.id || '';
+    sel.value = S.clientId;
+    sel.onchange = async () => { S.clientId = sel.value; await loadClient(); render(); };
+    $('#tabs').onclick = e => { const b=e.target.closest('[data-tab]'); if(!b)return; S.tab=b.dataset.tab; S.period=null; [...$('#tabs').children].forEach(x=>x.classList.toggle('active', x===b)); render(); };
+    await loadClient(); render();
+  }
+
+  async function loadClient(){
+    S.columns=[]; S.employees=[]; S.periods=[];
+    if(!S.clientId) return;
+    try {
+      const [c,e,p] = await Promise.all([ api('GET',`clients/${S.clientId}/columns`), api('GET',`clients/${S.clientId}/employees`), api('GET',`clients/${S.clientId}/periods`) ]);
+      S.columns=c.columns||[]; S.employees=e.employees||[]; S.periods=p.periods||[];
+    } catch(err){ fail(err); }
+  }
+
+  function render(){
+    if(!S.clientId){ view.innerHTML='<div class="card empty">Cree o seleccione una empresa en SERP para empezar.</div>'; return; }
+    if(S.period) return renderPeriod();
+    if(S.tab==='empleados') return renderEmployees();
+    if(S.tab==='columnas') return renderColumns();
+    if(S.tab==='periodos') return renderPeriods();
+  }
+
+  // ── EMPLEADOS ──
+  function renderEmployees(){
+    view.innerHTML = `<div class="card"><div class="row"><h2>Empleados</h2><span class="spacer"></span><button class="btn primary" id="add">+ Empleado</button></div>
+      ${S.employees.length ? `<div class="table-wrap"><table><tr><th>Nombre</th><th>Cédula</th><th>Puesto</th><th>Estado</th><th></th></tr>
+        ${S.employees.map(e=>`<tr><td><b>${esc(e.full_name)}</b></td><td class="mono">${esc(e.identifier||'—')}</td><td>${esc(e.position||'—')}</td><td>${e.active?'<span class="pill ok">Activo</span>':'<span class="pill">Inactivo</span>'}</td>
+          <td class="num"><button class="btn sm" data-ed="${e.id}">Editar</button> <button class="btn sm danger" data-del="${e.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+        : '<div class="empty">Aún no hay empleados. Agregue el primero.</div>'}</div>`;
+    $('#add').onclick = () => employeeModal(null);
+    view.querySelectorAll('[data-ed]').forEach(b=> b.onclick=()=> employeeModal(S.employees.find(x=>x.id===b.dataset.ed)));
+    view.querySelectorAll('[data-del]').forEach(b=> b.onclick=async()=>{ if(!confirm('¿Borrar este empleado? Se quitará de los períodos.'))return; try{ await api('DELETE',`employees/${b.dataset.del}`); await loadClient(); render(); toast('Empleado borrado','ok'); }catch(e){ fail(e);} });
+  }
+  function employeeModal(emp){
+    const m = modal(`${emp?'Editar':'Nuevo'} empleado`, `
+      <label class="f"><span>Nombre completo *</span><input id="m-name" maxlength="120" value="${esc(emp?.full_name||'')}"></label>
+      <label class="f"><span>Cédula</span><input id="m-id" maxlength="20" value="${esc(emp?.identifier||'')}"></label>
+      <label class="f"><span>Puesto</span><input id="m-pos" maxlength="80" value="${esc(emp?.position||'')}"></label>
+      <label class="row" style="gap:8px"><input type="checkbox" id="m-active" ${emp?.active!==false?'checked':''} style="width:auto"> Activo</label>`,
+      async () => {
+        const body = { full_name: $('#m-name').value.trim(), identifier: $('#m-id').value.trim(), position: $('#m-pos').value.trim(), active: $('#m-active').checked };
+        if(!body.full_name){ toast('El nombre es obligatorio','err'); return false; }
+        try { await api(emp?'PATCH':'POST', emp?`employees/${emp.id}`:`clients/${S.clientId}/employees`, body); await loadClient(); render(); toast('Guardado','ok'); return true; }
+        catch(e){ fail(e); return false; }
+      });
+    return m;
+  }
+
+  // ── COLUMNAS ──
+  function renderColumns(){
+    view.innerHTML = `<div class="card"><div class="row"><h2>Columnas de nómina</h2><span class="spacer"></span><button class="btn primary" id="add">+ Columna</button></div>
+      <p class="hint">Defina los conceptos de esta empresa. <b>Monto</b> = dinero; <b>Número</b> = cantidad (horas, días…); <b>Texto</b> = nota; <b>Fórmula</b> = se calcula con otras columnas por su <i>clave</i> (ej. <span class="mono">sueldo + horas_extra * 1.35</span>). El <b>signo</b> dice si una columna suma al neto (ingreso) o resta (deducción).</p>
+      ${S.columns.length ? `<div class="table-wrap"><table><tr><th>Orden</th><th>Nombre</th><th>Clave</th><th>Tipo</th><th>Signo</th><th>Fórmula</th><th></th></tr>
+        ${S.columns.map(c=>`<tr><td class="num">${c.position}</td><td><b>${esc(c.label)}</b></td><td class="mono">${esc(c.key)}</td><td>${esc(TYPE_LABEL[c.type]||c.type)}</td>
+          <td>${c.type==='monto'||c.type==='formula' ? (c.sign>0?'+ ingreso':c.sign<0?'− deducción':'neutro') : '—'}</td><td class="mono">${esc(c.formula||'')}</td>
+          <td class="num"><button class="btn sm" data-ed="${c.id}">Editar</button> <button class="btn sm danger" data-del="${c.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+        : '<div class="empty">Aún no hay columnas. Cree, por ejemplo, «Sueldo» (Monto, +) y una deducción.</div>'}</div>`;
+    $('#add').onclick = () => columnModal(null);
+    view.querySelectorAll('[data-ed]').forEach(b=> b.onclick=()=> columnModal(S.columns.find(x=>x.id===b.dataset.ed)));
+    view.querySelectorAll('[data-del]').forEach(b=> b.onclick=async()=>{ if(!confirm('¿Borrar esta columna?'))return; try{ await api('DELETE',`columns/${b.dataset.del}`); await loadClient(); render(); toast('Columna borrada','ok'); }catch(e){ fail(e);} });
+  }
+  function slug(s){ return String(s).normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'').replace(/^([0-9])/,'c$1').slice(0,39); }
+  function columnModal(col){
+    const keys = S.columns.filter(c=>!col||c.id!==col.id).map(c=>c.key);
+    modal(`${col?'Editar':'Nueva'} columna`, `
+      <label class="f"><span>Nombre *</span><input id="m-label" maxlength="60" value="${esc(col?.label||'')}"></label>
+      <label class="f"><span>Clave (para fórmulas) *</span><input id="m-key" class="mono" maxlength="39" value="${esc(col?.key||'')}" ${col?'disabled':''} placeholder="ej. sueldo"></label>
+      <label class="f"><span>Tipo *</span><select id="m-type">${Object.entries(TYPE_LABEL).map(([k,v])=>`<option value="${k}" ${col?.type===k?'selected':''}>${v}</option>`).join('')}</select></label>
+      <div id="m-signwrap"><label class="f"><span>Signo (para el neto)</span><select id="m-sign">
+        <option value="1">+ Ingreso (suma)</option><option value="-1">− Deducción (resta)</option><option value="0">Neutro (no afecta el neto)</option></select></label>
+        <label class="row" style="gap:8px"><input type="checkbox" id="m-inc" checked style="width:auto"> Incluir en los totales</label></div>
+      <label class="f" id="m-formwrap" style="display:none"><span>Fórmula</span><input id="m-formula" class="mono" maxlength="500" value="${esc(col?.formula||'')}" placeholder="sueldo + horas_extra * 1.35">
+        <span class="hint">Claves disponibles: ${esc(keys.join(', ')||'(aún ninguna)')}</span></label>`,
+      async () => {
+        const type=$('#m-type').value;
+        const body={ label:$('#m-label').value.trim(), key: col?col.key:slug($('#m-key').value||$('#m-label').value), type,
+          sign:Number($('#m-sign').value), include_total:$('#m-inc').checked, formula: type==='formula'?$('#m-formula').value.trim():null,
+          position: col?col.position:(S.columns.reduce((m,c)=>Math.max(m,c.position),0)+1) };
+        if(!body.label){ toast('El nombre es obligatorio','err'); return false; }
+        if(!col && !/^[a-z][a-z0-9_]{0,38}$/.test(body.key)){ toast('Clave inválida (letras minúsculas, números y _)','err'); return false; }
+        if(type==='formula'){ try{ parse(tokenize(body.formula||'')); }catch(_){ toast('La fórmula no es válida','err'); return false; } }
+        try{ await api(col?'PATCH':'POST', col?`columns/${col.id}`:`clients/${S.clientId}/columns`, body); await loadClient(); render(); toast('Guardado','ok'); return true; }
+        catch(e){ fail(e); return false; }
+      });
+    const type=$('#m-type'), formwrap=$('#m-formwrap'), signwrap=$('#m-signwrap'), key=$('#m-key'), label=$('#m-label');
+    const sync=()=>{ const t=type.value; formwrap.style.display=t==='formula'?'flex':'none'; signwrap.style.display=(t==='monto'||t==='formula')?'block':'none'; };
+    type.onchange=sync; sync();
+    if(col){ $('#m-sign').value=String(col.sign); $('#m-inc').checked=col.include_total!==false; }
+    if(!col && label && key){ label.oninput=()=>{ if(!key.dataset.touched) key.value=slug(label.value); }; key.oninput=()=>{ key.dataset.touched='1'; }; }
+  }
+
+  // ── PERÍODOS ──
+  function renderPeriods(){
+    view.innerHTML = `<div class="card"><div class="row"><h2>Períodos de nómina</h2><span class="spacer"></span><button class="btn primary" id="add">+ Nuevo período</button></div>
+      ${S.periods.length ? `<div class="table-wrap"><table><tr><th>Período</th><th>Estado</th><th>Creado</th><th></th></tr>
+        ${S.periods.map(p=>`<tr><td><b>${esc(p.label)}</b></td><td>${p.status==='closed'?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}</td><td class="muted">${new Date(p.created_at).toLocaleDateString('es-DO')}</td>
+          <td class="num"><button class="btn sm primary" data-open="${p.id}">Abrir</button> <button class="btn sm danger" data-del="${p.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+        : '<div class="empty">Aún no hay períodos. Cree el primero (ej. «Nómina octubre 2026»).</div>'}</div>`;
+    $('#add').onclick = () => {
+      const def = `Nómina ${new Date().toLocaleDateString('es-DO',{month:'long',year:'numeric'})}`;
+      modal('Nuevo período', `<label class="f"><span>Nombre del período *</span><input id="m-label" maxlength="80" value="${esc(def)}"></label>`,
+        async()=>{ const label=$('#m-label').value.trim(); if(!label){toast('Escriba un nombre','err');return false;}
+          try{ const now=new Date(); const { period } = await api('POST',`clients/${S.clientId}/periods`, { label, year:now.getFullYear(), month:now.getMonth()+1 }); await loadClient(); openPeriod(period.id); toast('Período creado','ok'); return true; }catch(e){ fail(e); return false; } });
+    };
+    view.querySelectorAll('[data-open]').forEach(b=> b.onclick=()=> openPeriod(b.dataset.open));
+    view.querySelectorAll('[data-del]').forEach(b=> b.onclick=async()=>{ if(!confirm('¿Borrar este período y sus datos capturados?'))return; try{ await api('DELETE',`periods/${b.dataset.del}`); await loadClient(); render(); toast('Período borrado','ok'); }catch(e){ fail(e);} });
+  }
+
+  async function openPeriod(id){
+    try{ const d = await api('GET',`periods/${id}`); S.period = d; render(); }catch(e){ fail(e); }
+  }
+
+  function renderPeriod(){
+    const d = S.period; const p = d.period;
+    const cols = d.columns || [];
+    const editable = cols.filter(c=>c.type!=='formula');
+    const closed = p.status==='closed';
+    // valores locales editables: map employee_id -> {key:val}
+    const vals = {}; (d.rows||[]).forEach(r=> vals[r.employee.id] = {}); // se llenan abajo con lo guardado
+    // reconstruir valores capturados desde las celdas no-fórmula
+    (d.rows||[]).forEach(r=>{ editable.forEach(c=>{ const v=r.cells[c.key]; vals[r.employee.id][c.key] = (c.type==='texto')? (v||'') : (v===0?'' : v); }); });
+
+    const head = `<div class="card"><div class="row"><button class="btn sm ghost" id="back">← Períodos</button><h2 style="margin:0">${esc(p.label)}</h2>
+      ${closed?'<span class="pill">Cerrado</span>':'<span class="pill ok">Borrador</span>'}<span class="spacer"></span>
+      <button class="btn sm" id="export">⇩ Exportar Excel</button>
+      <button class="btn sm" id="toggle">${closed?'Reabrir':'Cerrar período'}</button>
+      ${closed?'':'<button class="btn primary" id="save">Guardar</button>'}</div>
+      <div class="total-kpis" id="kpis"></div></div>`;
+
+    if(!(d.rows||[]).length){ view.innerHTML = head + '<div class="card empty">No hay empleados activos. Agregue empleados para capturar la nómina.</div>'; wirePeriodTop(); return; }
+
+    const body = `<div class="card"><div class="table-wrap"><table id="grid"><tr><th>Empleado</th>
+      ${cols.map(c=>`<th class="num" title="${esc(c.key)}">${esc(c.label)}${c.type==='formula'?' <span class="pill calc">fx</span>':''}</th>`).join('')}
+      <th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th></tr>
+      ${(d.rows||[]).map(r=>`<tr data-emp="${r.employee.id}"><td><b>${esc(r.employee.full_name)}</b><div class="muted mono">${esc(r.employee.identifier||'')}</div></td>
+        ${cols.map(c=>{
+          if(c.type==='formula') return `<td class="num" data-calc="${c.key}">${money(r.cells[c.key])}</td>`;
+          const v = vals[r.employee.id][c.key];
+          if(c.type==='texto') return `<td><input class="cell-in txt" data-k="${c.key}" value="${esc(v||'')}" ${closed?'disabled':''}></td>`;
+          return `<td class="num"><input class="cell-in" inputmode="decimal" data-k="${c.key}" value="${v===''||v==null?'':esc(v)}" ${closed?'disabled':''}></td>`;
+        }).join('')}
+        <td class="num" data-ing>${money(r.ingresos)}</td><td class="num" data-ded>${money(r.deducciones)}</td><td class="num" data-neto><b>${money(r.neto)}</b></td></tr>`).join('')}
+      <tr class="tot"><td>TOTALES</td>${cols.map(c=>`<td class="num" data-tot="${c.key}"></td>`).join('')}<td class="num" data-tot-ing></td><td class="num" data-tot-ded></td><td class="num" data-tot-neto></td></tr>
+      </table></div><p class="hint">Las columnas con <span class="pill calc">fx</span> se calculan solas. El neto se actualiza mientras escribe; pulse <b>Guardar</b> para registrar.</p></div>`;
+
+    view.innerHTML = head + body;
+    wirePeriodTop();
+    const recompute = () => {
+      const totals={}; cols.forEach(c=> totals[c.key]=0); let tIng=0,tDed=0,tNeto=0;
+      view.querySelectorAll('tr[data-emp]').forEach(tr=>{
+        const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const c=cols.find(x=>x.key===inp.dataset.k); values[inp.dataset.k] = c&&c.type==='texto'? inp.value : inp.value; });
+        const res = computeRow(cols, values);
+        cols.forEach(c=>{ if(c.type==='formula'){ const cell=tr.querySelector(`[data-calc="${c.key}"]`); if(cell) cell.textContent=money(res.cells[c.key]); } });
+        tr.querySelector('[data-ing]').textContent=money(res.ingresos); tr.querySelector('[data-ded]').textContent=money(res.deducciones); tr.querySelector('[data-neto]').innerHTML='<b>'+money(res.neto)+'</b>';
+        cols.forEach(c=>{ if(c.type!=='texto') totals[c.key]+= Number(res.cells[c.key])||0; });
+        tIng+=res.ingresos; tDed+=res.deducciones; tNeto+=res.neto;
+      });
+      cols.forEach(c=>{ const el=view.querySelector(`[data-tot="${c.key}"]`); if(el) el.textContent = c.type==='texto'?'':(c.type==='numero'?numfmt(round2(totals[c.key])):money(round2(totals[c.key]))); });
+      view.querySelector('[data-tot-ing]').textContent=money(round2(tIng)); view.querySelector('[data-tot-ded]').textContent=money(round2(tDed)); view.querySelector('[data-tot-neto]').innerHTML='<b>'+money(round2(tNeto))+'</b>';
+      $('#kpis').innerHTML = `<div class="k"><div class="muted">Empleados</div><div class="v">${(d.rows||[]).length}</div></div>
+        <div class="k"><div class="muted">Ingresos</div><div class="v">${money(round2(tIng))}</div></div>
+        <div class="k"><div class="muted">Deducciones</div><div class="v">${money(round2(tDed))}</div></div>
+        <div class="k neto"><div class="muted">Neto a pagar</div><div class="v">${money(round2(tNeto))}</div></div>`;
+    };
+    view.querySelectorAll('input[data-k]').forEach(inp=> inp.addEventListener('input', recompute));
+    recompute();
+
+    $('#save') && ($('#save').onclick = async () => {
+      const entries = [...view.querySelectorAll('tr[data-emp]')].map(tr=>{
+        const values={}; tr.querySelectorAll('input[data-k]').forEach(inp=>{ const v=inp.value.trim(); if(v!=='') values[inp.dataset.k]=v; });
+        return { employee_id: tr.dataset.emp, values };
+      });
+      try{ const d2 = await api('PUT',`periods/${p.id}/entries`, { entries }); S.period = d2; render(); toast('Nómina guardada','ok'); }catch(e){ fail(e); }
+    });
+  }
+
+  function wirePeriodTop(){
+    const p = S.period.period;
+    $('#back').onclick = async () => { S.period=null; await loadClient(); S.tab='periodos'; [...$('#tabs').children].forEach(x=>x.classList.toggle('active', x.dataset.tab==='periodos')); render(); };
+    $('#toggle').onclick = async () => { try{ await api('PATCH',`periods/${p.id}`, { status: p.status==='closed'?'draft':'closed' }); await openPeriod(p.id); toast('Período actualizado','ok'); }catch(e){ fail(e); } };
+    $('#export').onclick = async () => { try{ const r = await api('GET',`periods/${p.id}/export`); downloadB64(r.base64, r.filename, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'); }catch(e){ fail(e); } };
+  }
+
+  function downloadB64(b64, name, mime){
+    const bin = atob(b64); const arr = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([arr],{type:mime})); const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  }
+
+  // ── modal ──
+  function modal(title, inner, onOk){
+    const bg = document.createElement('div'); bg.className='modal-bg';
+    bg.innerHTML = `<div class="modal"><h2>${esc(title)}</h2><div class="grid" style="gap:12px">${inner}</div>
+      <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn ghost" data-x>Cancelar</button><button class="btn primary" data-ok>Guardar</button></div></div>`;
+    document.body.appendChild(bg);
+    const close=()=>bg.remove();
+    bg.querySelector('[data-x]').onclick=close; bg.addEventListener('click',e=>{ if(e.target===bg) close(); });
+    bg.querySelector('[data-ok]').onclick=async()=>{ const ok=await onOk(); if(ok!==false) close(); };
+    return bg;
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

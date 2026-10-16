@@ -48,16 +48,26 @@
     return headers;
   }
   NALA.authHeaders = authHeaders;
-  NALA.api = async function api(method, path, body) {
+  NALA.api = async function api(method, path, body, _retried) {
     const res = await fetch(`/api/nala/${path}`, {
       method, headers: { ...authHeaders(), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      // En un 401, el token pudo haber vencido mientras se trabajaba: pedirle al
+      // shell (misma sesión) que lo refresque y reintentar UNA vez antes de dar
+      // la sesión por terminada. Así ya no saca al usuario al inicio sin razón.
+      if (res.status === 401 && !_retried) {
+        let refreshed = null;
+        try { refreshed = window.parent && window.parent.directRefresh ? await window.parent.directRefresh() : null; } catch (_) { /* aislado */ }
+        if (refreshed) return api(method, path, body, true);
+        showSessionError();
+      } else if (res.status === 401) {
+        showSessionError();
+      }
       const error = new Error(data.error || `Error ${res.status}`);
       error.status = res.status; error.data = data;
-      if (res.status === 401) showSessionError();
       throw error;
     }
     return data;

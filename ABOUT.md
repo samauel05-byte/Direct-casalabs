@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — enviar el 606/607 a la DGII de la empresa (1 clic)**: al terminar de validar y exportar un lote, el detalle de la exportación trae el botón **«Enviar a la DGII de la empresa»**: descarga el TXT y abre la **Oficina Virtual de esa empresa ya con sesión iniciada** (usando su acceso DGII guardado y la tarjeta de códigos, cifrados). Solo entras a **Remisión/Envío de Archivos**, adjuntas el TXT y envías; después registras el número de recepción. Cierra el ciclo validar → exportar → enviar sin salir a buscar la empresa ni volver a iniciar sesión. (El archivo se adjunta a mano porque la DGII no permite adjuntarlo por código.)
+
 - **NALA — Consulta RNC: registro de cliente más claro**: al registrar una empresa desde la Consulta RNC, ahora se confirma con un aviso visible "✓ Registrada" y aparecen atajos para **Ver en Empresas clientes** o **Abrir su panel**; si el registro falla (por ejemplo, ya existía), se muestra el motivo en vez de quedarse sin respuesta. El guardado siempre funcionó; lo que faltaba era dejarlo claro.
 
 - **El asistente ahora entiende lo que tienes en pantalla**: en vez de dar respuestas genéricas, el asistente de cada módulo **ve los datos que estás mirando** (la empresa abierta, el período, las cifras y tablas) y responde sobre ellos. Por ejemplo, en Nómina puedes pedirle *«resume la nómina que tengo abierta»* y en CAMI/DGII *«explícame estos datos»*. Solo usa lo que es visible en pantalla (nunca contraseñas) y, si un dato no está a la vista, lo dice en lugar de inventarlo.

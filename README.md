@@ -283,6 +283,7 @@ NALA genera el TXT de la DGII y, además, deja las declaraciones listas en la **
 - **Copiar y pegar**: entrega las filas en el formato exacto de la herramienta (606: 25 columnas B..Z; 607: 23 columnas B..X) para pegarlas en B12.
 - **Excel con macro**: el usuario sube su herramienta oficial (.xlsm) en Configuración → Plantillas DGII y NALA se la devuelve llena (encabezado y filas), conservando el macro intacto.
 - **Aprendizaje del TXT de ejemplo**: NALA aprende de TXT ya enviados cómo escribir montos y qué campos deja vacíos, por formato.
+- **Enviar a la DGII de la empresa (asistido)**: en el detalle de una exportación, el botón **«Enviar a la DGII de la empresa»** descarga el TXT y pide al shell de Direct que abra la **Oficina Virtual de esa empresa ya logueada** (empareja el RNC de la exportación con su acceso DGII de la bóveda y usa el auto-login del relay, con la tarjeta de códigos cifrada). El usuario solo entra a **Remisión/Envío de Archivos**, adjunta el TXT descargado y envía; el archivo se adjunta a mano porque la DGII no permite adjuntarlo por código. Luego registra el número de recepción con «Registrar envío a DGII». Requiere la bóveda abierta y que exista el acceso DGII de la empresa; si no, NALA lo avisa. Mecanismo: `postMessage` `nala-open-dgii-envio` del iframe de NALA al shell (`public/index.html`), que responde con `nala-dgii-envio-result`.
 
 Detalle en `docs/nala/README.md` y `docs/nala/dgii-606-607.md`.
 

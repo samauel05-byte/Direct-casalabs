@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — suma el subtotal gravado + exento**: en facturas 606 con «Subtotal Gravado» y «Subtotal Exento» por separado (p. ej. supermercado), el Monto Bienes/Servicios ahora incluye **ambos** (sólo se excluye el ITBIS). Antes tomaba solo el gravado y el total quedaba corto. Lo hace el lector y, como respaldo, una red que reconcilia la base al total impreso menos los impuestos.
+
 - **NALA — aviso claro si un monto queda negativo**: si al editar una factura el Monto (Bienes/Servicios) queda negativo, NALA ahora lo avisa con un mensaje específico y te recuerda usar el botón **«− Restar ITBIS del monto»** (que resta el ITBIS del subtotal, dejando el Total correcto) en vez de escribir un negativo, que afectaba el Total.
 
 - **NALA — la imagen ahora coincide con la factura**: al abrir un comprobante, la imagen que se muestra es la de **esa** factura (antes, en PDF con varias facturas, la imagen salía corrida y mostraba la de la siguiente). Se procesa **una página por vez**, así cada factura queda ligada a su página exacta. Aplica a cargas nuevas; los lotes ya procesados deben **reprocesarse** para corregir el mapeo.

@@ -123,7 +123,10 @@ OpenAI), los módulos de Direct tienen un **asistente de IA** propio:
 - **Motor**: `lib/ai/assistant.js`, cliente compatible con OpenAI configurable por
   entorno: `AI_API_KEY`, `AI_BASE_URL` (por defecto OpenRouter) y `AI_MODEL` (por
   defecto un modelo gratis). Es **independiente** de las variables de NALA
-  (`OPENAI_API_KEY`, `NALA_OPENAI_*`).
+  (`OPENAI_API_KEY`, `NALA_OPENAI_*`). Envía `reasoning:{enabled:false}`: casi
+  todos los modelos gratis de OpenRouter son de razonamiento y, con contexto, se
+  quedaban sin presupuesto de tokens y devolvían el texto vacío; además, si el
+  modelo igual deja `content` vacío, se usa el campo `reasoning` como respaldo.
 - **Widget**: `public/js/ai-assistant.js`, un botón flotante ✨ + panel de chat
   reutilizable (UI pura); cada módulo lo monta con `AIAssistant.mount({module,
   auth, getContext, suggestions})`. Escapa el texto y solo permite **negrita**.

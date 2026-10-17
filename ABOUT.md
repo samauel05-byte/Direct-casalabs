@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — aviso claro si un monto queda negativo**: si al editar una factura el Monto (Bienes/Servicios) queda negativo, NALA ahora lo avisa con un mensaje específico y te recuerda usar el botón **«− Restar ITBIS del monto»** (que resta el ITBIS del subtotal, dejando el Total correcto) en vez de escribir un negativo, que afectaba el Total.
+
 - **NALA — la imagen ahora coincide con la factura**: al abrir un comprobante, la imagen que se muestra es la de **esa** factura (antes, en PDF con varias facturas, la imagen salía corrida y mostraba la de la siguiente). Se procesa **una página por vez**, así cada factura queda ligada a su página exacta. Aplica a cargas nuevas; los lotes ya procesados deben **reprocesarse** para corregir el mapeo.
 
 - **NALA — botón "− Restar ITBIS del monto"**: en la auditoría de una factura 606, si escribes en Monto (Bienes o Servicios) un valor que **ya trae el ITBIS incluido**, un botón lo **resta de un clic** para dejar la base sin impuestos; el Total (automático) queda igual al monto bruto (base + ITBIS). Ej.: Monto 2,349 + ITBIS 400 → Monto 1,949 y Total 2,349. (Las casillas Monto Servicios y Monto Bienes no son obligatorias por separado: basta llenar una.)

@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — aprobar con advertencias más simple**: al aprobar un comprobante con advertencias ya no hay que marcar una casilla aparte; basta escribir el **comentario**, que ahora es la constancia de que se revisaron las advertencias contra el documento. Se acabó el aviso "Confirme que revisó las advertencias" cuando ya se estaba poniendo un comentario.
+
 - **NALA — enviar el 606/607 a la DGII de la empresa (1 clic)**: al terminar de validar y exportar un lote, el detalle de la exportación trae el botón **«Enviar a la DGII de la empresa»**: descarga el TXT y abre la **Oficina Virtual de esa empresa ya con sesión iniciada** (usando su acceso DGII guardado y la tarjeta de códigos, cifrados). Solo entras a **Remisión/Envío de Archivos**, adjuntas el TXT y envías; después registras el número de recepción. Cierra el ciclo validar → exportar → enviar sin salir a buscar la empresa ni volver a iniciar sesión. (El archivo se adjunta a mano porque la DGII no permite adjuntarlo por código.)
 
 - **NALA — Consulta RNC: registro de cliente más claro**: al registrar una empresa desde la Consulta RNC, ahora se confirma con un aviso visible "✓ Registrada" y aparecen atajos para **Ver en Empresas clientes** o **Abrir su panel**; si el registro falla (por ejemplo, ya existía), se muestra el motivo en vez de quedarse sin respuesta. El guardado siempre funcionó; lo que faltaba era dejarlo claro.

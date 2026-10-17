@@ -127,8 +127,17 @@ OpenAI), los módulos de Direct tienen un **asistente de IA** propio:
 - **Widget**: `public/js/ai-assistant.js`, un botón flotante ✨ + panel de chat
   reutilizable (UI pura); cada módulo lo monta con `AIAssistant.mount({module,
   auth, getContext, suggestions})`. Escapa el texto y solo permite **negrita**.
-- **Fase 1**: montado en **Accesos** (shell) como guía de trámites/portales.
-  Próximas fases: Nómina, CAMI, DGII e IR-2, y clasificación de gastos.
+- **Contexto en vivo**: el widget envía como `context` lo que el usuario está
+  viendo en pantalla (empresa, período, cifras, tablas del módulo). Si el módulo
+  no define `getContext`, se usa `defaultContext()`, que toma el texto visible del
+  contenido (hasta 3000 caracteres, sin el propio panel del asistente). El
+  servidor lo inyecta en el *system prompt* como "Contexto del módulo", así el
+  asistente responde sobre los datos reales que el usuario tiene abiertos (p. ej.
+  "resume la nómina que tengo abierta") en vez de dar respuestas genéricas. No se
+  envían contraseñas: las credenciales no están como texto visible.
+- Montado en **Accesos** (shell, guía de trámites/portales), **Nómina**, **CAMI**,
+  **DGII** e **IR-2**; cada uno con su personalidad (`accesos`/`nomina`/`contable`)
+  y sus sugerencias.
 
 Para activarlo basta poner `AI_API_KEY` (llave de OpenRouter u otro proveedor
 compatible) en Vercel; sin la llave, el asistente responde que no está configurado.

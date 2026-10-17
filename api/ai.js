@@ -9,7 +9,10 @@ const BASE_RULES =
   'criterio de un contador ni de la DGII/TSS: cuando algo dependa de la ley, del caso ' +
   'particular o de cifras oficiales, dilo y sugiere verificar con la DGII o un profesional. ' +
   'No inventes montos, NCF ni RNC. Nunca pidas, muestres ni manejes contraseñas ni credenciales. ' +
-  'Si la pregunta se sale de tu tema, dilo con amabilidad.';
+  'Si la pregunta se sale de tu tema, dilo con amabilidad. ' +
+  'Cuando el usuario pregunte por "esto", "esta empresa", "este período", "estos datos" o por ' +
+  'cifras que tiene en pantalla, responde apoyándote en el Contexto del módulo (lo que el usuario ' +
+  've ahora mismo); si ese dato no está en el contexto, dilo en vez de inventarlo.';
 
 const PERSONAS = {
   accesos:
@@ -48,7 +51,9 @@ module.exports = async (req, res) => {
     }
     const context = typeof body.context === 'string' ? body.context.slice(0, 4000) : '';
     const system = `${persona}\n\n${BASE_RULES}` +
-      (context ? `\n\nContexto del módulo (datos del propio usuario; úsalo si ayuda, no lo repitas entero):\n${context}` : '');
+      (context ? `\n\nContexto del módulo — es lo que el usuario está viendo en pantalla ahora mismo ` +
+        `(empresa, período, cifras y tablas de su propia cuenta). Úsalo para responder sobre sus datos; ` +
+        `no lo repitas entero ni lo cites literalmente:\n"""\n${context}\n"""` : '');
 
     const { reply, model } = await chat([{ role: 'system', content: system }, ...history], { maxTokens: 900 });
     return res.json({ ok: true, reply, model });

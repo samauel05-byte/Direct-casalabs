@@ -52,6 +52,19 @@
     return { token: token, sid: sid };
   }
 
+  // Contexto por defecto: el texto visible del módulo donde está el usuario
+  // (empresa, período, cifras, tablas), para que el asistente responda sobre lo
+  // que tiene en pantalla. Recorta y quita el propio panel del asistente.
+  function defaultContext() {
+    try {
+      var el = document.querySelector('main') || document.querySelector('.content,.main,.shell,#content,#view') || document.body;
+      var t = (el.innerText || '');
+      var cut = t.indexOf('Hola, soy tu asistente'); if (cut >= 0) t = t.slice(0, cut);
+      t = t.replace(/[ \t]+/g, ' ').replace(/\n{2,}/g, '\n').trim();
+      return t.slice(0, 3000);
+    } catch (e) { return ''; }
+  }
+
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   // Formato mínimo seguro: escapa y luego permite **negrita** y saltos de línea.
   function fmt(s) { return esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>'); }
@@ -97,7 +110,7 @@
         var headers = { 'Content-Type': 'application/json' };
         if (auth.token) headers.Authorization = 'Bearer ' + auth.token;
         if (auth.sid) headers['X-Direct-Session'] = auth.sid;
-        var ctx = ''; try { ctx = (opts.getContext && opts.getContext()) || ''; } catch (e) { ctx = ''; }
+        var ctx = ''; try { ctx = (opts.getContext ? opts.getContext() : defaultContext()) || ''; } catch (e) { try { ctx = defaultContext(); } catch (e2) { ctx = ''; } }
         var r = await fetch('/api/ai/chat', { method: 'POST', headers: headers, body: JSON.stringify({ module: opts.module || 'accesos', messages: history.slice(-10), context: ctx }) });
         var data = await r.json().catch(function () { return {}; });
         if (!r.ok) throw new Error(data.error || 'No se pudo responder.');

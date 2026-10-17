@@ -22,6 +22,7 @@ document.documentElement.setAttribute('data-theme',t);document.documentElement.s
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script defer src="/js/ai-assistant.js"></script>
 <style>
 :root {
   --bg:      #070d1a;
@@ -1311,9 +1312,19 @@ function show(id) {
 }
 
 let _sessionTracked=false;
+function mountAIAssistant(){
+  if(!window.AIAssistant || !sessionToken) return;
+  AIAssistant.mount({
+    module:'accesos',
+    title:'Asistente Direct',
+    auth:()=>({ token: sessionToken, sid: activeSessionId }),
+    suggestions:['¿Qué portal uso para el 606?','¿Cómo declaro el IT-1?','¿Dónde pago la TSS?']
+  });
+}
 function showPortals() {
   activePortal=null;
   if(!_sessionTracked){ _sessionTracked=true; trackUsage('session','start'); } // una vez por sesión
+  mountAIAssistant();
   renderPortalGrid();
   show('view-portals');
   // Show users button only for admin

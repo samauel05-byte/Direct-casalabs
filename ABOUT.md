@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Asistente de IA en los módulos (Fase 1: Accesos)**: Direct estrena un **asistente con IA** (botón flotante ✨) que orienta sobre trámites y portales. Usa un **motor propio y gratis** (OpenRouter por defecto, compatible con OpenAI), **totalmente separado de NALA** (la IA de NALA no se toca). La llave nunca llega al navegador; el asistente responde en español y siempre recuerda verificar lo importante con la DGII o un contador. Para activarlo se configuran en Vercel las variables `AI_API_KEY` (y opcionalmente `AI_BASE_URL` / `AI_MODEL`). Próximas fases: el mismo asistente dentro de Nómina, CAMI, DGII e IR-2, y la clasificación automática de gastos.
+
 - **Nómina — registro del empleado: entrada, bajas y documentos**: la ficha del empleado ahora guarda la **fecha de entrada**. Al registrar una **baja** (fecha de salida, motivo, y si se pagaron las **prestaciones** con su monto), el empleado pasa a una lista aparte de **Ex-empleados** y queda inactivo. Además se pueden **subir documentos**: el **recibo firmado / soporte de pago** de cada período (desde el historial de la ficha) y un **expediente general** del empleado (contratos, cartas, etc.). Los archivos se guardan privados y se abren con enlaces temporales.
 
 - **NALA — el Asistente es solo para administradores**: el ítem **«Asistente NALA (chat, IR-17)»** del menú (Herramientas) ahora solo lo ven los administradores; para el resto se oculta y el acceso directo por URL redirige al panel.

@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — editar una factura ya aprobada (1 clic)**: en una factura aprobada ahora aparece un botón **«✎ Editar»** que la **reabre y la deja editable** de inmediato (revierte la aprobación por dentro, sin pedir motivo a mano). Antes había que ir a «Revertir aprobación» y escribir un motivo. Queda registrado en el historial; si la factura ya está en una exportación enviada/aceptada a la DGII, no se reabre (hay que rectificar) y NALA lo avisa.
+
 - **NALA — suma el subtotal gravado + exento**: en facturas 606 con «Subtotal Gravado» y «Subtotal Exento» por separado (p. ej. supermercado), el Monto Bienes/Servicios ahora incluye **ambos** (sólo se excluye el ITBIS). Antes tomaba solo el gravado y el total quedaba corto. Lo hace el lector y, como respaldo, una red que reconcilia la base al total impreso menos los impuestos.
 
 - **NALA — aviso claro si un monto queda negativo**: si al editar una factura el Monto (Bienes/Servicios) queda negativo, NALA ahora lo avisa con un mensaje específico y te recuerda usar el botón **«− Restar ITBIS del monto»** (que resta el ITBIS del subtotal, dejando el Total correcto) en vez de escribir un negativo, que afectaba el Total.

@@ -424,7 +424,7 @@
       ${(() => { const dup = inv.issues.find(i => i.code === 'DUPLICADO'); if (!dup || inv.status === 'excluded') return ''; return `<div class="issue critical" style="font-size:14px;padding:12px;flex-wrap:wrap"><span class="ico">⛔</span><span><b>Factura repetida: hay dos copias del mismo NCF.</b> ${esc(dup.message)} <b>Deja una y elimina la otra:</b></span>
         ${dup.ref ? `<a class="btn sm" href="#/auditoria/${dup.ref}">Ver la otra</a>` : ''}${NALA.can('exclude') && inv.status !== 'approved' ? '<button class="btn sm danger" id="discard-copy">🗑 Descartar esta</button>' : ''}${dup.ref && NALA.can('exclude') ? `<button class="btn sm danger" id="discard-other" data-other="${esc(dup.ref)}">🗑 Descartar la otra</button>` : ''}</div>`; })()}
       ${d.lock.locked_by_other ? '<div class="issue warning"><span class="ico">🔒</span>Otro usuario está editando este comprobante. Se muestra en sólo lectura hasta que lo libere.</div>' : ''}
-      ${inv.status === 'approved' ? `<div class="issue info"><span class="ico">✓</span>Aprobado ${NALA.dateTime(inv.approved_at)}${inv.approval_reason ? ` · motivo: ${esc(inv.approval_reason)}` : ''}. Para editar, revierta la aprobación.</div>` : ''}
+      ${inv.status === 'approved' ? `<div class="issue info"><span class="ico">✓</span>Aprobado ${NALA.dateTime(inv.approved_at)}${inv.approval_reason ? ` · motivo: ${esc(inv.approval_reason)}` : ''}.${(NALA.can('edit') && NALA.can('revert')) ? ' Pulsa «✎ Editar» para reabrirla y modificarla.' : ' Para editar, revierte la aprobación.'}</div>` : ''}
       <div class="audit">
         <div class="card viewer" id="viewer"></div>
         <div class="card editor">
@@ -441,6 +441,7 @@
           <div class="row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px">
             ${editable ? '<button class="btn" id="undo" disabled>↶ Deshacer</button><button class="btn primary" id="save" disabled>Guardar</button>' : ''}
             ${editable && NALA.can('approve') ? '<button class="btn ok" id="approve">Aprobar</button>' : ''}
+            ${inv.status === 'approved' && NALA.can('edit') && NALA.can('revert') ? '<button class="btn primary" id="edit-approved">✎ Editar</button>' : ''}
             ${inv.status === 'approved' && NALA.can('revert') ? '<button class="btn danger" id="revert">Revertir aprobación</button>' : ''}
             ${editable && NALA.can('relocate') ? '<button class="btn" id="relocate">Reubicar</button>' : ''}
             ${editable && NALA.can('exclude') ? '<button class="btn danger" id="exclude">Excluir</button>' : ''}
@@ -548,6 +549,12 @@
         NALA.toast('Comprobante aprobado', 'ok');
         if (ids[pos + 1]) navTo(1); else NALA.route();
       } catch (e) { if (e.status === 422 && e.data?.issues) NALA.toast(`No se puede aprobar: ${e.data.issues.map(i => i.message).join(' · ')}`, 'err'); handleConflict(e); }
+    });
+    // "✎ Editar" en una factura aprobada: la reabre (revierte la aprobación) de un
+    // clic y la deja editable, sin pedir motivo a mano. Si ya está en una
+    // exportación enviada/aceptada, el servidor lo impide y se avisa.
+    root.querySelector('#edit-approved')?.addEventListener('click', async () => {
+      try { await NALA.api('POST', `invoices/${inv.id}/revert`, { reason: 'Reabierta para editar' }); NALA.toast('Factura reabierta para editar', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });
     root.querySelector('#revert')?.addEventListener('click', async () => {
       const reason = await NALA.askReason('Revertir aprobación', { extra: '<p class="muted" style="margin-bottom:8px">El comprobante vuelve a revisión. Si estaba en una exportación generada (no enviada), esa exportación queda reemplazada.</p>' });

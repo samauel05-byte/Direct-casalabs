@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — botón "− Restar ITBIS del monto"**: en la auditoría de una factura 606, si escribes en Monto (Bienes o Servicios) un valor que **ya trae el ITBIS incluido**, un botón lo **resta de un clic** para dejar la base sin impuestos; el Total (automático) queda igual al monto bruto (base + ITBIS). Ej.: Monto 2,349 + ITBIS 400 → Monto 1,949 y Total 2,349. (Las casillas Monto Servicios y Monto Bienes no son obligatorias por separado: basta llenar una.)
+
 - **NALA — "factura ya cargada": ahora te lleva al lote**: cuando subes una factura que ya estaba cargada, el aviso ("ya fue cargada en el lote «…»") trae un botón **"Abrir lote →"** que te lleva directo a ese lote, aunque esté en otra empresa o período. Antes solo nombraba el lote y, si tu filtro activo era otro mes/empresa, no lo encontrabas. (Recuerda: la lista de lotes muestra la empresa y el período activos de arriba; usa "Todos los períodos" para ver el resto.)
 
 - **NALA — ITBIS incluido en el total (supermercados/retail)**: en las facturas de compra donde el recibo trae el **Total con ITBIS incluido** y el ITBIS por separado (típico de supermercados), NALA ahora **captura el ITBIS** y pone en "Monto Bienes/Servicios" la **base sin impuestos** (Total − ITBIS − otros impuestos), en vez de meter el total completo como base. Además hay una red de seguridad: si el monto de bienes/servicios queda igual al total y hay impuestos impresos, NALA separa el ITBIS automáticamente. Antes había que corregirlo a mano en cada factura.

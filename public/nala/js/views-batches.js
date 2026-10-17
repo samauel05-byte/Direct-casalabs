@@ -53,7 +53,7 @@
     let okCount = 0; let repeated = 0;
     for (const r of reg.files) {
       const p = prepared.find(x => x.file.name === r.name);
-      if (r.error) { report(r.name, r.already_processed ? r.error : `✕ ${r.error}`, 'crit'); if (r.already_processed) repeated++; continue; }
+      if (r.error) { report(r.name, r.already_processed ? r.error : `✕ ${r.error}`, 'crit', r.already_processed?.batch_id); if (r.already_processed) repeated++; continue; }
       if (r.already && !r.upload_url) { report(r.name, 'Ya estaba en el lote (misma huella)', 'warn'); continue; }
       try {
         await put(r.upload_url, p.file, f => report(r.name, `Subiendo ${Math.round(f * 100)}%`));
@@ -84,7 +84,7 @@
     const listEl = root.querySelector('#flist');
     const status = {};
     const draw = () => {
-      listEl.innerHTML = selected.length ? `<div class="table-wrap"><table><tr><th>Archivo</th><th class="num">Tamaño</th><th>Estado</th></tr>${selected.map(f => `<tr><td>${esc(f.name)}</td><td class="num">${(f.size / 1024).toFixed(0)} KB</td><td>${status[f.name] ? (status[f.name][0].length > 40 ? `<div class="issue ${status[f.name][1] === 'crit' ? 'critical' : 'warning'}"><span class="ico">✕</span>${esc(status[f.name][0])}</div>` : `<span class="badge ${status[f.name][1] || ''}">${esc(status[f.name][0])}</span>`) : ''}</td></tr>`).join('')}</table></div>` : '';
+      listEl.innerHTML = selected.length ? `<div class="table-wrap"><table><tr><th>Archivo</th><th class="num">Tamaño</th><th>Estado</th></tr>${selected.map(f => `<tr><td>${esc(f.name)}</td><td class="num">${(f.size / 1024).toFixed(0)} KB</td><td>${status[f.name] ? (status[f.name][0].length > 40 ? `<div class="issue ${status[f.name][1] === 'crit' ? 'critical' : 'warning'}"><span class="ico">✕</span><span>${esc(status[f.name][0])}${status[f.name][2] ? ` <a class="btn sm" href="#/lotes/${encodeURIComponent(status[f.name][2])}">Abrir lote →</a>` : ''}</span></div>` : `<span class="badge ${status[f.name][1] || ''}">${esc(status[f.name][0])}</span>`) : ''}</td></tr>`).join('')}</table></div>` : '';
       root.querySelector('#go').disabled = !selected.length;
     };
     const add = list => {
@@ -117,7 +117,7 @@
         const files = selected.filter(f => !/\.rar$/i.test(f.name));
         // Reintenta solo los que aún no se recibieron; los ya subidos se saltan.
         const pending = files.filter(f => (status[f.name] || [])[0] !== RECEIVED);
-        await uploadFiles(target.id, pending, (name, msg, cls) => { status[name] = [msg, cls]; draw(); });
+        await uploadFiles(target.id, pending, (name, msg, cls, batchId) => { status[name] = [msg, cls, batchId]; draw(); });
         const anyFailed = files.some(f => (status[f.name] || [])[1] === 'crit');
         if (anyFailed) {
           btn.disabled = false;

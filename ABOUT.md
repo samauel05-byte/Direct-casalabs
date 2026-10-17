@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — "factura ya cargada": ahora te lleva al lote**: cuando subes una factura que ya estaba cargada, el aviso ("ya fue cargada en el lote «…»") trae un botón **"Abrir lote →"** que te lleva directo a ese lote, aunque esté en otra empresa o período. Antes solo nombraba el lote y, si tu filtro activo era otro mes/empresa, no lo encontrabas. (Recuerda: la lista de lotes muestra la empresa y el período activos de arriba; usa "Todos los períodos" para ver el resto.)
+
 - **NALA — ITBIS incluido en el total (supermercados/retail)**: en las facturas de compra donde el recibo trae el **Total con ITBIS incluido** y el ITBIS por separado (típico de supermercados), NALA ahora **captura el ITBIS** y pone en "Monto Bienes/Servicios" la **base sin impuestos** (Total − ITBIS − otros impuestos), en vez de meter el total completo como base. Además hay una red de seguridad: si el monto de bienes/servicios queda igual al total y hay impuestos impresos, NALA separa el ITBIS automáticamente. Antes había que corregirlo a mano en cada factura.
 
 - **NALA — la clasificación (tipo de bienes y servicios) se confirma por factura**: el código "Tipo de bienes y servicios" (606) y el "Tipo de ingreso" (607) los propone el lector, pero **dependen de cada factura** y a veces se equivoca (p. ej. "01 · Gastos de personal" en una compra de supermercado). Antes esa sugerencia se aceptaba en silencio; ahora aparece como **advertencia** para que el auditor **confirme o cambie la clasificación en cada comprobante**. Al guardarla queda confirmada y el aviso desaparece. NALA sigue proponiendo (no cambia el lector); solo deja la decisión final en manos del auditor.

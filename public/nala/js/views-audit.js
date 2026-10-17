@@ -433,6 +433,7 @@
             <div data-pane="data"><div class="stack" style="gap:6px">${issueHtml}</div>
               <div class="recon" id="recon">${recon()}</div>
               <div class="row" style="justify-content:space-between"><div class="tabs" style="border:0;margin:0"><button class="active" data-mode="form">Formulario</button><button data-mode="sheet">Hoja</button></div><span class="muted">Página(s) ${inv.page_from ?? '—'}${inv.page_to && inv.page_to !== inv.page_from ? `–${inv.page_to}` : ''} · v${inv.version}</span></div>
+              ${inv.format === '606' && editable ? `<div class="row" style="margin:2px 0 0"><button class="btn sm" id="minus-itbis" title="Si el monto que escribiste ya trae el ITBIS incluido, lo resta para dejar la base sin impuestos. El Total queda igual al monto bruto (base + ITBIS).">− Restar ITBIS del monto (si ya lo incluye)</button></div>` : ''}
               <div id="fieldsbox">${form()}</div></div>
             <div data-pane="history" hidden><div class="timeline">${d.events.map(e => `<div><b>${esc(NALA.actionLabel(e.action))}</b> · ${NALA.dateTime(e.created_at)}${e.reason ? `<br>Motivo: ${esc(e.reason)}` : ''}${e.details?.changes ? `<br>${Object.entries(e.details.changes).map(([k, [a, b]]) => `${esc(defs[k]?.label || k)}: <s>${esc(a ?? '∅')}</s> → ${esc(b ?? '∅')}`).join('<br>')}` : ''}${e.details?.from ? `<br>De ${esc(NALA.clientName(e.details.from.client_id))} ${period(e.details.from.period)} a ${esc(NALA.clientName(e.details.to.client_id))} ${period(e.details.to.period)}` : ''}</div>`).join('')}</div></div>
             <div data-pane="exports" hidden>${d.exports.map(x => `<div><a href="#/exportar/${x.export_id}">${esc(x.file_name)}</a> · línea ${x.line_no} · ${NALA.badge(x.status)}</div>`).join('')}</div>
@@ -487,6 +488,22 @@
       root.querySelector('#fieldsbox').innerHTML = mode === 'form' ? form() : sheet(); bindFields();
     }));
     bindFields();
+    // "− Restar ITBIS del monto": cuando el monto escrito ya trae el ITBIS (y
+    // demás impuestos) incluido, lo resta de la casilla de monto para dejar la
+    // base sin impuestos. El Total (base + ITBIS) queda igual al monto bruto.
+    root.querySelector('#minus-itbis')?.addEventListener('click', () => {
+      const read = key => { const el = root.querySelector(`#fieldsbox [data-k="${key}"]`); return el ? el.value : (values[key] ?? ''); };
+      const taxes = sumC(['itbis', 'isc', 'otros_impuestos', 'propina'].map(read));
+      if (taxes === null || taxes <= 0n) { NALA.toast('Escribe primero el ITBIS (y otros impuestos) que trae la factura.', 'err'); return; }
+      const filled = ['monto_bienes', 'monto_servicios'].filter(k => { const c = cents(read(k)); return c !== null && c !== 0n; });
+      if (!filled.length) { NALA.toast('Escribe primero el monto en Bienes o Servicios.', 'err'); return; }
+      if (filled.length > 1) { NALA.toast('Deja el monto en una sola casilla (Bienes o Servicios) para separar el ITBIS.', 'err'); return; }
+      const k = filled[0];
+      const base = cents(read(k)) - taxes;
+      if (base <= 0n) { NALA.toast('El ITBIS no puede ser mayor o igual que el monto.', 'err'); return; }
+      const el = root.querySelector(`#fieldsbox [data-k="${k}"]`);
+      if (el) { el.value = centsToStr(base); el.dispatchEvent(new Event('change')); NALA.toast('ITBIS separado del monto. Revisa el Total.', 'ok'); }
+    });
     root.querySelectorAll('[data-focus]').forEach(b => b.addEventListener('click', () => { const el = root.querySelector(`#fieldsbox [data-k="${b.dataset.focus}"]`); el?.scrollIntoView({ block: 'center' }); el?.focus(); }));
 
     const changedFields = () => Object.fromEntries(Object.keys(values).concat(Object.keys(inv.fields)).filter((k, i, a) => a.indexOf(k) === i && (values[k] ?? null) !== (inv.fields[k] ?? null)).map(k => [k, values[k] ?? null]));

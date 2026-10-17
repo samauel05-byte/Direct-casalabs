@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — la imagen ahora coincide con la factura**: al abrir un comprobante, la imagen que se muestra es la de **esa** factura (antes, en PDF con varias facturas, la imagen salía corrida y mostraba la de la siguiente). Se procesa **una página por vez**, así cada factura queda ligada a su página exacta. Aplica a cargas nuevas; los lotes ya procesados deben **reprocesarse** para corregir el mapeo.
+
 - **NALA — botón "− Restar ITBIS del monto"**: en la auditoría de una factura 606, si escribes en Monto (Bienes o Servicios) un valor que **ya trae el ITBIS incluido**, un botón lo **resta de un clic** para dejar la base sin impuestos; el Total (automático) queda igual al monto bruto (base + ITBIS). Ej.: Monto 2,349 + ITBIS 400 → Monto 1,949 y Total 2,349. (Las casillas Monto Servicios y Monto Bienes no son obligatorias por separado: basta llenar una.)
 
 - **NALA — "factura ya cargada": ahora te lleva al lote**: cuando subes una factura que ya estaba cargada, el aviso ("ya fue cargada en el lote «…»") trae un botón **"Abrir lote →"** que te lleva directo a ese lote, aunque esté en otra empresa o período. Antes solo nombraba el lote y, si tu filtro activo era otro mes/empresa, no lo encontrabas. (Recuerda: la lista de lotes muestra la empresa y el período activos de arriba; usa "Todos los períodos" para ver el resto.)

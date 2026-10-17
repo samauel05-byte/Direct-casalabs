@@ -42,6 +42,16 @@
 '.aia-typing i:nth-child(2){animation-delay:.2s}.aia-typing i:nth-child(3){animation-delay:.4s}' +
 '@keyframes aiaBlink{0%,60%,100%{opacity:.3}30%{opacity:1}}';
 
+  // Auth por defecto: el token y el id de sesión que la app Direct guarda en el
+  // mismo origen (los iframes de los módulos los comparten). Cada módulo puede
+  // pasar su propia función auth; si no, se usa esta.
+  function defaultAuth() {
+    var token = '', sid = '';
+    try { token = (window.parent && window.parent.sessionStorage.getItem('dtoken')) || sessionStorage.getItem('dtoken') || ''; } catch (e) { try { token = sessionStorage.getItem('dtoken') || ''; } catch (e2) { token = ''; } }
+    try { sid = localStorage.getItem('direct_session_id') || ''; } catch (e) { sid = ''; }
+    return { token: token, sid: sid };
+  }
+
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   // Formato mínimo seguro: escapa y luego permite **negrita** y saltos de línea.
   function fmt(s) { return esc(s).replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>'); }
@@ -83,7 +93,7 @@
       history.push({ role: 'user', content: q });
       var typing = add('bot', '<span class="aia-typing"><i></i><i></i><i></i></span>');
       try {
-        var auth = (opts.auth && opts.auth()) || {};
+        var auth = (opts.auth ? opts.auth() : defaultAuth()) || {};
         var headers = { 'Content-Type': 'application/json' };
         if (auth.token) headers.Authorization = 'Bearer ' + auth.token;
         if (auth.sid) headers['X-Direct-Session'] = auth.sid;

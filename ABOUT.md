@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — la clasificación (tipo de bienes y servicios) se confirma por factura**: el código "Tipo de bienes y servicios" (606) y el "Tipo de ingreso" (607) los propone el lector, pero **dependen de cada factura** y a veces se equivoca (p. ej. "01 · Gastos de personal" en una compra de supermercado). Antes esa sugerencia se aceptaba en silencio; ahora aparece como **advertencia** para que el auditor **confirme o cambie la clasificación en cada comprobante**. Al guardarla queda confirmada y el aviso desaparece. NALA sigue proponiendo (no cambia el lector); solo deja la decisión final en manos del auditor.
+
 - **NALA — aprobar con advertencias más simple**: al aprobar un comprobante con advertencias ya no hay que marcar una casilla aparte; basta escribir el **comentario**, que ahora es la constancia de que se revisaron las advertencias contra el documento. Se acabó el aviso "Confirme que revisó las advertencias" cuando ya se estaba poniendo un comentario.
 
 - **NALA — enviar el 606/607 a la DGII de la empresa (1 clic)**: al terminar de validar y exportar un lote, el detalle de la exportación trae el botón **«Enviar a la DGII de la empresa»**: descarga el TXT y abre la **Oficina Virtual de esa empresa ya con sesión iniciada** (usando su acceso DGII guardado y la tarjeta de códigos, cifrados). Solo entras a **Remisión/Envío de Archivos**, adjuntas el TXT y envías; después registras el número de recepción. Cierra el ciclo validar → exportar → enviar sin salir a buscar la empresa ni volver a iniciar sesión. (El archivo se adjunta a mano porque la DGII no permite adjuntarlo por código.)

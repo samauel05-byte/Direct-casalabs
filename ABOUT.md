@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — Consulta RNC: registro de cliente más claro**: al registrar una empresa desde la Consulta RNC, ahora se confirma con un aviso visible "✓ Registrada" y aparecen atajos para **Ver en Empresas clientes** o **Abrir su panel**; si el registro falla (por ejemplo, ya existía), se muestra el motivo en vez de quedarse sin respuesta. El guardado siempre funcionó; lo que faltaba era dejarlo claro.
+
 - **El asistente ahora entiende lo que tienes en pantalla**: en vez de dar respuestas genéricas, el asistente de cada módulo **ve los datos que estás mirando** (la empresa abierta, el período, las cifras y tablas) y responde sobre ellos. Por ejemplo, en Nómina puedes pedirle *«resume la nómina que tengo abierta»* y en CAMI/DGII *«explícame estos datos»*. Solo usa lo que es visible en pantalla (nunca contraseñas) y, si un dato no está a la vista, lo dice en lugar de inventarlo.
 
 - **Asistente de IA en todo Direct**: Direct estrena un **asistente con IA** (botón flotante ✨) presente en **Accesos y en todos los módulos** — con una personalidad propia en cada uno: **Asistente Direct** (guía de trámites/portales), **Asistente de Nómina** (ISR, aportes TSS, INFOTEP), y **Asistente contable/fiscal/IR-2** (606/607, IT-1, IR-2). Usa un **motor propio y gratis** (OpenRouter por defecto, compatible con OpenAI), **totalmente separado de NALA** (la IA de NALA no se toca). La llave nunca llega al navegador; responde en español y recuerda verificar lo importante con la DGII o un contador. Para activarlo se configuran en Vercel `AI_API_KEY` (y opcionalmente `AI_BASE_URL` / `AI_MODEL`). Próximo: clasificación automática de gastos en CAMI.

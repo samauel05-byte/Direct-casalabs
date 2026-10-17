@@ -214,7 +214,7 @@
                 : o.found ? `<div class="table-wrap"><table>${rows}</table></div>` : `<div class="issue critical"><span class="ico">✕</span>${esc(o.data?.message || 'No inscrito')}</div>`}
               ${o?.fetched_at ? `<p class="muted" style="margin-top:8px">Fuente: <a href="${esc(o.source_url)}" target="_blank" rel="noopener">${esc(o.source)}</a> · ${NALA.dateTime(o.fetched_at)}${o.cached ? ' · resultado guardado (máx. 24 h)' : ''}</p>` : ''}
               ${o?.found && !known && NALA.can('clients_manage') ? `<button class="btn primary" id="radd" style="margin-top:8px">Registrar como empresa cliente</button>` : ''}
-              ${known ? `<p style="margin-top:8px">Ya registrada como <b>${esc(known.legal_name)}</b>.</p>` : ''}
+              ${known ? `<p style="margin-top:8px"><span class="badge ok">✓ Registrada</span> Ya es una empresa cliente: <b>${esc(known.legal_name)}</b>. <button class="btn sm" id="rgo">Ver en Empresas clientes</button> <button class="btn sm primary" id="ropen">Abrir su panel</button></p>` : ''}
             </div>
             <div class="card" style="margin-top:12px"><h2>4 · Antigüedad (archivo oficial de RNC)</h2>
               ${!reg ? '<span class="muted">No aplica.</span>' : reg.status === 'unavailable' ? `<div class="issue warning"><span class="ico">!</span>${esc(reg.message)}</div>`
@@ -226,10 +226,20 @@
               ${o?.adecuacion ? `<div class="issue ${o.adecuacion.status === 'pendiente' ? 'warning' : 'info'}"><span class="ico">${o.adecuacion.status === 'pendiente' ? '!' : '✓'}</span>${esc(o.adecuacion.message)}</div>` : ''}
               <div class="issue warning"><span class="ico">🔒</span><span><b>Deudas y si está al día:</b> ${esc(r.debts.message)}</span></div></div></div>`;
           out.querySelector('#rrefresh')?.addEventListener('click', () => run(true));
-          out.querySelector('#radd')?.addEventListener('click', async () => {
-            await NALA.api('POST', 'clients', { legal_name: o.data.nombre, [s.kind === 'rnc' ? 'rnc' : 'cedula']: s.digits });
-            await NALA.loadClients(); NALA.toast('Empresa registrada', 'ok'); run(false);
+          out.querySelector('#radd')?.addEventListener('click', async ev => {
+            const btn = ev.target; btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Registrando…';
+            try {
+              await NALA.api('POST', 'clients', { legal_name: o.data.nombre, [s.kind === 'rnc' ? 'rnc' : 'cedula']: s.digits });
+              await NALA.loadClients();
+              NALA.toast('Registrada como empresa cliente', 'ok');
+              run(false); // re-dibuja: ahora aparece el aviso "✓ Registrada" con los atajos
+            } catch (err) {
+              btn.disabled = false; btn.textContent = prev;
+              NALA.toast(err.message || 'No se pudo registrar la empresa', 'err');
+            }
           });
+          out.querySelector('#rgo')?.addEventListener('click', () => NALA.go('#/clientes'));
+          out.querySelector('#ropen')?.addEventListener('click', () => { if (known) { NALA.setScope({ client: known.id }); NALA.go('#/empresa'); } });
         } catch (e) { out.innerHTML = `<div class="card empty">⚠️ ${esc(e.message)}</div>`; }
       };
       root.querySelector('#rf').addEventListener('submit', e => { e.preventDefault(); run(false); });

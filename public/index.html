@@ -1633,6 +1633,35 @@ window.addEventListener('message', e => {
       toast('No encontré una credencial DGII con ese RNC', 'warn');
     })();
   }
+  // NALA: enviar el 606/607 a la Oficina Virtual de la empresa. NALA ya descargó
+  // el TXT; aquí abrimos la OFV de esa empresa (auto-login por el relay) para que
+  // el usuario lo adjunte en «Remisión/Envío de Archivos». Solo desde el iframe
+  // de NALA y con la bóveda abierta. El archivo se adjunta a mano: la DGII no
+  // permite adjuntarlo por código.
+  if (e.data.action === 'nala-open-dgii-envio') {
+    if (e.source !== document.getElementById('nala-frame')?.contentWindow) return;
+    const reply = (ok, company) => { const fr = document.getElementById('nala-frame'); if (fr && fr.contentWindow) fr.contentWindow.postMessage({ action:'nala-dgii-envio-result', ok: !!ok, company: company || '' }, location.origin); };
+    const rnc = String(e.data.rnc || '').trim();
+    if (!rnc) { toast('La exportación no trae RNC', 'warn'); reply(false); return; }
+    if (!masterKey) { toast('Abre la bóveda (ingresa tu contraseña) para enviar a la DGII', 'warn'); reply(false); return; }
+    const onlyDigits = s => String(s || '').replace(/\D/g, '');
+    const credRnc = p => String(p.rnc || p.cedula || p.rncCedula || p.username || '');
+    const target = onlyDigits(rnc);
+    (async () => {
+      for (const c of getCompanies('dgii')) {
+        try {
+          const p = await C.dec(masterKey, c.iv, c.ct);
+          const cand = credRnc(p);
+          if (cand && (cand.trim() === rnc || (target && onlyDigits(cand) === target))) {
+            reply(true, p.companyName || 'empresa');
+            enterCompany(c.id); return;
+          }
+        } catch {}
+      }
+      toast('No hay un acceso DGII guardado con ese RNC. Créalo en Accesos para poder enviar.', 'warn');
+      reply(false);
+    })();
+  }
   if (e.data.action === 'dgii-ready') {
     const frame = document.getElementById('dgii-modulos-frame');
     if (!frame || !frame.contentWindow) return;

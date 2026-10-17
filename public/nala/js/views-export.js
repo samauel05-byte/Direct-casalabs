@@ -4,7 +4,21 @@
    distintos: NALA nunca marca una exportación como aceptada por sí sola. */
 (function () {
   const { esc, money, int, period } = NALA;
-  const EXTRA_COLUMNS = [['x_line', 'Línea'], ['x_counterpart', 'Proveedor / Cliente'], ['x_currency', 'Moneda original'], ['x_invoice', 'ID factura NALA'], ['x_batch', 'Lote'], ['x_warnings', 'Advertencias aceptadas']];
+
+  // Respuesta del shell de Direct al intentar abrir la OFV para enviar el 606/607.
+  // Si falló (no hay acceso DGII con ese RNC o la bóveda está cerrada), lo avisamos
+  // y marcamos la guía en rojo. Se registra una sola vez por carga del módulo.
+  if (!window.__nalaEnvioListener) {
+    window.__nalaEnvioListener = true;
+    window.addEventListener('message', e => {
+      if (!e.data || e.data.action !== 'nala-dgii-envio-result' || e.data.ok) return;
+      NALA.toast('No pude abrir la DGII de esa empresa. Verifica su acceso DGII (RNC y tarjeta) en Accesos y que la bóveda esté abierta.', 'err');
+      const hint = document.getElementById('dgii-envio-hint');
+      if (hint) hint.innerHTML = '<div class="issue critical"><span class="ico">✕</span>No se pudo abrir la Oficina Virtual de la empresa. Revisa que exista su <b>acceso DGII</b> (con RNC y tarjeta de códigos) en Accesos y que la <b>bóveda esté abierta</b>. El TXT ya se descargó: también puedes subirlo manualmente en la OFV.</div>';
+    });
+  }
+
+  const EXTRA_COLUMNS =[['x_line', 'Línea'], ['x_counterpart', 'Proveedor / Cliente'], ['x_currency', 'Moneda original'], ['x_invoice', 'ID factura NALA'], ['x_batch', 'Lote'], ['x_warnings', 'Advertencias aceptadas']];
 
   function linesTable(snapshot, { limit = 1000 } = {}) {
     const cols = snapshot.columns;
@@ -152,6 +166,7 @@
         ${exp.status === 'superseded' ? `<div class="issue warning" style="margin-top:8px"><span class="ico">!</span>Reemplazada: ${esc(exp.superseded_reason || '')}</div>` : ''}
         ${exp.accepted_warnings?.length ? `<p class="muted" style="margin-top:8px">Advertencias aceptadas: ${exp.accepted_warnings.map(esc).join(', ')} · motivo: ${esc(exp.acceptance_reason || '')}</p>` : ''}
         <div class="row" style="margin-top:12px"><button class="btn primary" id="d-txt">Descargar TXT</button><button class="btn" id="d-xlsx">Excel (plantilla oficial)</button><button class="btn" id="d-custom">Excel personalizado</button><button class="btn" id="d-tool">Mi herramienta DGII (con macro)</button>
+          ${canSubmit && ['generated', 'rejected'].includes(exp.status) ? '<button class="btn ok" id="s-dgii">⬆ Enviar a la DGII de la empresa</button>' : ''}
           ${canSubmit && exp.status === 'generated' ? '<button class="btn" id="s-sub">Registrar envío a DGII</button>' : ''}
           ${canSubmit && exp.status === 'submitted' ? '<button class="btn ok" id="s-acc">Registrar aceptación</button><button class="btn danger" id="s-rej">Registrar rechazo</button>' : ''}
           ${canSubmit && ['generated', 'rejected'].includes(exp.status) ? '<button class="btn" id="s-sup">Marcar como reemplazada</button>' : ''}</div>
@@ -166,6 +181,28 @@
     root.querySelector('#d-xlsx').addEventListener('click', guard(() => download(exp, 'xlsx')));
     root.querySelector('#d-custom').addEventListener('click', guard(() => customExcel(exp)));
     root.querySelector('#d-tool')?.addEventListener('click', guard(() => download(exp, 'template')));
+    root.querySelector('#s-dgii')?.addEventListener('click', guard(async () => {
+      const rnc = exp.snapshot?.header?.rnc || '';
+      // 1) Descargar el TXT para adjuntarlo en la Oficina Virtual.
+      await download(exp, 'txt');
+      // 2) Pedir al shell de Direct que abra la OFV de esa empresa (auto-login
+      //    con su credencial DGII cifrada). El archivo se adjunta a mano: la DGII
+      //    no permite adjuntarlo por código.
+      try { window.parent.postMessage({ action: 'nala-open-dgii-envio', rnc, format: exp.format, period: exp.period, fileName: exp.file_name }, location.origin); } catch (_) { /* fuera del shell */ }
+      NALA.toast('Descargué el TXT y estoy abriendo la Oficina Virtual…', 'ok');
+      // 3) Guía fija (no un toast efímero) con los pasos en la OFV.
+      const stack = root.querySelector('.stack');
+      let hint = root.querySelector('#dgii-envio-hint');
+      if (!hint && stack) { hint = document.createElement('div'); hint.id = 'dgii-envio-hint'; hint.className = 'card'; stack.insertBefore(hint, stack.children[1] || null); }
+      if (hint) hint.innerHTML = `<h2>Enviar a la DGII · ${esc(NALA.clientName(exp.client_id))}</h2>
+        <ol style="margin:0 0 6px 18px;line-height:1.8">
+          <li>Descargué <b>${esc(exp.file_name)}</b> — búscalo en tu carpeta de descargas.</li>
+          <li>Abrí la <b>Oficina Virtual</b> de la empresa en otra pestaña (ya con sesión iniciada).</li>
+          <li>En la OFV entra a <b>Remisión / Envío de Archivos</b>, elige <b>${esc(exp.format)}</b> y período <b>${esc(period(exp.period))}</b>, <b>adjunta el TXT</b> descargado y pulsa Enviar.</li>
+          <li>Cuando la DGII te dé el <b>número de recepción</b>, pulsa «Registrar envío a DGII» aquí y pégalo.</li>
+        </ol>
+        <p class="muted">El archivo se adjunta manualmente por seguridad (la DGII no permite adjuntarlo por código). Si no se abrió la pestaña, revisa que la bóveda esté abierta y que exista el acceso DGII de la empresa (con RNC y tarjeta) en Accesos.</p>`;
+    }));
     const setStatus = async (status, body) => { await NALA.api('POST', `exports/${exp.id}/status`, { status, ...body }); NALA.toast('Estado actualizado', 'ok'); NALA.route(); };
     root.querySelector('#s-sub')?.addEventListener('click', guard(async () => {
       const r = await NALA.modal({ title: 'Registrar envío a la DGII', okText: 'Registrar',

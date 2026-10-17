@@ -522,9 +522,8 @@
         if (warnings.length) {
           const reason = await NALA.modal({ title: 'Aprobar con advertencias', okText: 'Aprobar', okClass: 'ok',
             body: `<div class="stack" style="gap:6px;margin-bottom:10px">${warnings.map(w => `<div class="issue warning"><span class="ico">!</span>${esc(w.message)}</div>`).join('')}</div>
-              <label><input type="checkbox" id="acc"> Revisé las advertencias contra el documento original</label>
-              <label class="f" style="margin-top:8px"><span>Motivo</span><textarea id="why" rows="2"></textarea></label>`,
-            onOk: m => { if (!m.querySelector('#acc').checked) throw new Error('Confirme que revisó las advertencias.'); const v = m.querySelector('#why').value.trim(); if (v.length < 5) throw new Error('Indique el motivo (mín. 5 caracteres).'); return v; } });
+              <label class="f"><span>Comentario <span class="muted" style="font-weight:400">(confirma que revisó las advertencias contra el documento)</span></span><textarea id="why" rows="2" placeholder="Ej.: Revisado contra la factura; el ITBIS es correcto."></textarea></label>`,
+            onOk: m => { const v = m.querySelector('#why').value.trim(); if (v.length < 5) throw new Error('Escriba un comentario que confirme la revisión (mín. 5 caracteres).'); return v; } });
           if (!reason) { NALA.route(); return; }
           body = { ...body, accept_warnings: true, reason };
         }

@@ -111,6 +111,30 @@ Los nombres de empresa de la **bóveda de credenciales** (lista de empresas de u
 
 ---
 
+## Asistente de IA en los módulos (separado de NALA)
+
+Además de la IA de NALA (que **no se toca** y mantiene su propia configuración de
+OpenAI), los módulos de Direct tienen un **asistente de IA** propio:
+
+- **Backend**: `api/ai.js` (ruta `/api/ai/chat`, reescrita en `vercel.json`),
+  autenticado con la sesión de Direct. La **personalidad** del asistente la pone
+  el servidor según el `module` (`accesos`, `nomina`, `contable`); el cliente
+  nunca define el rol ni ve la llave.
+- **Motor**: `lib/ai/assistant.js`, cliente compatible con OpenAI configurable por
+  entorno: `AI_API_KEY`, `AI_BASE_URL` (por defecto OpenRouter) y `AI_MODEL` (por
+  defecto un modelo gratis). Es **independiente** de las variables de NALA
+  (`OPENAI_API_KEY`, `NALA_OPENAI_*`).
+- **Widget**: `public/js/ai-assistant.js`, un botón flotante ✨ + panel de chat
+  reutilizable (UI pura); cada módulo lo monta con `AIAssistant.mount({module,
+  auth, getContext, suggestions})`. Escapa el texto y solo permite **negrita**.
+- **Fase 1**: montado en **Accesos** (shell) como guía de trámites/portales.
+  Próximas fases: Nómina, CAMI, DGII e IR-2, y clasificación de gastos.
+
+Para activarlo basta poner `AI_API_KEY` (llave de OpenRouter u otro proveedor
+compatible) en Vercel; sin la llave, el asistente responde que no está configurado.
+
+---
+
 ## Roles de usuario
 
 | Rol | Permisos |

@@ -139,6 +139,13 @@ tr.selected td { background: var(--accent-light); }
 .viewer-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-bottom: 8px; }
 .viewer-canvas { flex: 1; overflow: auto; background: var(--surface-2); border-radius: 10px; border: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: flex-start; padding: 10px; min-height: 0; }
 .viewer-canvas > * { margin: 0 auto; flex-shrink: 0; }
+/* Texto leído de la página (copiar y pegar en los campos). */
+.viewer-text { flex: 0 0 auto; max-height: 38%; overflow: auto; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; }
+.viewer-text-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; position: sticky; top: -8px; background: var(--surface); padding: 4px 0; }
+.ocr-row { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; border-bottom: 1px dashed var(--border); }
+.ocr-cp { flex: none; padding: 0 6px; }
+.ocr-tx { user-select: text; -webkit-user-select: text; white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
 .viewer-canvas img, .viewer-canvas canvas { box-shadow: var(--shadow); background: #fff; transform-origin: center center; max-width: none; }
 .editor { display: flex; flex-direction: column; min-height: 0; }
 .editor-body { flex: 1; overflow: auto; min-height: 0; }

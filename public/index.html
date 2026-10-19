@@ -555,9 +555,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 </div>
 
 <!-- CAMI -->
-<div id="view-cami" class="layer" hidden style="padding:0">
-  <iframe id="cami-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
-</div>
+<div id="view-cami" class="layer" hidden style="padding:0"></div>
 
 <!-- Usuarios (admin) -->
 <div id="view-dx-cards" class="layer" hidden>
@@ -1548,12 +1546,15 @@ async function saveResetPw() {
   } catch(e) { err.textContent = 'Error: ' + e.message; err.hidden = false; }
 }
 
+// CAMI se abre en una pestaña nueva (no dentro de Direct). Se abre SIN noopener a
+// propósito: así la pestaña hereda una copia de sessionStorage (token de sesión que
+// usa la guía de empresas). Si ya hay una pestaña de CAMI abierta, se le da el foco
+// en vez de recargarla (no se pierde lo que se tenga digitado).
+let _camiWin=null;
 function openCami() {
-  const frame=document.getElementById('cami-frame');
-  if (!frame.src || frame.src==='about:blank' || !frame.src.includes('cami')) {
-    frame.src='/cami/itbis-web.html';
-  }
-  show('view-cami');
+  if (_camiWin && !_camiWin.closed) { try { _camiWin.focus(); return; } catch(e) {} }
+  _camiWin=window.open('/cami/itbis-web.html','serp-cami');
+  if (!_camiWin) toast('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio para abrir CAMI.','warn');
 }
 
 function openNala() {

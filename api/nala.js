@@ -53,6 +53,7 @@ const ROUTES = [
   ['POST', /^exports\/preview$/, (ctx, q, b) => exportsApi.preview(ctx, b)],
   ['POST', /^exports$/, (ctx, q, b) => exportsApi.create(ctx, b)],
   ['GET', /^exports$/, (ctx, q) => exportsApi.list(ctx, q)],
+  ['GET', /^export-ready$/, (ctx, q) => exportsApi.ready(ctx, q)],
   ['GET', /^zero-filings$/, (ctx, q) => exportsApi.zeroList(ctx, q)],
   ['POST', /^zero-filings$/, (ctx, q, b) => exportsApi.zeroCreate(ctx, b)],
   ['GET', /^exports\/([^/]+)$/, (ctx, q, b, m) => exportsApi.detail(ctx, m[1])],

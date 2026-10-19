@@ -234,12 +234,20 @@
     await NALA.loadClients();
     const prefs = loadPrefs();
     NALA.state.client = (NALA.state.clients.some(c => c.id === prefs.client) ? prefs.client : '') || '';
-    NALA.state.period = prefs.period || prevMonth();
+    // Vista consolidada (todas las empresas) = todos los períodos, sin filtro de fecha.
+    NALA.state.period = NALA.state.client ? (prefs.period || prevMonth()) : '';
     NALA.state.format = prefs.format || '';
     document.getElementById('tenant').textContent = NALA.state.me.tenant?.name || '';
     document.getElementById('who').textContent = NALA.state.me.role_label;
     renderScope();
-    document.getElementById('scope-client').addEventListener('change', e => NALA.setScope({ client: e.target.value }));
+    document.getElementById('scope-client').addEventListener('change', e => {
+      const client = e.target.value;
+      // Al elegir "Todas las empresas" se quita el filtro de período; al elegir una
+      // empresa sin período fijado, se parte del mes anterior.
+      const patch = { client };
+      if (!client) patch.period = ''; else if (!NALA.state.period) patch.period = prevMonth();
+      NALA.setScope(patch);
+    });
     document.getElementById('scope-period').addEventListener('change', e => NALA.setScope({ period: e.target.value.replace('-', '') }));
     document.getElementById('scope-period-all').addEventListener('click', () => NALA.setScope({ period: '' }));
     document.getElementById('scope-format').addEventListener('change', e => NALA.setScope({ format: e.target.value }));

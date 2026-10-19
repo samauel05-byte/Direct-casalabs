@@ -239,15 +239,77 @@
     root.querySelector('#s-sup')?.addEventListener('click', guard(async () => { const notes = await NALA.askReason('Marcar como reemplazada', { okText: 'Marcar' }); if (notes) await setStatus('superseded', { notes }); }));
   }
 
+  // Informativo en cero: la empresa no tuvo operaciones en el período, así que la
+  // DGII pide remitir el 606/607/608 «de manera informativa» (OFV → Declaraciones
+  // en Cero). No hay archivo; NALA guía el trámite y guarda el código de referencia.
+  async function zeroFiling() {
+    const s = NALA.state;
+    if (!s.client) { NALA.toast('Elige una empresa arriba para declarar su informativo en cero.', 'warn'); return; }
+    const client = (s.clients || []).find(c => c.id === s.client) || {};
+    const rnc = client.rnc || client.cedula || '';
+    const per = s.period || NALA.prevMonth();
+    const names = { 606: '606 - COMPRAS DE BIENES Y SERVICIOS', 607: '607 - VENTAS DE BIENES Y SERVICIOS', 608: '608 - ANULACIONES' };
+    const p = NALA.modal({ title: `Informativo en cero · ${NALA.clientName(s.client)}`, okText: 'Registrar informativo', wide: true,
+      body: `<p class="muted" style="margin-bottom:8px">Úsalo cuando la empresa <b>no tuvo operaciones</b> en el período. Si tuvo compras o ventas, se envía el archivo (606/607), no esto.</p>
+        <div class="fields"><label class="f"><span>Formato</span><select id="z-fmt"><option value="606">606 · Compras</option><option value="607">607 · Ventas</option><option value="608">608 · Anulaciones</option></select></label>
+          <label class="f"><span>Período</span><input type="month" id="z-per" value="${per.slice(0, 4)}-${per.slice(4)}"></label></div>
+        <div id="z-note" style="margin:8px 0"></div>
+        <ol style="margin:0 0 8px 18px;line-height:1.7">
+          <li><button type="button" class="btn sm ok" id="z-open">⬆ Abrir la Oficina Virtual de la empresa</button> (queda con sesión iniciada).</li>
+          <li>En el menú pulsa <b>Declaraciones Juradas → Declaraciones en Cero</b>.</li>
+          <li>En <b>Formato o Impuesto</b> elige <b id="z-name">${esc(names[606])}</b>, escribe el <b>Período</b> <b class="mono" id="z-pcode">${esc(per)}</b> (AAAAMM) y pulsa <b>Presentar Declaración y/o Formato</b>.</li>
+          <li>Saldrá «El formato ha sido presentado satisfactoriamente con el código de referencia: …». Pega ese código aquí y registra.</li>
+        </ol>
+        <label class="f"><span>Código de referencia</span><input id="z-ref" placeholder="Ej. 60634619206" autocomplete="off"></label>`,
+      onOk: async m => {
+        const fmt = m.querySelector('#z-fmt').value; const per2 = m.querySelector('#z-per').value.replace('-', '');
+        const reference = m.querySelector('#z-ref').value.trim();
+        if (reference.length < 4) throw new Error('Pega el código de referencia que muestra la DGII.');
+        await NALA.api('POST', 'zero-filings', { client_id: s.client, format: fmt, period: per2, reference });
+        NALA.toast('Informativo en cero registrado ✓', 'ok');
+        return true;
+      } });
+    const m = [...document.querySelectorAll('.modal-bg')].pop()?.querySelector('.modal'); if (!m) return p;
+    const note = m.querySelector('#z-note'); const fmtEl = m.querySelector('#z-fmt'); const perEl = m.querySelector('#z-per');
+    const refresh = async () => {
+      const fmt = fmtEl.value; const per2 = perEl.value.replace('-', '');
+      m.querySelector('#z-name').textContent = names[fmt]; m.querySelector('#z-pcode').textContent = per2;
+      if (!/^\d{6}$/.test(per2)) { note.innerHTML = ''; return; }
+      let r; try { r = await NALA.api('GET', `zero-filings?client_id=${s.client}&period=${per2}`); } catch (e) { note.innerHTML = `<div class="issue warning"><span class="ico">!</span>${esc(e.message)}</div>`; return; }
+      const c = r.counts?.[fmt]; const done = (r.filings || []).filter(f => f.format === fmt);
+      const out = [];
+      if (fmt === '608') out.push('<div class="issue info"><span class="ico">i</span>NALA no maneja el 608 (anulaciones): declara el período en cero solo si no hubo comprobantes anulados.</div>');
+      else if (c?.approved) out.push(`<div class="issue critical"><span class="ico">✕</span>Este período tiene ${int(c.approved)} comprobante(s) aprobado(s) en el ${fmt}: se envía el archivo con las operaciones, no el informativo.</div>`);
+      else if (c?.open) out.push(`<div class="issue warning"><span class="ico">!</span>Hay ${int(c.open)} comprobante(s) sin aprobar en el ${fmt}. Apruébalos o exclúyelos antes de declarar el período en cero.</div>`);
+      else out.push(`<div class="issue info"><span class="ico">✓</span>Sin comprobantes en el ${fmt} de ese período: puede declararse en cero.</div>`);
+      for (const f of done) out.push(`<div class="issue info"><span class="ico">✓</span>Ya registrado: código <b class="mono">${esc(f.reference)}</b> (${NALA.dateTime(f.submitted_at)}).</div>`);
+      note.innerHTML = out.join('');
+    };
+    fmtEl.addEventListener('change', refresh); perEl.addEventListener('change', refresh); refresh();
+    m.querySelector('#z-open').addEventListener('click', () => {
+      if (!rnc) { NALA.toast('La empresa no tiene RNC o cédula registrado.', 'warn'); return; }
+      try { window.parent.postMessage({ action: 'nala-open-dgii-envio', rnc, format: fmtEl.value, period: perEl.value.replace('-', ''), fileName: '' }, location.origin); } catch (_) { /* fuera del shell */ }
+      NALA.toast('Abriendo la Oficina Virtual de la empresa…', 'ok');
+    });
+    if (await p) NALA.route();
+  }
+
   async function list(root) {
     const s = NALA.state;
     const qs = new URLSearchParams(Object.entries({ client_id: s.client, period: s.period, format: s.format }).filter(([, v]) => v));
-    const { exports } = await NALA.api('GET', `exports?${qs}`);
-    root.innerHTML = `<div class="stack"><div class="row"><button class="btn primary" id="new">+ Nueva exportación</button><span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
+    const [{ exports }, zero] = await Promise.all([
+      NALA.api('GET', `exports?${qs}`),
+      s.client ? NALA.api('GET', `zero-filings?client_id=${s.client}`).catch(() => ({ filings: [] })) : Promise.resolve({ filings: [] }),
+    ]);
+    const zeroCard = zero.filings.length ? `<div class="card"><h2>Informativos en cero presentados</h2><div class="table-wrap"><table><tr><th>Formato</th><th>Período</th><th>Código de referencia</th><th>Presentado</th></tr>
+      ${zero.filings.map(f => `<tr><td>${esc(f.format)}</td><td>${period(f.period)}</td><td class="mono">${esc(f.reference)}</td><td>${NALA.dateTime(f.submitted_at)}</td></tr>`).join('')}</table></div></div>` : '';
+    root.innerHTML = `<div class="stack"><div class="row"><button class="btn primary" id="new">+ Nueva exportación</button>${NALA.can('submit') ? '<button class="btn" id="zero" title="Para períodos sin compras ni ventas">Informativo en cero</button>' : ''}<span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
+      ${zeroCard}
       ${exports.length ? `<div class="table-wrap"><table><tr><th>Archivo</th><th>Empresa</th><th>Alcance</th><th>Estado</th><th class="num">Líneas</th><th>Generado</th><th>Enviado</th></tr>
         ${exports.map(e => `<tr class="clickable" data-id="${e.id}"><td class="mono">${esc(e.file_name)}</td><td>${esc(NALA.clientName(e.client_id))}</td><td>${e.scope === 'period' ? 'Mes' : `${e.batch_ids.length} lote(s)`}</td><td>${NALA.badge(e.status)}</td><td class="num">${int(e.line_count)}</td><td>${NALA.dateTime(e.created_at)}</td><td>${NALA.dateTime(e.submitted_at)}</td></tr>`).join('')}</table></div>`
         : '<div class="card empty">No hay exportaciones en este alcance.</div>'}</div>`;
     root.querySelector('#new').addEventListener('click', () => NALA.go('#/exportar?nueva=1'));
+    root.querySelector('#zero')?.addEventListener('click', () => zeroFiling());
     root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', () => NALA.go(`#/exportar/${tr.dataset.id}`)));
   }
 

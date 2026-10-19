@@ -156,6 +156,23 @@
     });
   });
 
+  // Alertas del «Detalle Validación» de la DGII y la acción a tomar
+  // (Instructivo «Llenado y Remisión del Formato de Envío 606», Impuestos Internos, feb. 2026).
+  const DGII_ALERTS = [
+    ['RNC/Cédula inactivo', 'Excluye ese NCF del formato: el RNC del suplidor no es válido (inactivo o fallecido).'],
+    ['NCF no habilitado', 'Contacta al suplidor: su RNC está en estatus «Bloqueo» y debe regularizar su situación.'],
+    ['NCF no existe o fue eliminado', 'El NCF fue anulado: pide al suplidor que lo sustituya.'],
+    ['NCF no autorizado por la DGII', 'La secuencia no fue solicitada: el suplidor debe sustituir el NCF por otra secuencia o solicitarla.'],
+    ['NCF ya se encuentra reportado', 'Revisa que no hayas digitado el mismo NCF dos veces (elimina el duplicado). Si es error del emisor, exclúyelo y pide otra numeración.'],
+    ['NCF afectado por la Nota de Crédito no ha sido remitido', 'Incluye (en el mismo mes o en el período que corresponda) el NCF que afecta la nota de crédito.'],
+    ['Cédula registrada como contribuyente', 'El proveedor debe emitir un NCF válido para crédito fiscal.'],
+    ['RNC/Cédula no registrada como contribuyente', 'El proveedor debe emitir un comprobante de compras.'],
+    ['Emisor o receptor del e-CF no coinciden / no aceptado', 'Valida el RNC del emisor, el RNC del receptor y que el e-CF figure «recibido» en «Consulta de NCF / e-NCF»; luego avisa al suplidor.'],
+    ['RNC/Cédula no es Facturador Electrónico', 'Pide al suplidor una factura con NCF válido.'],
+    ['Emisor debe emitir una secuencia electrónica válida', 'Es un NCF tipo B de un emisor obligado a e-CF: pide que emita un comprobante electrónico (tipo E).'],
+  ];
+  const DGII_ALERTS_HTML = `<details style="margin-bottom:10px"><summary><b>Alertas frecuentes de la DGII y qué hacer</b></summary><ul style="margin:6px 0 0 18px;line-height:1.5">${DGII_ALERTS.map(([t, a]) => `<li><b>${esc(t)}:</b> ${esc(a)}</li>`).join('')}</ul></details>`;
+
   async function detail(root, id) {
     const { export: exp, dgii_tool: tool } = await NALA.api('GET', `exports/${id}`);
     const steps = [['generated', 'Archivo generado', exp.created_at], ['submitted', 'Enviado a la DGII (Oficina Virtual)', exp.submitted_at], [exp.status === 'rejected' ? 'rejected' : 'accepted', exp.status === 'rejected' ? 'Rechazado por la DGII' : 'Aceptado por la DGII', exp.result_at]];
@@ -164,6 +181,9 @@
       <div class="card"><h2>${esc(exp.file_name)} ${NALA.badge(exp.status)}<span class="spacer"></span><button class="btn" data-href="#/exportar">← Exportaciones</button></h2>
         <div class="muted">${esc(NALA.clientName(exp.client_id))} · ${exp.format} · ${period(exp.period)} · ${exp.scope === 'period' ? 'consolidado del mes' : `${exp.batch_ids.length} lote(s)`} · ${int(exp.line_count)} líneas · SHA-256 TXT <span class="mono">${esc(exp.txt_sha256.slice(0, 16))}…</span></div>
         <div class="row" style="margin-top:12px;gap:18px">${steps.map(([k, label, at]) => `<div><span class="badge ${at ? (k === 'rejected' ? 'crit' : 'ok') : ''}">${at ? '✓' : '○'} ${esc(label)}</span><div class="muted">${at ? NALA.dateTime(at) : 'pendiente'}</div></div>`).join('<span class="muted">→</span>')}</div>
+        ${exp.status === 'submitted' && exp.format === '606' ? `<div class="card" style="margin-top:10px"><b>Cuadre con «Ver Resumen» de la DGII</b>
+          <div class="muted">Cuando la validación diga <i>Completado</i>, compara estos totales de NALA con el «Resumen del Envío» de la OFV:</div>
+          <div class="table-wrap"><table><tr><th>Concepto</th><th class="num">NALA</th></tr>${[['Total Monto Facturado', 'total_monto_facturado'], ['ITBIS Facturado', 'itbis'], ['ITBIS Retenido', 'itbis_retenido'], ['ITBIS por Adelantar', 'itbis_adelantar']].map(([l, k]) => `<tr><td>${l}</td><td class="num">${(exp.totals || {})[k] != null ? money((exp.totals || {})[k]) : '—'}</td></tr>`).join('')}</table></div></div>` : ''}
         ${exp.submission_reference ? `<p style="margin-top:8px">Referencia OFV: <b class="mono">${esc(exp.submission_reference)}</b></p>` : ''}${exp.result_notes ? `<p>Resultado: ${esc(exp.result_notes)}</p>` : ''}
         ${exp.status === 'superseded' ? `<div class="issue warning" style="margin-top:8px"><span class="ico">!</span>Reemplazada: ${esc(exp.superseded_reason || '')}</div>` : ''}
         ${exp.accepted_warnings?.length ? `<p class="muted" style="margin-top:8px">Advertencias aceptadas: ${exp.accepted_warnings.map(esc).join(', ')} · motivo: ${esc(exp.acceptance_reason || '')}</p>` : ''}
@@ -200,20 +220,22 @@
         <ol style="margin:0 0 6px 18px;line-height:1.8">
           <li>Descargué <b>${esc(exp.file_name)}</b> — búscalo en tu carpeta de descargas.</li>
           <li>Abrí la <b>Oficina Virtual</b> de la empresa en otra pestaña (ya con sesión iniciada).</li>
-          <li>En la OFV entra a <b>Remisión / Envío de Archivos</b>, elige <b>${esc(exp.format)}</b> y período <b>${esc(period(exp.period))}</b>, <b>adjunta el TXT</b> descargado y pulsa Enviar.</li>
-          <li>Cuando la DGII te dé el <b>número de recepción</b>, pulsa «Registrar envío a DGII» aquí y pégalo.</li>
+          <li>En el menú de la OFV pulsa <b>Enviar Archivos</b>. En <b>Tipo Información</b> elige <b>${esc(exp.format === '606' ? '606 - COMPRAS DE BIENES Y SERVICIOS' : exp.format)}</b>, escribe el <b>Período</b> <b class="mono">${esc(exp.period)}</b> (AAAAMM) y pulsa <b>Continuar</b>.</li>
+          <li>Pulsa <b>Examinar…</b>, <b>adjunta el TXT</b> descargado y pulsa <b>Enviar Datos</b>.</li>
+          <li>Saldrá «El archivo ha sido recibido para validación» con el <b>Número Referencia</b>: imprime o guarda ese resumen, vuelve aquí y pulsa «Registrar envío a DGII» para pegarlo.</li>
+          <li>La DGII valida el archivo en unos <b>30 minutos</b>. En la OFV abre <b>Consultas → Consulta Envíos ${esc(exp.format)}</b> y mira el <b>Estatus Validación</b>: <i>Recibido</i> / <i>En proceso</i> / <i>Completado</i> (aceptado) / <i>Error</i> (pulsa «Ver Resumen» para ver las líneas).</li>
         </ol>
         <p class="muted">El archivo se adjunta manualmente por seguridad (la DGII no permite adjuntarlo por código). Si no se abrió la pestaña, revisa que la bóveda esté abierta y que exista el acceso DGII de la empresa (con RNC y tarjeta) en Accesos.</p>`;
     }));
     const setStatus = async (status, body) => { await NALA.api('POST', `exports/${exp.id}/status`, { status, ...body }); NALA.toast('Estado actualizado', 'ok'); NALA.route(); };
     root.querySelector('#s-sub')?.addEventListener('click', guard(async () => {
       const r = await NALA.modal({ title: 'Registrar envío a la DGII', okText: 'Registrar',
-        body: '<div class="fields"><label class="f"><span>Fecha de envío</span><input type="date" id="sd"></label><label class="f"><span>Referencia / número de recepción</span><input id="sr"></label></div>',
+        body: '<div class="fields"><label class="f"><span>Fecha de envío</span><input type="date" id="sd"></label><label class="f"><span>Número Referencia (pantalla «El archivo ha sido recibido para validación»)</span><input id="sr"></label></div>',
         onOk: m => ({ submitted_at: m.querySelector('#sd').value || null, reference: m.querySelector('#sr').value }) });
       if (r) await setStatus('submitted', r);
     }));
-    root.querySelector('#s-acc')?.addEventListener('click', guard(async () => { const notes = await NALA.askReason('Registrar aceptación de la DGII', { label: 'Detalle (ej. "Completado" en Consulta Envíos)', min: 0, okText: 'Registrar' }); if (notes !== null) await setStatus('accepted', { notes }); }));
-    root.querySelector('#s-rej')?.addEventListener('click', guard(async () => { const notes = await NALA.askReason('Registrar rechazo de la DGII', { label: 'Errores informados por la DGII', okText: 'Registrar' }); if (notes) await setStatus('rejected', { notes }); }));
+    root.querySelector('#s-acc')?.addEventListener('click', guard(async () => { const notes = await NALA.askReason('Registrar aceptación de la DGII', { label: 'Detalle (ej. «Completado» en Consulta Envíos; Adelanto ITBIS calculado)', min: 0, okText: 'Registrar' }); if (notes !== null) await setStatus('accepted', { notes }); }));
+    root.querySelector('#s-rej')?.addEventListener('click', guard(async () => { const notes = await NALA.askReason('Registrar rechazo de la DGII', { label: 'Errores informados por la DGII (línea, descripción y dato validado)', okText: 'Registrar', extra: DGII_ALERTS_HTML }); if (notes) await setStatus('rejected', { notes }); }));
     root.querySelector('#s-sup')?.addEventListener('click', guard(async () => { const notes = await NALA.askReason('Marcar como reemplazada', { okText: 'Marcar' }); if (notes) await setStatus('superseded', { notes }); }));
   }
 

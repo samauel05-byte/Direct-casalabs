@@ -304,7 +304,8 @@
       el.querySelector('[data-zm]').textContent = `${Math.round(st.zoom * 100)}%`;
       const avail = Math.max(200, canvasBox.clientWidth - 24);
       if (doc.kind === 'image') {
-        let img = canvasBox.querySelector('img');
+        let wrap = canvasBox.querySelector('.viewer-page');
+        let img = wrap?.querySelector('img');
         if (!img) {
           // Primero la previsualización (ligera); si falla, el original. Un
           // aviso de carga evita que el visor se vea congelado mientras llega.
@@ -320,15 +321,18 @@
             img.onerror = () => { if (usedPreview) { usedPreview = false; NALA.cache.imgPreviewBroken = true; img.src = full; } else resolve(); };
             img.src = preview;
           });
-          canvasBox.innerHTML = ''; canvasBox.appendChild(img);
+          wrap = document.createElement('div'); wrap.className = 'viewer-page'; wrap.appendChild(img);
+          canvasBox.innerHTML = ''; canvasBox.appendChild(wrap);
           st.base = img.naturalWidth || 800; st.baseH = img.naturalHeight || 800;
         }
         const sideways = st.rot % 180 !== 0;
         if (st.fit) st.zoom = Math.min(4, avail / (sideways ? st.baseH : st.base));
+        // La caja .viewer-page mide lo que se VE (ya rotada); la imagen va centrada y girada
+        // dentro de ella, así la capa de texto se alinea sin importar la rotación.
+        wrap.style.width = `${(sideways ? st.baseH : st.base) * st.zoom}px`;
+        wrap.style.height = `${(sideways ? st.base : st.baseH) * st.zoom}px`;
         img.style.width = `${st.base * st.zoom}px`;
-        // Rotating with CSS keeps the layout box; reserve room so nothing is clipped.
-        img.style.transform = `rotate(${st.rot}deg)`;
-        img.style.margin = sideways ? `${(st.base - st.baseH) * st.zoom / 2}px auto` : '0 auto';
+        img.style.transform = `translate(-50%, -50%) rotate(${st.rot}deg)`;
       } else {
         if (!st.pdf) {
           // Cargar el documento una vez y reusarlo al navegar entre comprobantes
@@ -348,9 +352,12 @@
         const viewport = page.getViewport({ scale: 1.5 * st.zoom, rotation: st.rot });
         const canvas = document.createElement('canvas'); canvas.width = viewport.width; canvas.height = viewport.height;
         await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-        canvasBox.innerHTML = ''; canvasBox.appendChild(canvas);
+        const pageBox = document.createElement('div'); pageBox.className = 'viewer-page'; pageBox.style.width = `${canvas.width}px`; pageBox.style.height = `${canvas.height}px`;
+        canvas.style.display = 'block'; pageBox.appendChild(canvas);
+        canvasBox.innerHTML = ''; canvasBox.appendChild(pageBox);
         el.querySelector('[data-pg]').textContent = `Pág. ${st.page}/${st.pages}`;
       }
+      syncOverlay();
     };
     // ── Copiar texto de la imagen (OCR en el navegador) ───────────────────
     // La imagen no sale del equipo: Tesseract corre en el navegador sobre la
@@ -380,13 +387,37 @@
       }
       NALA.toast('Copiado ✓', 'ok');
     };
-    const renderText = lines => {
-      textPanel.innerHTML = `<div class="viewer-text-head"><b>Texto de la página ${st.page}</b><span class="muted">Selecciona con el mouse o pulsa ⧉ para copiar la línea</span><span class="spacer" style="flex:1"></span>
+    // Capa de texto sobre la imagen: cada línea leída es un div transparente en su lugar
+    // (posición en % de la página y tamaño con unidades cqh), ajustado a lo ancho de la línea.
+    const removeOverlay = () => el.querySelectorAll('.ocr-layer').forEach(n => n.remove());
+    const syncOverlay = () => {
+      removeOverlay();
+      const wrap = canvasBox.querySelector('.viewer-page'); const entry = NALA.cache.ocrText?.get(textKey());
+      if (!wrap || !entry || textPanel.hidden) return;
+      const layer = document.createElement('div'); layer.className = 'ocr-layer';
+      for (const l of entry.lines) {
+        if (l.x1 == null) continue;
+        const h = (l.y1 - l.y0) / entry.H * 100; const d = document.createElement('div'); d.className = 'ocr-line'; d.textContent = l.t;
+        d.style.cssText = `left:${l.x0 / entry.W * 100}%;top:${l.y0 / entry.H * 100}%;height:${h}%;font-size:${h * 0.82}cqh;line-height:${h}cqh`;
+        layer.appendChild(d);
+      }
+      wrap.appendChild(layer);
+      // Ajuste fino: se estira cada línea al ancho que tiene en la imagen (la razón no cambia con el zoom).
+      const wpx = wrap.clientWidth;
+      layer.querySelectorAll('.ocr-line').forEach((d, i) => {
+        const l = entry.lines.filter(x => x.x1 != null)[i]; const tw = d.scrollWidth; if (!tw) return;
+        const r = ((l.x1 - l.x0) / entry.W * wpx) / tw; d.style.transform = `scaleX(${Math.min(5, Math.max(0.2, r))})`;
+      });
+    };
+    const renderText = entry => {
+      const lines = entry.lines.map(l => l.t);
+      syncOverlay();
+      textPanel.innerHTML = `<div class="viewer-text-head"><b>Texto de la página ${st.page}</b><span class="muted">Selecciona el texto directamente sobre la imagen (Ctrl+C) o pulsa ⧉ para copiar la línea</span><span class="spacer" style="flex:1"></span>
         <button class="btn sm" data-t="all">Copiar todo</button><button class="btn sm" data-t="close">Cerrar</button></div>
         ${lines.length ? lines.map((l, i) => `<div class="ocr-row"><button class="btn sm ocr-cp" data-t="line" data-i="${i}" title="Copiar esta línea">⧉</button><span class="ocr-tx">${esc(l)}</span></div>`).join('') : '<div class="muted">No se pudo leer texto en esta página.</div>'}`;
       textPanel.onclick = ev => {
         const t = ev.target.closest('[data-t]')?.dataset.t; if (!t) return;
-        if (t === 'close') textPanel.hidden = true;
+        if (t === 'close') { textPanel.hidden = true; removeOverlay(); }
         if (t === 'all') copyText(lines.join('\n'));
         if (t === 'line') copyText(lines[Number(ev.target.closest('[data-i]').dataset.i)]);
       };
@@ -402,15 +433,19 @@
         c.ocrProgress = m => { const pct = textPanel.querySelector('[data-pct]'); if (pct && m.status === 'recognizing text') pct.textContent = `${Math.round(m.progress * 100)}%`; };
         if (!c.ocrWorker) c.ocrWorker = window.Tesseract.createWorker('spa', 1, { langPath: OCR_LANG_PATH, logger: m => c.ocrProgress && c.ocrProgress(m) });
         const worker = await c.ocrWorker;
-        const { data } = await worker.recognize(await pageCanvas());
+        const canvas = await pageCanvas();
+        const { data } = await worker.recognize(canvas);
         c.ocrIdle = setTimeout(async () => { const w = await c.ocrWorker.catch(() => null); c.ocrWorker = null; try { await w?.terminate(); } catch (_) { /* ya cerrado */ } }, 120000);
-        const lines = String(data.text || '').split('\n').map(x => x.trim()).filter(Boolean);
-        NALA.cache.ocrText.set(key, lines);
-        if (key === textKey()) renderText(lines);
+        const raw = data.lines || (data.blocks || []).flatMap(b => (b.paragraphs || []).flatMap(p => p.lines || []));
+        let lines = raw.filter(l => l.bbox && String(l.text || '').trim()).map(l => ({ t: String(l.text).replace(/\s+$/, ''), x0: l.bbox.x0, y0: l.bbox.y0, x1: l.bbox.x1, y1: l.bbox.y1 }));
+        if (!lines.length) lines = String(data.text || '').split('\n').map(x => x.trim()).filter(Boolean).map(t => ({ t }));
+        const entry = { lines, W: canvas.width, H: canvas.height };
+        NALA.cache.ocrText.set(key, entry);
+        if (key === textKey()) renderText(entry);
       } catch (e) {
         NALA.cache.ocrWorker = null;
         textPanel.innerHTML = `<div class="issue warning"><span class="ico">!</span><span>No se pudo leer el texto: ${esc(String(e?.message || e || 'error'))}.</span> <button class="btn sm" data-t="retry">Reintentar</button> <button class="btn sm" data-t="close">Cerrar</button></div>`;
-        textPanel.onclick = ev => { const t = ev.target.closest('[data-t]')?.dataset.t; if (t === 'close') textPanel.hidden = true; if (t === 'retry') readText(); };
+        textPanel.onclick = ev => { const t = ev.target.closest('[data-t]')?.dataset.t; if (t === 'close') { textPanel.hidden = true; removeOverlay(); } if (t === 'retry') readText(); };
       }
     };
     el.querySelector('.viewer-tools').addEventListener('click', e => {
@@ -420,7 +455,7 @@
       if (a === 'out') { st.fit = false; st.zoom = Math.max(0.25, st.zoom - 0.25); }
       if (a === 'fit') st.fit = true;
       if (a === 'rot') st.rot = (st.rot + 90) % 360;
-      if (a === 'ocr') { if (!textPanel.hidden) { textPanel.hidden = true; return; } readText(); return; }
+      if (a === 'ocr') { if (!textPanel.hidden) { textPanel.hidden = true; removeOverlay(); return; } readText(); return; }
       draw().then(() => { if (!textPanel.hidden && ['prev', 'next', 'rot'].includes(a)) readText(); }).catch(err => NALA.fail(err));
     });
     if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = '/cami/vendor/pdf.worker.min.js';

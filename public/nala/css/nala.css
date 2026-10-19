@@ -139,6 +139,14 @@ tr.selected td { background: var(--accent-light); }
 .viewer-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-bottom: 8px; }
 .viewer-canvas { flex: 1; overflow: auto; background: var(--surface-2); border-radius: 10px; border: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: flex-start; padding: 10px; min-height: 0; }
 .viewer-canvas > * { margin: 0 auto; flex-shrink: 0; }
+/* Caja del tamaño que se ve (ya rotada): la imagen va centrada y girada dentro; la capa de texto se alinea con ella. */
+.viewer-page { position: relative; container-type: size; flex: none; }
+.viewer-page img { position: absolute; left: 50%; top: 50%; }
+/* Texto leído, transparente y seleccionable justo sobre la imagen. */
+.ocr-layer { position: absolute; inset: 0; user-select: text; -webkit-user-select: text; cursor: text; }
+.ocr-line { position: absolute; width: max-content; white-space: pre; color: transparent; transform-origin: 0 0; border-radius: 2px; }
+.ocr-line:hover { background: rgba(124, 58, 237, .10); }
+.ocr-line::selection { background: rgba(124, 58, 237, .38); color: transparent; }
 /* Texto leído de la página (copiar y pegar en los campos). */
 .viewer-text { flex: 0 0 auto; max-height: 38%; overflow: auto; margin-top: 8px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-size: 13px; }
 .viewer-text-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; position: sticky; top: -8px; background: var(--surface); padding: 4px 0; }

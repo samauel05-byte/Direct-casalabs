@@ -269,6 +269,23 @@
     wireFix(root);
   }
 
+  // ── Lector de texto (OCR) ───────────────────────────────────────────────
+  // Tesseract.js fijado a una versión y con huella SRI; el idioma (español) se
+  // descarga de la misma CDN. Se carga solo al pulsar «Copiar texto».
+  const OCR_SCRIPT = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+  const OCR_SRI = 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F';
+  const OCR_LANG_PATH = 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/spa@1.0.0/4.0.0_best_int';
+  function loadOcrEngine() {
+    if (window.Tesseract) return Promise.resolve();
+    if (NALA.cache.ocrLoading) return NALA.cache.ocrLoading;
+    NALA.cache.ocrLoading = new Promise((resolve, reject) => {
+      const sc = document.createElement('script'); sc.src = OCR_SCRIPT; sc.integrity = OCR_SRI; sc.crossOrigin = 'anonymous';
+      sc.onload = resolve; sc.onerror = () => { NALA.cache.ocrLoading = null; reject(new Error('no se pudo cargar el lector de texto; revisa tu conexión')); };
+      document.head.appendChild(sc);
+    });
+    return NALA.cache.ocrLoading;
+  }
+
   // ── Visor del original ──────────────────────────────────────────────────
   async function mountViewer(el, documentId, startPage) {
     if (!documentId) { el.innerHTML = '<div class="empty">Sin documento original.</div>'; return; }
@@ -278,8 +295,9 @@
     const st = { zoom: 1, rot: 0, page: startPage || 1, pages: doc.page_count || 1, pdf: null, fit: true };
     el.innerHTML = `<div class="viewer-tools"><button class="btn sm" data-a="prev" title="Página anterior">◀</button><span class="muted" data-pg></span><button class="btn sm" data-a="next" title="Página siguiente">▶</button>
       <button class="btn sm" data-a="out" title="Alejar">−</button><span class="muted" data-zm></span><button class="btn sm" data-a="in" title="Acercar">+</button><button class="btn sm" data-a="fit">Ajustar</button>
-      <button class="btn sm" data-a="rot" title="Rotar">⟳ 90°</button><a class="btn sm" href="${esc(info.url)}" target="_blank" rel="noopener">Abrir original</a><span class="muted mono" title="Huella SHA-256 del original">${esc((doc.sha256 || '').slice(0, 12))}…</span></div>
-      <div class="viewer-canvas" data-canvas></div>`;
+      <button class="btn sm" data-a="rot" title="Rotar">⟳ 90°</button><button class="btn sm" data-a="ocr" title="Leer el texto de esta página para copiarlo y pegarlo en los campos de la derecha">Aa Copiar texto</button><a class="btn sm" href="${esc(info.url)}" target="_blank" rel="noopener">Abrir original</a><span class="muted mono" title="Huella SHA-256 del original">${esc((doc.sha256 || '').slice(0, 12))}…</span></div>
+      <div class="viewer-canvas" data-canvas></div>
+      <div class="viewer-text" data-text hidden></div>`;
     const canvasBox = el.querySelector('[data-canvas]');
     const draw = async () => {
       el.querySelector('[data-pg]').textContent = `Pág. ${st.page}/${st.pages}`;
@@ -334,6 +352,67 @@
         el.querySelector('[data-pg]').textContent = `Pág. ${st.page}/${st.pages}`;
       }
     };
+    // ── Copiar texto de la imagen (OCR en el navegador) ───────────────────
+    // La imagen no sale del equipo: Tesseract corre en el navegador sobre la
+    // página que se está viendo (imagen o página de PDF) y el texto queda
+    // seleccionable, con un botón para copiar cada línea.
+    const textPanel = el.querySelector('[data-text]');
+    const textKey = () => `${documentId}:${st.page}:${st.rot}`;
+    const pageCanvas = async () => {
+      if (doc.kind === 'image') {
+        if (!st.imgBlob) st.imgBlob = await (await fetch(info.url)).blob();
+        const bmp = await createImageBitmap(st.imgBlob);
+        const k = Math.min(1, 2400 / Math.max(bmp.width, bmp.height)); const w = Math.round(bmp.width * k); const h = Math.round(bmp.height * k);
+        const sideways = st.rot % 180 !== 0; const c = document.createElement('canvas'); c.width = sideways ? h : w; c.height = sideways ? w : h;
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+        g.translate(c.width / 2, c.height / 2); g.rotate(st.rot * Math.PI / 180); g.drawImage(bmp, -w / 2, -h / 2, w, h);
+        return c;
+      }
+      const page = await st.pdf.getPage(st.page); const viewport = page.getViewport({ scale: 2, rotation: st.rot });
+      const c = document.createElement('canvas'); c.width = viewport.width; c.height = viewport.height;
+      await page.render({ canvasContext: c.getContext('2d'), viewport }).promise;
+      return c;
+    };
+    const copyText = async text => {
+      try { await navigator.clipboard.writeText(text); } catch (_) {
+        const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } finally { ta.remove(); }
+      }
+      NALA.toast('Copiado ✓', 'ok');
+    };
+    const renderText = lines => {
+      textPanel.innerHTML = `<div class="viewer-text-head"><b>Texto de la página ${st.page}</b><span class="muted">Selecciona con el mouse o pulsa ⧉ para copiar la línea</span><span class="spacer" style="flex:1"></span>
+        <button class="btn sm" data-t="all">Copiar todo</button><button class="btn sm" data-t="close">Cerrar</button></div>
+        ${lines.length ? lines.map((l, i) => `<div class="ocr-row"><button class="btn sm ocr-cp" data-t="line" data-i="${i}" title="Copiar esta línea">⧉</button><span class="ocr-tx">${esc(l)}</span></div>`).join('') : '<div class="muted">No se pudo leer texto en esta página.</div>'}`;
+      textPanel.onclick = ev => {
+        const t = ev.target.closest('[data-t]')?.dataset.t; if (!t) return;
+        if (t === 'close') textPanel.hidden = true;
+        if (t === 'all') copyText(lines.join('\n'));
+        if (t === 'line') copyText(lines[Number(ev.target.closest('[data-i]').dataset.i)]);
+      };
+    };
+    const readText = async () => {
+      const key = textKey(); textPanel.hidden = false;
+      NALA.cache.ocrText = NALA.cache.ocrText || new Map();
+      if (NALA.cache.ocrText.has(key)) { renderText(NALA.cache.ocrText.get(key)); return; }
+      textPanel.innerHTML = '<div class="muted">Leyendo el texto de la página… <span data-pct></span><br><small>La primera vez descarga el lector (unos segundos); la imagen no sale de tu equipo.</small></div>';
+      try {
+        await loadOcrEngine();
+        const c = NALA.cache; clearTimeout(c.ocrIdle);
+        c.ocrProgress = m => { const pct = textPanel.querySelector('[data-pct]'); if (pct && m.status === 'recognizing text') pct.textContent = `${Math.round(m.progress * 100)}%`; };
+        if (!c.ocrWorker) c.ocrWorker = window.Tesseract.createWorker('spa', 1, { langPath: OCR_LANG_PATH, logger: m => c.ocrProgress && c.ocrProgress(m) });
+        const worker = await c.ocrWorker;
+        const { data } = await worker.recognize(await pageCanvas());
+        c.ocrIdle = setTimeout(async () => { const w = await c.ocrWorker.catch(() => null); c.ocrWorker = null; try { await w?.terminate(); } catch (_) { /* ya cerrado */ } }, 120000);
+        const lines = String(data.text || '').split('\n').map(x => x.trim()).filter(Boolean);
+        NALA.cache.ocrText.set(key, lines);
+        if (key === textKey()) renderText(lines);
+      } catch (e) {
+        NALA.cache.ocrWorker = null;
+        textPanel.innerHTML = `<div class="issue warning"><span class="ico">!</span><span>No se pudo leer el texto: ${esc(String(e?.message || e || 'error'))}.</span> <button class="btn sm" data-t="retry">Reintentar</button> <button class="btn sm" data-t="close">Cerrar</button></div>`;
+        textPanel.onclick = ev => { const t = ev.target.closest('[data-t]')?.dataset.t; if (t === 'close') textPanel.hidden = true; if (t === 'retry') readText(); };
+      }
+    };
     el.querySelector('.viewer-tools').addEventListener('click', e => {
       const a = e.target.closest('[data-a]')?.dataset.a; if (!a) return;
       if (a === 'prev' && st.page > 1) st.page--; if (a === 'next' && st.page < st.pages) st.page++;
@@ -341,7 +420,8 @@
       if (a === 'out') { st.fit = false; st.zoom = Math.max(0.25, st.zoom - 0.25); }
       if (a === 'fit') st.fit = true;
       if (a === 'rot') st.rot = (st.rot + 90) % 360;
-      draw().catch(err => NALA.fail(err));
+      if (a === 'ocr') { if (!textPanel.hidden) { textPanel.hidden = true; return; } readText(); return; }
+      draw().then(() => { if (!textPanel.hidden && ['prev', 'next', 'rot'].includes(a)) readText(); }).catch(err => NALA.fail(err));
     });
     if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = '/cami/vendor/pdf.worker.min.js';
     await draw().catch(err => { canvasBox.innerHTML = `<div class="empty">No se pudo mostrar el documento: ${esc(err.message)}</div>`; });

@@ -99,10 +99,13 @@
     title: 'Panel de control',
     async render(root) {
       const s = NALA.state;
-      const from = shiftPeriod(s.period, -11);
+      // En "Todos" (sin período) los KPIs son de todos los períodos; la gráfica
+      // de tendencia siempre necesita una ventana concreta de 12 meses.
+      const endP = s.period || NALA.prevMonth();
+      const from = shiftPeriod(endP, -11);
       const [cur, trend] = await Promise.all([
         NALA.api('GET', `stats?${q({ client_id: s.client, period_from: s.period, period_to: s.period, format: s.format })}`),
-        NALA.api('GET', `stats?${q({ client_id: s.client, period_from: from, period_to: s.period, format: s.format })}`),
+        NALA.api('GET', `stats?${q({ client_id: s.client, period_from: from, period_to: endP, format: s.format })}`),
       ]);
       const st = cur.stats;
       const periods = Array.from({ length: 12 }, (_, i) => shiftPeriod(from, i));
@@ -111,7 +114,7 @@
       const auditBase = `#/auditoria?${q({ client: s.client, period: s.period, format: s.format })}`;
       const byClient = [...(cur.stats.by_client || [])].sort((a, b) => b.pending - a.pending);
       root.innerHTML = `<div class="stack">
-        <div class="muted">Período ${period(s.period)} · ${scopeLabel}${s.format ? ` · formato ${s.format}` : ''}</div>
+        <div class="muted">Período ${s.period ? period(s.period) : 'Todos los períodos'} · ${scopeLabel}${s.format ? ` · formato ${s.format}` : ''}</div>
         ${heroResumen(st, auditBase)}
         <div class="grid kpis">
           ${kpi('Comprobantes', int(st.invoices), `${int(st.excluded)} excluidos`, auditBase)}
@@ -154,7 +157,7 @@
         <div class="card"><h2>${esc(c.legal_name)} <span class="badge">${esc(c.rnc || c.cedula || 'sin RNC')}</span>${c.status === 'inactive' ? '<span class="badge crit">Inactiva</span>' : ''}<span class="spacer"></span>
           ${NALA.can('upload') ? '<button class="btn primary" data-href="#/lotes?nuevo=1">+ Nuevo lote</button>' : ''}
           <button class="btn" data-href="${auditBase}">Auditoría unificada</button><button class="btn" data-href="#/exportar">Exportar 606/607</button></h2>
-          <div class="muted">Período ${period(s.period)}${s.format ? ` · formato ${s.format}` : ' · 606 y 607'} · Configuración contable: ${c.settings?.default_tipo_bienes_servicios ? `606 tipo ${c.settings.default_tipo_bienes_servicios}` : '606 sin tipo por defecto'}, ${c.settings?.default_tipo_ingreso ? `607 ingreso ${c.settings.default_tipo_ingreso}` : '607 sin tipo por defecto'}</div></div>
+          <div class="muted">Período ${s.period ? period(s.period) : 'Todos los períodos'}${s.format ? ` · formato ${s.format}` : ' · 606 y 607'} · Configuración contable: ${c.settings?.default_tipo_bienes_servicios ? `606 tipo ${c.settings.default_tipo_bienes_servicios}` : '606 sin tipo por defecto'}, ${c.settings?.default_tipo_ingreso ? `607 ingreso ${c.settings.default_tipo_ingreso}` : '607 sin tipo por defecto'}</div></div>
         <div class="grid kpis">
           ${kpi('Lotes', int(st.batches), `${int(st.batches_active)} activos · ${int(st.batches_review)} en revisión`)}
           ${kpi('Pendientes', int(st.pending), '', `${auditBase}&status=pending_review,reviewed`)}

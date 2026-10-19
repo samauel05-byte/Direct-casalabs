@@ -60,7 +60,9 @@
     const s = NALA.state;
     const clientId = params.client || s.client;
     const fmt = params.format || s.format || '606';
-    const per = params.period || s.period;
+    // La exportación es por mes (envío DGII); si el período global está en
+    // "Todos" (vacío), partimos del mes anterior y el usuario elige el mes.
+    const per = params.period || s.period || NALA.prevMonth();
     const batches = clientId ? (await NALA.api('GET', `batches?client_id=${clientId}&period=${per}&format=${fmt}`)).batches : [];
     const chosen = (params.batches || '').split(',').filter(Boolean);
     root.innerHTML = `<div class="stack"><div class="card"><h2>Nueva exportación</h2>
@@ -219,7 +221,7 @@
     const s = NALA.state;
     const qs = new URLSearchParams(Object.entries({ client_id: s.client, period: s.period, format: s.format }).filter(([, v]) => v));
     const { exports } = await NALA.api('GET', `exports?${qs}`);
-    root.innerHTML = `<div class="stack"><div class="row"><button class="btn primary" id="new">+ Nueva exportación</button><span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${period(s.period)}</span></div>
+    root.innerHTML = `<div class="stack"><div class="row"><button class="btn primary" id="new">+ Nueva exportación</button><span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
       ${exports.length ? `<div class="table-wrap"><table><tr><th>Archivo</th><th>Empresa</th><th>Alcance</th><th>Estado</th><th class="num">Líneas</th><th>Generado</th><th>Enviado</th></tr>
         ${exports.map(e => `<tr class="clickable" data-id="${e.id}"><td class="mono">${esc(e.file_name)}</td><td>${esc(NALA.clientName(e.client_id))}</td><td>${e.scope === 'period' ? 'Mes' : `${e.batch_ids.length} lote(s)`}</td><td>${NALA.badge(e.status)}</td><td class="num">${int(e.line_count)}</td><td>${NALA.dateTime(e.created_at)}</td><td>${NALA.dateTime(e.submitted_at)}</td></tr>`).join('')}</table></div>`
         : '<div class="card empty">No hay exportaciones en este alcance.</div>'}</div>`;

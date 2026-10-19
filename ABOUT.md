@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — ver todos los lotes sin fijar un mes («Todos»)**: junto al selector de **Período** de la cabecera ahora hay un botón **«Todos»**. Al pulsarlo, NALA deja de filtrar por mes y muestra **todos los lotes y comprobantes de todos los períodos** de una vez — ideal para ver de un vistazo lo que falta por corregir sin tener que elegir una fecha. El Panel de control pasa a mostrar totales de **todos los períodos** (la gráfica de 12 meses sigue mostrando los últimos meses). La exportación, que es por mes para el envío a la DGII, parte del mes anterior y ahí eliges el mes. Para volver a un mes concreto, basta elegirlo en el selector.
+
 - **NALA — al aprobar, las advertencias quedan aceptadas y la factura queda limpia**: cuando apruebas un comprobante, sus advertencias se dan por aceptadas y se **quitan de los avisos abiertos** (ya no cuenta como "con advertencias"): queda listo y limpio. Las advertencias aceptadas se conservan en el registro/historial. Si reviertes la aprobación, vuelven a aparecer para revisarlas.
 
 - **NALA — editar una factura ya aprobada (1 clic)**: en una factura aprobada ahora aparece un botón **«✎ Editar»** que la **reabre y la deja editable** de inmediato (revierte la aprobación por dentro, sin pedir motivo a mano). Antes había que ir a «Revertir aprobación» y escribir un motivo. Queda registrado en el historial; si la factura ya está en una exportación enviada/aceptada a la DGII, no se reabre (hay que rectificar) y NALA lo avisa.

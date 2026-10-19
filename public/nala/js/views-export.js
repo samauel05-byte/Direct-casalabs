@@ -56,72 +56,7 @@
     }));
   }
 
-  async function newExport(root, params) {
-    const s = NALA.state;
-    const clientId = params.client || s.client;
-    const fmt = params.format || s.format || '606';
-    // La exportación es por mes (envío DGII); si el período global está en
-    // "Todos" (vacío), partimos del mes anterior y el usuario elige el mes.
-    const per = params.period || s.period || NALA.prevMonth();
-    const batches = clientId ? (await NALA.api('GET', `batches?client_id=${clientId}&period=${per}&format=${fmt}`)).batches : [];
-    const chosen = (params.batches || '').split(',').filter(Boolean);
-    root.innerHTML = `<div class="stack"><div class="card"><h2>Nueva exportación</h2>
-      <div class="row"><label class="f" style="min-width:280px"><span>Empresa</span><select id="e-client">${NALA.clientOptions(clientId, { includeAll: !clientId, allLabel: '— Elegir empresa —' })}</select></label>
-        <label class="f"><span>Formato</span><select id="e-format"><option value="606" ${fmt === '606' ? 'selected' : ''}>606 · Compras</option><option value="607" ${fmt === '607' ? 'selected' : ''}>607 · Ventas</option></select></label>
-        <label class="f"><span>Período</span><input type="month" id="e-period" value="${per.slice(0, 4)}-${per.slice(4)}"></label>
-        <label class="f"><span>Alcance</span><select id="e-scope"><option value="period" ${!chosen.length ? 'selected' : ''}>Consolidar el mes</option><option value="batches" ${chosen.length ? 'selected' : ''}>Lotes seleccionados</option></select></label>
-        <button class="btn primary" id="e-preview">Previsualizar</button></div>
-      <div id="e-batches" style="margin-top:8px;${chosen.length ? '' : 'display:none'}">${batches.length ? batches.map(b => `<label style="margin-right:14px"><input type="checkbox" class="e-b" value="${b.id}" ${chosen.includes(b.id) ? 'checked' : ''}> ${esc(b.name)} <span class="muted">(${int(b.summary?.approved)} aprobados)</span></label>`).join('') : '<span class="muted">No hay lotes de esta empresa, formato y período.</span>'}</div></div>
-      <div id="e-result"></div></div>`;
-    const read = () => ({ client_id: root.querySelector('#e-client').value, format: root.querySelector('#e-format').value, period: root.querySelector('#e-period').value.replace('-', ''),
-      batch_ids: root.querySelector('#e-scope').value === 'batches' ? [...root.querySelectorAll('.e-b:checked')].map(x => x.value) : undefined });
-    const reload = () => { const r = read(); NALA.go(`#/exportar?nueva=1&${new URLSearchParams({ client: r.client_id, format: r.format, period: r.period })}`); };
-    ['#e-client', '#e-format', '#e-period'].forEach(sel => root.querySelector(sel).addEventListener('change', reload));
-    root.querySelector('#e-scope').addEventListener('change', e => { root.querySelector('#e-batches').style.display = e.target.value === 'batches' ? '' : 'none'; });
-    root.querySelector('#e-preview').addEventListener('click', async () => {
-      const body = read();
-      if (!body.client_id) return NALA.toast('Elija la empresa.', 'err');
-      if (body.batch_ids && !body.batch_ids.length) return NALA.toast('Seleccione al menos un lote.', 'err');
-      const out = root.querySelector('#e-result'); out.innerHTML = '<div class="card empty">Calculando instantánea…</div>';
-      try { renderPreview(out, body, await NALA.api('POST', 'exports/preview', body)); } catch (e) { out.innerHTML = `<div class="card empty">⚠️ ${esc(e.message)}</div>`; }
-    });
-    if (params.auto && clientId) root.querySelector('#e-preview').click();
-  }
 
-  function renderPreview(out, body, preview) {
-    const snap = preview.snapshot;
-    out.innerHTML = `<div class="stack">
-      <div class="card"><h2>Vista previa · ${esc(snap.file_name)}<span class="spacer"></span><span class="muted">Esquema ${esc(snap.schema_version)} · reglas ${esc(snap.rules_version)}</span></h2>
-        <div class="mono" style="margin-bottom:10px">Encabezado: <b>${esc(`${snap.format}|${snap.header.rnc}|${snap.header.period}|${snap.header.count}`)}</b></div>
-        <div class="grid kpis"><div class="kpi"><div class="label">Líneas</div><div class="value">${int(snap.lines.length)}</div></div>
-          <div class="kpi"><div class="label">Excluidas</div><div class="value">${int(snap.excluded.length)}</div></div>
-          ${Object.entries(snap.totals).filter(([k]) => ['total_monto_facturado', 'monto_facturado', 'itbis', 'itbis_retenido', 'isr_retenido'].includes(k)).map(([k, v]) => `<div class="kpi"><div class="label">${esc(snap.columns.find(c => c.key === k)?.label || k)}</div><div class="value" style="font-size:16px">${money(v)}</div></div>`).join('')}</div></div>
-      ${snap.errors.length ? `<div class="card"><h2>Errores críticos (bloquean la exportación)</h2><div class="stack" style="gap:6px">${snap.errors.map(e => `<div class="issue critical"><span class="ico">✕</span>${esc(e.message)}${e.invoice_id ? ` <a class="btn sm" href="#/auditoria/${e.invoice_id}">Abrir</a>` : ''}</div>`).join('')}</div></div>` : ''}
-      ${snap.warnings.length ? `<div class="card"><h2>Advertencias (deben aceptarse una por una)</h2><div class="stack" style="gap:6px">${snap.warnings.map(w => `<label class="issue warning"><input type="checkbox" class="acc" value="${esc(w.code)}"> <span>${esc(w.message)}${w.lines?.length ? ` <span class="muted">· líneas ${w.lines.slice(0, 12).join(', ')}${w.lines.length > 12 ? '…' : ''}</span>` : ''}</span></label>`).join('')}
-        <label class="f"><span>Motivo para exportar con advertencias</span><textarea id="acc-reason" rows="2"></textarea></label></div></div>` : ''}
-      ${snap.consumer_summary ? `<div class="card"><h2>Resumen de Facturas de Consumo (para el módulo de la Oficina Virtual)</h2><p>${int(snap.consumer_summary.count)} NCF · Monto facturado RD$ ${money(snap.consumer_summary.monto_facturado)} · ITBIS RD$ ${money(snap.consumer_summary.itbis)}. <span class="muted">Las facturas de consumo menores de RD$250,000 no van en el TXT.</span></p></div>` : ''}
-      ${snap.excluded.length ? `<details class="card"><summary><b>Comprobantes no incluidos (${snap.excluded.length})</b></summary><div class="stack" style="gap:4px;margin-top:8px">${snap.excluded.map(x => `<div><a href="#/auditoria/${x.invoice_id}">${x.invoice_id.slice(0, 8)}</a> — ${esc(x.reason)}</div>`).join('')}</div></details>` : ''}
-      ${preview.txt_check ? `<div class="card"><h2>Estructura del TXT ${preview.txt_check.valid ? '<span class="badge ok">Válida</span>' : '<span class="badge crit">Con problemas</span>'}</h2>
-        <pre class="mono" style="white-space:pre-wrap;background:var(--surface-2);padding:8px;border-radius:8px">${esc(preview.txt_preview || '')}${snap.lines.length > 5 ? '\n…' : ''}</pre>${preview.txt_check.problems.map(p => `<div class="issue critical">${esc(p)}</div>`).join('')}
-        <p class="muted">Delimitador "|", fechas AAAAMMDD, montos con punto y 2 decimales, códigos según la herramienta oficial, líneas CRLF, codificación ASCII.</p></div>` : ''}
-      ${snap.errors.length ? '' : toolCard(preview.dgii_tool)}
-      <div class="card"><h2>Líneas (mismo orden que el TXT y el Excel)</h2>${snap.lines.length ? linesTable(snap) : '<div class="empty">Sin líneas.</div>'}</div>
-      <div class="row"><button class="btn primary" id="gen" ${snap.errors.length || !NALA.can('export') ? 'disabled' : ''}>Generar TXT y Excel</button>
-        ${!NALA.can('export') ? '<span class="muted">Su rol no permite generar exportaciones.</span>' : ''}</div></div>`;
-    bindToolCard(out, preview.dgii_tool);
-    out.querySelector('#gen')?.addEventListener('click', async () => {
-      const accepted = [...out.querySelectorAll('.acc:checked')].map(x => x.value);
-      if (accepted.length !== snap.warnings.length) return NALA.toast('Acepte cada advertencia antes de exportar.', 'err');
-      const reason = out.querySelector('#acc-reason')?.value.trim() || '';
-      if (snap.warnings.length && reason.length < 5) return NALA.toast('Indique el motivo (mín. 5 caracteres).', 'err');
-      try {
-        const r = await NALA.api('POST', 'exports', { ...body, accepted_warnings: accepted, reason, preview_fingerprint: preview.fingerprint });
-        NALA.toast('Exportación generada', 'ok'); NALA.go(`#/exportar/${r.export.id}`);
-      } catch (e) {
-        if (e.status === 409) { NALA.toast(e.message, 'err'); out.innerHTML = ''; } else NALA.fail(e);
-      }
-    });
-  }
 
   async function download(exp, type, columns) {
     const qs = new URLSearchParams({ type, ...(columns ? { columns: columns.join(',') } : {}) });
@@ -294,27 +229,85 @@
     if (await p) NALA.route();
   }
 
+
+  // Listos para exportar: por empresa, formato y período, lo aprobado y lo que falta
+  // por auditar. Con auditoría completa se saca el TXT o el Excel con un clic: NALA
+  // genera el archivo (o reutiliza el último si nada cambió) y lo descarga.
+  const auditLink = g => `#/auditoria?${new URLSearchParams({ client: g.client_id, period: g.period, format: g.format, status: 'pending_review,reviewed' })}`;
+
+  function askWarnings(snap) {
+    return NALA.modal({ title: 'Advertencias del archivo', okText: 'Aceptar y generar', wide: true,
+      body: `<p class="muted" style="margin-bottom:8px">Acepta cada advertencia para generar el archivo. Quedan registradas.</p>
+        <div class="stack" style="gap:6px">${snap.warnings.map(w => `<label class="issue warning"><input type="checkbox" class="acc" value="${esc(w.code)}"> <span>${esc(w.message)}${w.lines?.length ? ` <span class="muted">· líneas ${w.lines.slice(0, 12).join(', ')}${w.lines.length > 12 ? '…' : ''}</span>` : ''}</span></label>`).join('')}</div>
+        <label class="f" style="margin-top:8px"><span>Motivo para exportar con advertencias</span><textarea id="acc-reason" rows="2"></textarea></label>`,
+      onOk: m => {
+        const accepted = [...m.querySelectorAll('.acc:checked')].map(x => x.value);
+        if (accepted.length !== snap.warnings.length) throw new Error('Acepta cada advertencia antes de exportar.');
+        const reason = m.querySelector('#acc-reason').value.trim();
+        if (reason.length < 5) throw new Error('Indica el motivo (mín. 5 caracteres).');
+        return { accepted, reason };
+      } });
+  }
+
+  async function exportNow(g, type, btn) {
+    const body = { client_id: g.client_id, format: g.format, period: g.period };
+    const label = btn.textContent; btn.disabled = true; btn.textContent = '…';
+    try {
+      const preview = await NALA.api('POST', 'exports/preview', body);
+      const snap = preview.snapshot;
+      if (snap.errors.length) {
+        const go = await NALA.modal({ title: 'No se puede exportar todavía', okText: 'Ir a auditar', okClass: 'primary',
+          body: `<p class="muted" style="margin-bottom:8px">Hay errores que bloquean el archivo. Corrígelos en Auditoría fiscal:</p><div class="stack" style="gap:6px">${snap.errors.slice(0, 15).map(e => `<div class="issue critical"><span class="ico">✕</span>${esc(e.message)}</div>`).join('')}${snap.errors.length > 15 ? `<div class="muted">… y ${snap.errors.length - 15} más.</div>` : ''}</div>` });
+        if (go) NALA.go(auditLink(g));
+        return;
+      }
+      // Si el último archivo del mes sigue vigente y nada cambió (misma huella), se reutiliza.
+      let exp = g.last_export && ['generated', 'submitted', 'accepted'].includes(g.last_export.status) && g.last_export.fingerprint === preview.fingerprint ? g.last_export : null;
+      if (!exp) {
+        if (!NALA.can('export')) { NALA.toast('Su rol no permite generar exportaciones.', 'err'); return; }
+        let accepted = []; let reason = '';
+        if (snap.warnings.length) { const r = await askWarnings(snap); if (!r) return; ({ accepted, reason } = r); }
+        exp = (await NALA.api('POST', 'exports', { ...body, accepted_warnings: accepted, reason, preview_fingerprint: preview.fingerprint })).export;
+      }
+      await download(exp, type);
+      NALA.toast(`${type === 'txt' ? 'TXT' : 'Excel'} listo: ${exp.file_name}`, 'ok');
+      NALA.route();
+    } catch (e) {
+      if (e.status === 409) { NALA.toast(e.message, 'err'); NALA.route(); } else NALA.fail(e);
+    } finally { btn.disabled = false; btn.textContent = label; }
+  }
+
   async function list(root) {
     const s = NALA.state;
     const qs = new URLSearchParams(Object.entries({ client_id: s.client, period: s.period, format: s.format }).filter(([, v]) => v));
-    const [{ exports }, zero] = await Promise.all([
+    const [{ exports }, { items }, zero] = await Promise.all([
       NALA.api('GET', `exports?${qs}`),
+      NALA.api('GET', `export-ready?${qs}`),
       s.client ? NALA.api('GET', `zero-filings?client_id=${s.client}`).catch(() => ({ filings: [] })) : Promise.resolve({ filings: [] }),
     ]);
     const zeroCard = zero.filings.length ? `<div class="card"><h2>Informativos en cero presentados</h2><div class="table-wrap"><table><tr><th>Formato</th><th>Período</th><th>Código de referencia</th><th>Presentado</th></tr>
       ${zero.filings.map(f => `<tr><td>${esc(f.format)}</td><td>${period(f.period)}</td><td class="mono">${esc(f.reference)}</td><td>${NALA.dateTime(f.submitted_at)}</td></tr>`).join('')}</table></div></div>` : '';
-    root.innerHTML = `<div class="stack"><div class="row"><button class="btn primary" id="new">+ Nueva exportación</button>${NALA.can('submit') ? '<button class="btn" id="zero" title="Para períodos sin compras ni ventas">Informativo en cero</button>' : ''}<span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
+    const readyRow = (g, i) => `<tr data-ready="${i}"><td>${esc(NALA.clientName(g.client_id))}</td><td>${esc(g.format)}</td><td>${period(g.period)}</td><td class="num">${int(g.approved)}</td>
+      <td>${g.ready ? '<span class="badge ok">✓ Auditoría completa</span>' : `<span class="badge warn">Faltan ${int(g.open)} por auditar</span>`}</td>
+      <td>${g.last_export ? `${NALA.badge(g.last_export.status)} <span class="muted">${NALA.dateTime(g.last_export.created_at)}</span>` : '<span class="muted">—</span>'}</td>
+      <td style="white-space:nowrap">${g.ready
+        ? `<button class="btn sm primary" data-exp="${i}" data-type="txt" title="Descargar el TXT para la DGII">TXT</button> <button class="btn sm" data-exp="${i}" data-type="xlsx" title="Descargar el Excel">Excel</button>${g.last_export ? ` <a class="btn sm" href="#/exportar/${g.last_export.id}" title="Ver el archivo y registrar el envío a la DGII">Envío →</a>` : ''}`
+        : `<a class="btn sm" href="${auditLink(g)}">Ir a auditar</a>`}</td></tr>`;
+    root.innerHTML = `<div class="stack"><div class="row">${NALA.can('submit') ? '<button class="btn" id="zero" title="Para períodos sin compras ni ventas">Informativo en cero</button>' : ''}<span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
+      <div class="card"><h2>Listos para exportar</h2>
+        ${items.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th>Formato</th><th>Período</th><th class="num">Aprobados</th><th>Auditoría</th><th>Último archivo</th><th></th></tr>${items.map(readyRow).join('')}</table></div>
+        <p class="muted" style="margin-top:8px">Con la auditoría completa, pulsa <b>TXT</b> o <b>Excel</b>: NALA genera el archivo del mes (o reutiliza el último si nada cambió) y lo descarga para enviarlo a la DGII.</p>`
+        : '<div class="empty">No hay comprobantes aprobados en este alcance. Aprueba comprobantes en <a href="#/auditoria">Auditoría fiscal</a>.</div>'}</div>
       ${zeroCard}
-      ${exports.length ? `<div class="table-wrap"><table><tr><th>Archivo</th><th>Empresa</th><th>Alcance</th><th>Estado</th><th class="num">Líneas</th><th>Generado</th><th>Enviado</th></tr>
-        ${exports.map(e => `<tr class="clickable" data-id="${e.id}"><td class="mono">${esc(e.file_name)}</td><td>${esc(NALA.clientName(e.client_id))}</td><td>${e.scope === 'period' ? 'Mes' : `${e.batch_ids.length} lote(s)`}</td><td>${NALA.badge(e.status)}</td><td class="num">${int(e.line_count)}</td><td>${NALA.dateTime(e.created_at)}</td><td>${NALA.dateTime(e.submitted_at)}</td></tr>`).join('')}</table></div>`
-        : '<div class="card empty">No hay exportaciones en este alcance.</div>'}</div>`;
-    root.querySelector('#new').addEventListener('click', () => NALA.go('#/exportar?nueva=1'));
+      ${exports.length ? `<div class="card"><h2>Archivos generados</h2><div class="table-wrap"><table><tr><th>Archivo</th><th>Empresa</th><th>Alcance</th><th>Estado</th><th class="num">Líneas</th><th>Generado</th><th>Enviado</th></tr>
+        ${exports.map(e => `<tr class="clickable" data-id="${e.id}"><td class="mono">${esc(e.file_name)}</td><td>${esc(NALA.clientName(e.client_id))}</td><td>${e.scope === 'period' ? 'Mes' : `${e.batch_ids.length} lote(s)`}</td><td>${NALA.badge(e.status)}</td><td class="num">${int(e.line_count)}</td><td>${NALA.dateTime(e.created_at)}</td><td>${NALA.dateTime(e.submitted_at)}</td></tr>`).join('')}</table></div></div>` : ''}</div>`;
     root.querySelector('#zero')?.addEventListener('click', () => zeroFiling());
+    root.querySelectorAll('button[data-exp]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); exportNow(items[Number(b.dataset.exp)], b.dataset.type, b); }));
     root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', () => NALA.go(`#/exportar/${tr.dataset.id}`)));
   }
 
   NALA.views.exportar = {
     title: 'Exportar DGII 606/607',
-    render(root, { id, params }) { if (id) return detail(root, id); return params.nueva ? newExport(root, params) : list(root); },
+    render(root, { id }) { if (id) return detail(root, id); return list(root); },
   };
 })();

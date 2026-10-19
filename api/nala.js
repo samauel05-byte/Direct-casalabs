@@ -53,6 +53,8 @@ const ROUTES = [
   ['POST', /^exports\/preview$/, (ctx, q, b) => exportsApi.preview(ctx, b)],
   ['POST', /^exports$/, (ctx, q, b) => exportsApi.create(ctx, b)],
   ['GET', /^exports$/, (ctx, q) => exportsApi.list(ctx, q)],
+  ['GET', /^zero-filings$/, (ctx, q) => exportsApi.zeroList(ctx, q)],
+  ['POST', /^zero-filings$/, (ctx, q, b) => exportsApi.zeroCreate(ctx, b)],
   ['GET', /^exports\/([^/]+)$/, (ctx, q, b, m) => exportsApi.detail(ctx, m[1])],
   ['GET', /^exports\/([^/]+)\/download$/, (ctx, q, b, m) => exportsApi.download(ctx, m[1], q)],
   ['POST', /^exports\/([^/]+)\/status$/, (ctx, q, b, m) => exportsApi.setStatus(ctx, m[1], b)],
@@ -95,7 +97,7 @@ module.exports = async (req, res) => {
     const ctx = await nalaContext(req);
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const result = await handler.fn(ctx, req.query || {}, body, handler.m);
-    return res.status(req.method === 'POST' && /^(batches|clients|exports)$/.test(route) ? 201 : 200).json({ ok: true, ...result });
+    return res.status(req.method === 'POST' && /^(batches|clients|exports|zero-filings)$/.test(route) ? 201 : 200).json({ ok: true, ...result });
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.status).json({ error: error.message, ...error.extra });
     console.error('[nala]', route, error);

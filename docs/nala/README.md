@@ -39,6 +39,15 @@ error). Si el último archivo queda *CARGADO-COMPLETADO* se toma como el válido
 rectificativa reemplaza al anterior. Sin operaciones en el período, los formatos
 606/607/608 se remiten de forma informativa en *Declaraciones en cero*.
 
+**Informativo en cero.** Para un período sin operaciones, *Exportar → Informativo en cero*
+guía el trámite (OFV → Declaraciones Juradas → **Declaraciones en Cero** → *Formato o
+Impuesto* → *Período* → **Presentar Declaración y/o Formato**) y guarda el código de
+referencia («El formato ha sido presentado satisfactoriamente con el código de
+referencia: …»). API: `GET/POST /api/nala/zero-filings` (permiso `submit` para registrar).
+Se guarda como evento inmutable `zero_filed` (entidad `client`, sin migración). Se
+rechaza (409) si el período tiene comprobantes **aprobados** o **sin aprobar** en ese
+formato (606/607; el 608 no se maneja en NALA) y si el código ya estaba registrado.
+
 NALA recoge esto así: la guía de la exportación lleva esos pasos; mientras está
 *enviada* muestra el cuadre de totales contra «Ver Resumen»; y al registrar un rechazo
 ofrece las alertas de la DGII con su acción a tomar. El límite de 10.000 registros por

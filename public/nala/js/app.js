@@ -30,7 +30,7 @@
     reextracted: 'Extraído de nuevo (correcciones conservadas)', reprocess_skipped: 'Reproceso omitido (aprobado/excluido)', saved: 'Guardado', approved: 'Aprobado',
     approval_reverted: 'Aprobación revertida', relocated: 'Reubicado', excluded: 'Excluido', restored: 'Restaurado', exported: 'Incluido en exportación',
     export_generated: 'Exportación generada', export_submitted: 'Enviado a DGII', export_accepted: 'Aceptado por DGII', export_rejected: 'Rechazado por DGII',
-    export_superseded: 'Exportación reemplazada', client_created: 'Empresa registrada', client_updated: 'Empresa actualizada', member_updated: 'Miembro actualizado',
+    export_superseded: 'Exportación reemplazada', zero_filed: 'Informativo en cero presentado', client_created: 'Empresa registrada', client_updated: 'Empresa actualizada', member_updated: 'Miembro actualizado',
     settings_updated: 'Configuración actualizada', retention_purged: 'Originales depurados', rnc_lookup: 'Consulta RNC',
   };
   NALA.actionLabel = a => ACTIONS[a] || String(a).replace(/_/g, ' ');

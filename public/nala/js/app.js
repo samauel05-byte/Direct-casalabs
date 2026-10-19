@@ -35,7 +35,14 @@
   };
   NALA.actionLabel = a => ACTIONS[a] || String(a).replace(/_/g, ' ');
   NALA.badge = s => { const [label, cls] = STATUS[s] || [s, '']; return `<span class="badge ${cls}">${esc(label)}</span>`; };
-  NALA.issueBadges = inv => `${inv.critical_count ? `<span class="badge crit" title="Errores críticos">✕ ${inv.critical_count}</span>` : ''}${inv.warning_count ? ` <span class="badge warn" title="Advertencias">! ${inv.warning_count}</span>` : ''}${!inv.critical_count && !inv.warning_count ? '<span class="badge ok">✓</span>' : ''}`;
+  // Una factura aprobada da sus advertencias por aceptadas: no muestra el badge
+  // "! N" (queda con cotejo verde ✓). Cubre también las aprobadas antes de que
+  // el servidor empezara a limpiar el contador al aprobar.
+  NALA.issueBadges = inv => {
+    const crit = inv.critical_count || 0;
+    const warn = inv.status === 'approved' ? 0 : (inv.warning_count || 0);
+    return `${crit ? `<span class="badge crit" title="Errores críticos">✕ ${crit}</span>` : ''}${warn ? ` <span class="badge warn" title="Advertencias">! ${warn}</span>` : ''}${!crit && !warn ? '<span class="badge ok">✓</span>' : ''}`;
+  };
 
   // ── API (misma sesión que SERP; el JWT nunca va en la URL) ─────────────
   function authHeaders() {

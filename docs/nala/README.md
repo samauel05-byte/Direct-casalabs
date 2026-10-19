@@ -26,6 +26,24 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 | Configuración | Integraciones, límites, tolerancia de conciliación, retención documental y plantillas de Excel personalizado. |
 | Asistente NALA | El chat contable y la lectura rápida 606/607/IR-17 existentes, sin cambios (`public/nala/asistente.html`). |
 
+## Envío a la DGII (después del TXT)
+
+Según el instructivo oficial de la DGII (feb. 2026): el TXT se envía por la Oficina
+Virtual → **Enviar Archivos** → *Tipo Información* (p. ej. «606 - COMPRAS DE BIENES Y
+SERVICIOS») → *Período* AAAAMM → **Continuar** → **Examinar** → **Enviar Datos**. La OFV
+responde «El archivo ha sido recibido para validación» con el **Número Referencia**
+(se registra en NALA). La validación tarda ~30 minutos; el resultado se ve en
+**Consultas → Consulta Envíos 606** (*Estatus Validación*: Recibido, En proceso,
+Completado, Error; «Ver Resumen» da los totales y el *Detalle Validación* las líneas con
+error). Si el último archivo queda *CARGADO-COMPLETADO* se toma como el válido; una
+rectificativa reemplaza al anterior. Sin operaciones en el período, los formatos
+606/607/608 se remiten de forma informativa en *Declaraciones en cero*.
+
+NALA recoge esto así: la guía de la exportación lleva esos pasos; mientras está
+*enviada* muestra el cuadre de totales contra «Ver Resumen»; y al registrar un rechazo
+ofrece las alertas de la DGII con su acción a tomar. El límite de 10.000 registros por
+archivo ya se valida al exportar (`EXCEDE_MAXIMO`).
+
 ## Facturas repetidas
 
 - **Mismo archivo otra vez** (misma huella SHA-256, en cualquier lote de la

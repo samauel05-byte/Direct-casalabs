@@ -15,6 +15,7 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 | Módulo | Qué hace |
 |---|---|
 | Panel de control | Indicadores del período (consolidado o por empresa), tendencia de 12 meses y empresas con pendientes. |
+| Período global y «Todos» | La cabecera filtra por **empresa activa · período · formato**. El botón **«Todos»** junto al período quita el filtro de mes y muestra **todos los lotes y comprobantes de todos los períodos** (útil para ver lo que falta por corregir sin elegir fecha); el panel pasa a totales de todos los períodos y la exportación (por mes para la DGII) parte del mes anterior. |
 | Dashboard por empresa | Lotes, pendientes, aprobadas, observaciones y exportaciones de la empresa activa. |
 | Empresas clientes | Las mismas empresas de SERP (`direct_clients`); registro, edición, búsqueda y configuración contable (tipos por defecto, desglose bienes/servicios, régimen, cierre). |
 | Consulta RNC | De quién es (razón social, nombre comercial), estado, actividad, régimen, facturador electrónico, aviso de Adecuación/Transformación (Consulta RNC de dgii.gov.do) y **antigüedad**: fecha de constitución o inicio de operaciones del archivo oficial `DGII_RNC.zip`. Estructura y dígito verificador se muestran aparte. Deudas, pagos y "al día" **no son públicos** (Código Tributario, art. 47): la pantalla lo explica en vez de suponerlos. |

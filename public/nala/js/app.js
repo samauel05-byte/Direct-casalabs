@@ -142,6 +142,8 @@
     const s = NALA.state;
     document.getElementById('scope-client').innerHTML = NALA.clientOptions(s.client, { includeAll: true });
     document.getElementById('scope-period').value = s.period ? `${s.period.slice(0, 4)}-${s.period.slice(4)}` : '';
+    const allBtn = document.getElementById('scope-period-all');
+    if (allBtn) { const all = !s.period; allBtn.classList.toggle('primary', all); allBtn.setAttribute('aria-pressed', all ? 'true' : 'false'); }
     document.getElementById('scope-format').value = s.format || '';
     document.getElementById('scope-chip').textContent = s.client ? 'Vista por empresa' : 'Vista consolidada';
   }
@@ -232,6 +234,7 @@
     renderScope();
     document.getElementById('scope-client').addEventListener('change', e => NALA.setScope({ client: e.target.value }));
     document.getElementById('scope-period').addEventListener('change', e => NALA.setScope({ period: e.target.value.replace('-', '') }));
+    document.getElementById('scope-period-all').addEventListener('click', () => NALA.setScope({ period: '' }));
     document.getElementById('scope-format').addEventListener('change', e => NALA.setScope({ format: e.target.value }));
     route();
   }

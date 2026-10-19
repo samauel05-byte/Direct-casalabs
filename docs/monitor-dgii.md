@@ -84,6 +84,14 @@ comprobaciones a redes internas ni a terceros.
   día); **Verificaciones** (registro paginado y filtrable, distingue Programada /
   Manual); **Configuración** (solo admin). Lee solo datos guardados (no llama a la
   DGII por visita). Color + icono + texto.
+- **Respaldo del scheduler (pg_cron de Supabase)**: un job `monitor-dgii` de
+  `pg_cron`/`pg_net` llama cada minuto a `/api/monitor/cron` con la cabecera
+  `x-monitor-secret`, leyendo el valor del Vault (`monitor_cron_secret`, el mismo
+  `MONITOR_CRON_SECRET` de Vercel). Es independiente de Cloudflare: si el Worker
+  deja de disparar (pasó el 15/10/2026), el monitor sigue comprobando. Conviven
+  los dos; el endpoint evita comprobaciones duplicadas. Alta (una sola vez):
+  `select vault.create_secret('<MONITOR_CRON_SECRET>', 'monitor_cron_secret');` y
+  `select cron.schedule('monitor-dgii', '* * * * *', $$ select net.http_post(url := 'https://app.casalabs.com.do/api/monitor/cron', headers := jsonb_build_object('x-monitor-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'monitor_cron_secret'), 'Content-Type', 'application/json'), timeout_milliseconds := 30000); $$);`
 - **Scheduler** (`worker.js` + `wrangler.toml`): el Cloudflare Worker ejecuta un
   cron `* * * * *` (1 minuto) que llama a `/api/monitor/cron` con un secreto.
   Independiente del navegador.

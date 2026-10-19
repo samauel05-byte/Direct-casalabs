@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Monitor DGII — vuelve a comprobar solo (respaldo independiente de Cloudflare)**: el panel mostraba «El monitor no reporta comprobaciones recientes» porque el Cloudflare Worker que lo disparaba cada minuto dejó de ejecutarse el 15/10. Ahora el monitor tiene un **segundo programador en Supabase (`pg_cron`)** que lo dispara cada minuto sin depender de Cloudflare: si uno falla, el otro lo mantiene vivo.
+
 - **NALA — «Todas las empresas» muestra todos los lotes sin filtro de fecha**: al elegir **Todas las empresas (consolidado)** en la cabecera, el **Período** pasa solo a **«Todos»** y ves los lotes y comprobantes de todos los meses sin tocar la fecha. Al elegir una empresa concreta vuelve a filtrar por mes (parte del mes anterior; puedes cambiarlo o pulsar «Todos»). Al abrir NALA en vista consolidada también arranca en «Todos».
 
 - **NALA — una factura aprobada ya no muestra el badge amarillo «! N»**: en la lista de auditoría, los comprobantes **aprobados** se ven con cotejo verde (✓) aunque tuvieran advertencias: al aprobar, esas advertencias quedan aceptadas y el badge «! N» deja de mostrarse. Cubre también las facturas que se habían aprobado **antes** de que el servidor empezara a limpiar el contador. (Si reviertes la aprobación, las advertencias vuelven a verse para revisarlas.)

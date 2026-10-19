@@ -185,6 +185,8 @@ El admin puede:
 
 ## Monitor DGII (disponibilidad de facturación electrónica e-CF)
 
+> **Programador:** las comprobaciones cada minuto las dispara el Cloudflare Worker (`worker.js`) **y, como respaldo independiente, un job `pg_cron` de Supabase** (`monitor-dgii`) que llama a `/api/monitor/cron` con el secreto del Vault. Ver `docs/monitor-dgii.md`.
+
 Módulo dentro de Direct para consultar el estado de los servicios de la DGII. La
 comprobación es la **“Obtención de semilla de autenticación”** e-CF: un `GET` de
 solo lectura, sin certificado ni credenciales, que **no genera transacciones

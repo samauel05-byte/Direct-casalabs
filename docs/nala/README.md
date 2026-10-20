@@ -26,6 +26,10 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 | Configuración | Integraciones, límites, tolerancia de conciliación, retención documental y plantillas de Excel personalizado. |
 | Asistente NALA | El chat contable y la lectura rápida 606/607/IR-17 existentes, sin cambios (`public/nala/asistente.html`). |
 
+## Estimación Fiscal toma el 606/607 de NALA
+
+Estimación Fiscal consulta `GET /api/ir2/resumen?…&fuente=nala` (código en `lib/nala/fiscal-summary.js`) y muestra, por empresa y año, lo **aprobado** en NALA: compras 606 por tipo de gasto (alimenta Gastos NCF y el Anexo J) y el 606/607 mensual con estado de auditoría y último archivo/referencia. Los comprobantes pendientes o excluidos **no** suman. La empresa se enlaza por RNC o cédula.
+
 ## Envío a la DGII (después del TXT)
 
 Según el instructivo oficial de la DGII (feb. 2026): el TXT se envía por la Oficina

@@ -331,6 +331,7 @@ function requestRefresh(){
 // Prefiere el token más reciente que la app guarda en sessionStorage (mismo
 // origen): tras un re-login el iframe no se recarga, así que _token quedaría
 // obsoleto. Usar primero dtoken evita el 401 por token viejo.
+const authH=tk=>{const h={Authorization:'Bearer '+tk}; if(sessionId()) h['X-Direct-Session']=sessionId(); return h;};
 const token=()=>sessionStorage.getItem('dtoken')||_token||'';
 let RNC='',NOMBRE='',ANIO=new Date().getFullYear();
 
@@ -648,7 +649,7 @@ async function load(){
   const tk=token();
   if(!tk||!RNC){renderAll();renderNala();return;}
   try{
-    const r=await fetch(`${API}?rnc=${encodeURIComponent(RNC)}&anio=${ANIO}&tipo=dgii-modulos`,{headers:{Authorization:'Bearer '+tk}});
+    const r=await fetch(`${API}?rnc=${encodeURIComponent(RNC)}&anio=${ANIO}&tipo=dgii-modulos`,{headers:authH(tk)});
     if(r.ok){const j=await r.json();if(j.record?.data){Object.assign(DATA,j.record.data);normalizeGastos();}}
   }catch{}
   renderAll();
@@ -711,7 +712,7 @@ async function loadNala(){
   if(!tk||!rnc){ renderNala(); return; }
   NALA_SRC=null; NALA_ERR=''; renderNala();
   try{
-    const r=await fetch(`${API}?rnc=${encodeURIComponent(rnc)}&anio=${anio}&tipo=dgii-modulos&fuente=nala`,{headers:{Authorization:'Bearer '+tk}});
+    const r=await fetch(`${API}?rnc=${encodeURIComponent(rnc)}&anio=${anio}&tipo=dgii-modulos&fuente=nala`,{headers:authH(tk)});
     if(rnc!==RNC||anio!==ANIO) return; // cambió de empresa/año mientras llegaba
     if(!r.ok){ NALA_ERR=r.status===403?'No tienes acceso a Estimación Fiscal.':'No se pudo consultar NALA ('+r.status+').'; renderNala(); return; }
     NALA_SRC=await r.json();

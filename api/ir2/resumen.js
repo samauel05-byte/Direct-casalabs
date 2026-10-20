@@ -18,6 +18,19 @@ module.exports = async (req, res) => {
   const tenantId = session.tenantId;
 
   try {
+    // Estimación Fiscal pide lo que NALA tiene aprobado (606/607) de la empresa y el año:
+    // solo lectura, mismo permiso y mismo tenant que el resto de este endpoint.
+    if (req.method === 'GET' && req.query?.fuente === 'nala') {
+      if (!req.query.rnc) return res.status(400).json({ error: 'rnc requerido' });
+      try {
+        const summary = await require('../../lib/nala/fiscal-summary').summarize({ tenantId, rnc: req.query.rnc, anio: req.query.anio || new Date().getFullYear() });
+        return res.json({ ok: true, ...summary });
+      } catch (e) {
+        if (e.status === 400) return res.status(400).json({ error: e.message });
+        throw e;
+      }
+    }
+
     if (req.method === 'GET') {
       const { rnc, anio, tipo = 'ir2' } = req.query;
       if (!rnc) return res.status(400).json({ error: 'rnc requerido' });

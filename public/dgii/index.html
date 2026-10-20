@@ -83,6 +83,17 @@ select option{background:var(--surf2)}
 
 .btn-add{background:rgba(32,189,90,.09);border:1px solid rgba(32,189,90,.32);color:var(--green);padding:4px 11px;border-radius:6px;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit}
 .btn-danger{background:transparent;border:none;color:var(--red);padding:0 5px;cursor:pointer;font-size:13px;font-family:inherit;line-height:1}
+/* Datos que vienen de NALA (606/607 aprobado) */
+.nala-box{margin:0 0 12px;padding:10px 12px;border:1px solid rgba(61,139,255,.35);border-radius:8px;background:rgba(61,139,255,.06);font-size:12px;color:var(--fg2)}
+.nala-box h4{margin:0 0 4px;font-size:12px;color:var(--acc3);font-family:var(--font-head)}
+.nala-box .ok{color:var(--green);font-weight:700}.nala-box .warn{color:var(--warn);font-weight:700}
+.nala-box button{margin-left:6px}
+.tag-nala{display:inline-block;padding:1px 6px;border-radius:10px;background:rgba(61,139,255,.15);color:var(--acc3);font-size:9px;font-weight:700;letter-spacing:.04em;flex:none}
+.nala-tbl{width:100%;border-collapse:collapse;margin-top:8px}
+.nala-tbl th{position:static;text-align:left;padding:4px 8px;font-size:10px;color:var(--fg3);text-transform:uppercase;border-bottom:1px solid var(--bdr)}
+.nala-tbl td{padding:4px 8px;border-bottom:1px solid var(--bdr);white-space:nowrap}
+.nala-tbl td.r,.nala-tbl th.r{text-align:right;font-variant-numeric:tabular-nums}
+.nala-tbl tr.tot td{font-weight:700;color:var(--acc3);border-top:2px solid var(--bdr2)}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>/* Tipografia de marca Direct: Josefin Sans en titulos, Poppins en el resto */:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style></head>
 <body>
@@ -123,6 +134,7 @@ select option{background:var(--surf2)}
       <button class="btn-add" onclick="goAnexoJ()">Llenar Anexo J</button>
     </div>
   </div>
+  <div id="nala-gastos"></div>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
@@ -243,6 +255,7 @@ select option{background:var(--surf2)}
       <button class="btn-danger" onclick="toggleEnviosImport(true)">Cancelar</button>
     </div>
   </div>
+  <div id="nala-envios"></div>
   <div class="tbl-wrap">
     <table>
       <thead><tr>
@@ -329,7 +342,7 @@ const MODS={
     nums:new Set(['monto','cantidad_ncf']),
     render(r,i){
       return`<tr>
-        <td>${inp(r,'tipo_gasto',i,'gastos',260)}</td>
+        <td><div style="display:flex;gap:6px;align-items:center">${r.origen==='nala'?'<span class="tag-nala" title="Viene de NALA (606 aprobado). Si lo editas, pasa a ser tuyo.">NALA</span>':''}${inp(r,'tipo_gasto',i,'gastos',260)}</div></td>
         <td>${ninp(r,'monto',i,'gastos',150)}</td>
         <td>${ninp(r,'cantidad_ncf',i,'gastos',120)}</td>
         <td><button class="btn-danger" onclick="delRow('gastos',${i})">✕</button></td>
@@ -495,7 +508,8 @@ function normalizeGastos(){
   DATA.gastos=(DATA.gastos||[]).map(r=>({
     tipo_gasto:r.tipo_gasto||'Sin clasificar',
     monto:r.monto ?? r.mtotal ?? (n(r.mserv)+n(r.mbienes)),
-    cantidad_ncf:r.cantidad_ncf ?? (r.ncf ? 1 : 0)
+    cantidad_ncf:r.cantidad_ncf ?? (r.ncf ? 1 : 0),
+    origen:r.origen==='nala'?'nala':''
   }));
 }
 
@@ -527,6 +541,7 @@ function onCell(el){
   const{i,f:fld,m:mod}=el.dataset;
   const isNum=(MODS[mod]?.nums||new Set()).has(fld);
   DATA[mod][i][fld]=isNum?n(el.value):el.value;
+  if(mod==='gastos'&&DATA.gastos[i].origen==='nala') DATA.gastos[i].origen=''; // editada a mano: ya no se pisa
   // auto-calc ret adquirencia
   if(mod==='retenciones'&&(fld==='monto_ventas'||fld==='pct_ret')){
     DATA[mod][i].monto_retenido=Math.round(n(DATA[mod][i].monto_ventas)*n(DATA[mod][i].pct_ret))/100;
@@ -631,12 +646,13 @@ function applyEnviosImport(){
 /* ── API ── */
 async function load(){
   const tk=token();
-  if(!tk||!RNC){renderAll();return;}
+  if(!tk||!RNC){renderAll();renderNala();return;}
   try{
     const r=await fetch(`${API}?rnc=${encodeURIComponent(RNC)}&anio=${ANIO}&tipo=dgii-modulos`,{headers:{Authorization:'Bearer '+tk}});
     if(r.ok){const j=await r.json();if(j.record?.data){Object.assign(DATA,j.record.data);normalizeGastos();}}
   }catch{}
   renderAll();
+  loadNala();
 }
 
 async function saveAll(){
@@ -678,6 +694,87 @@ async function goAnexoJ(){
 
 function showBadge(){const b=document.getElementById('sbadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000);}
 
+/* ── NALA → Estimación Fiscal ──
+   El 606/607 que NALA audita (solo lo APROBADO) se trae solo al elegir empresa y año:
+   · Gastos NCF se llena con las compras (606) por tipo de gasto. Las filas que vienen de
+     NALA llevan la etiqueta NALA y se refrescan en cada carga; si las editas a mano pasan
+     a ser tuyas y ya no se pisan. Si ya tienes filas propias, se avisa y NALA no las toca.
+   · Consulta Envíos muestra el 606/607 mes a mes (aprobado, pendiente, totales, archivo). */
+let NALA_SRC=null,NALA_ERR='',NALA_SYNC='';
+const MES=['','ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const perTxt=p=>(MES[parseInt(String(p).slice(4),10)]||'')+' '+String(p).slice(0,4);
+const EST={generated:'Generado',submitted:'Enviado',accepted:'Aceptado',rejected:'Rechazado'};
+const fdate=d=>{ if(!d) return ''; const t=new Date(d); return isNaN(t)?'':t.toLocaleDateString('es-DO'); };
+const escH=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function loadNala(){
+  const tk=token(); const rnc=RNC, anio=ANIO;
+  if(!tk||!rnc){ renderNala(); return; }
+  NALA_SRC=null; NALA_ERR=''; renderNala();
+  try{
+    const r=await fetch(`${API}?rnc=${encodeURIComponent(rnc)}&anio=${anio}&tipo=dgii-modulos&fuente=nala`,{headers:{Authorization:'Bearer '+tk}});
+    if(rnc!==RNC||anio!==ANIO) return; // cambió de empresa/año mientras llegaba
+    if(!r.ok){ NALA_ERR=r.status===403?'No tienes acceso a Estimación Fiscal.':'No se pudo consultar NALA ('+r.status+').'; renderNala(); return; }
+    NALA_SRC=await r.json();
+    applyNalaGastos();
+  }catch(e){ if(rnc===RNC&&anio===ANIO){ NALA_ERR='No se pudo consultar NALA (sin conexión).'; } }
+  renderNala();
+}
+function nalaRows(){ return (NALA_SRC?.gastos||[]).map(g=>({tipo_gasto:g.tipo_gasto,monto:n(g.monto),cantidad_ncf:g.cantidad_ncf,origen:'nala'})); }
+// Llena Gastos NCF con lo de NALA si no hay filas propias; guarda en silencio si cambió.
+function applyNalaGastos(){
+  NALA_SYNC='';
+  if(!NALA_SRC||!NALA_SRC.client) return;
+  const fresh=nalaRows(); const cur=DATA.gastos||[];
+  const mine=cur.filter(r=>r.origen!=='nala');
+  if(mine.length){ NALA_SYNC='manual'; return; }
+  const same=JSON.stringify(cur.map(r=>[r.tipo_gasto,n(r.monto),n(r.cantidad_ncf)]))===JSON.stringify(fresh.map(r=>[r.tipo_gasto,r.monto,r.cantidad_ncf]));
+  DATA.gastos=fresh; renderMod('gastos'); NALA_SYNC='auto';
+  if(!same) saveQuiet();
+}
+function replaceGastosNala(){
+  if(!NALA_SRC||!NALA_SRC.client) return;
+  if(!confirm('Esto reemplaza las filas de Gastos NCF que escribiste a mano por lo que tiene NALA (606 aprobado). ¿Continuar?')) return;
+  DATA.gastos=nalaRows(); NALA_SYNC='auto'; renderMod('gastos'); renderNala(); saveQuiet();
+}
+// Guardado silencioso (sin alertas): mantiene el registro al día para Anexo J / IR-2.
+async function saveQuiet(){
+  try{
+    const ri=document.getElementById('rnc-inp'); if(ri) RNC=ri.value.trim();
+    if(!token()||!RNC) return;
+    const h={Authorization:'Bearer '+token(),'Content-Type':'application/json'}; if(sessionId()) h['X-Direct-Session']=sessionId();
+    const r=await fetch(API,{method:'POST',headers:h,body:JSON.stringify({rnc:RNC,anio:ANIO,nombre:NOMBRE,tipo:'dgii-modulos',data:DATA})});
+    if(r.ok) showBadge();
+  }catch{}
+}
+function renderNala(){
+  const g=document.getElementById('nala-gastos'), e=document.getElementById('nala-envios');
+  if(!g||!e) return;
+  const box=(html)=>`<div class="nala-box">${html}</div>`;
+  let msg='';
+  if(!RNC) msg=box('<h4>NALA</h4>Elige una empresa para traer su 606/607 aprobado.');
+  else if(NALA_ERR) msg=box(`<h4>NALA</h4><span class="warn">${escH(NALA_ERR)}</span> <button class="btn-add" onclick="loadNala()">Reintentar</button>`);
+  else if(!NALA_SRC) msg=box('<h4>NALA</h4>Consultando el 606/607 aprobado…');
+  else if(!NALA_SRC.client) msg=box(`<h4>NALA</h4>Esta empresa (RNC ${escH(RNC)}) no está registrada en NALA, así que no hay 606/607 que traer. Regístrala en NALA → Empresas clientes y cárgale sus facturas.`);
+  if(msg){ g.innerHTML=msg; e.innerHTML=msg; return; }
+  const r6=NALA_SRC.resumen['606']||{}, r7=NALA_SRC.resumen['607']||{};
+  const aud=(r)=>`${r.meses_completos||0} mes(es) con auditoría completa`+(r.pendientes?` · <span class="warn">${r.pendientes} comprobante(s) sin aprobar en ${r.meses_en_proceso} mes(es)</span>`:'');
+  const sync = NALA_SYNC==='auto' ? '<span class="ok">✓ Gastos NCF se llenó solo con esto</span>'
+    : NALA_SYNC==='manual' ? '<span class="warn">Tienes filas escritas a mano en Gastos NCF: NALA no las tocó.</span> <button class="btn-add" onclick="replaceGastosNala()">Reemplazar con NALA</button>' : '';
+  const head=`<h4>Desde NALA · ${escH(NALA_SRC.client.nombre)} · ${NALA_SRC.anio}</h4>`;
+  if(!r6.aprobados) g.innerHTML=box(head+`NALA todavía no tiene compras (606) aprobadas de ${NALA_SRC.anio}. En cuanto las auditen, aparecen aquí solas.<br>${aud(r6)}`);
+  else g.innerHTML=box(head+`606 aprobado: <b>${r6.aprobados}</b> comprobantes · base RD$ <b>${f(r6.total_monto)}</b> · ITBIS RD$ ${f(r6.itbis)}<br>${aud(r6)}<br>${sync} <button class="btn-add" onclick="loadNala()" title="Volver a consultar NALA">Actualizar</button>`);
+  // Pestaña Envíos: tabla mes a mes
+  const fila=m=>{ const x=m.export;
+    const aud=m.auditoria==='completa'?'<span class="ok">✓ Completa</span>':m.auditoria==='en_proceso'?'<span class="warn">En proceso</span>':'—';
+    const arch=x?`${EST[x.estado]||escH(x.estado)}${x.fecha_envio?' · '+fdate(x.fecha_envio):''}${x.referencia?' · ref '+escH(x.referencia):''}`:'<span style="color:var(--fg3)">sin archivo</span>';
+    return `<tr><td>${perTxt(m.period)}</td><td>${m.format}</td><td class="r">${m.aprobados}</td><td class="r">${m.pendientes||''}</td><td class="r">${f(m.total_monto)}</td><td class="r">${f(m.itbis)}</td><td class="r">${f(n(m.itbis_retenido)+n(m.isr_retenido))}</td><td>${aud}</td><td>${arch}</td></tr>`; };
+  const tot=(fmt,r)=>r.aprobados||r.pendientes?`<tr class="tot"><td colspan="2">Total ${fmt}</td><td class="r">${r.aprobados}</td><td class="r">${r.pendientes||''}</td><td class="r">${f(r.total_monto)}</td><td class="r">${f(r.itbis)}</td><td colspan="3"></td></tr>`:'';
+  const rows=NALA_SRC.meses;
+  e.innerHTML=box(head+`Lo que NALA tiene <b>aprobado</b> de 606 y 607 en ${NALA_SRC.anio}, mes a mes (se actualiza solo). Los montos son la base sin impuestos, en pesos.`+
+    (rows.length?`<div style="overflow:auto"><table class="nala-tbl"><thead><tr><th>Período</th><th>Formato</th><th class="r">Aprobados</th><th class="r">Sin aprobar</th><th class="r">Total monto</th><th class="r">ITBIS</th><th class="r">Retenido</th><th>Auditoría</th><th>Archivo en NALA</th></tr></thead><tbody>${rows.map(fila).join('')}${tot('606',r6)}${tot('607',r7)}</tbody></table></div>`:`<br>NALA aún no tiene comprobantes de ${NALA_SRC.anio} para esta empresa.`)+
+    ` <button class="btn-add" onclick="loadNala()">Actualizar</button>`);
+}
+
 /* ── Company / year selectors ── */
 function renderCoSel(){
   const sel=document.getElementById('co-select');
@@ -700,11 +797,13 @@ function changeCompany(rnc){
   const ri=document.getElementById('rnc-inp');
   if(ri) ri.value=RNC;
   MODKEYS.forEach(k=>DATA[k]=[]);
+  NALA_SRC=null; NALA_ERR='';
   load();
 }
 function changeAnio(y){
   ANIO=parseInt(y)||new Date().getFullYear();
   MODKEYS.forEach(k=>DATA[k]=[]);
+  NALA_SRC=null; NALA_ERR='';
   load();
 }
 

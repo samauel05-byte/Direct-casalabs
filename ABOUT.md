@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — «Asistente NALA (chat, IR-17)» oculto por ahora**: se quitó del menú lateral (sección Herramientas) y su dirección directa redirige al panel. El código sigue en el proyecto; para volver a mostrarlo basta quitar el indicador `hidden` de su entrada en `NAV` (`public/nala/js/app.js`).
+
 - **Estimación Fiscal más sólida y con guardado automático**: (1) al escribir en cualquier tabla ya **no se pierde el cursor** en cada letra (antes la tabla se reconstruía con cada tecla); (2) **se guarda solo** ~1.5 s después de cada cambio, con un indicador junto a Guardar («● Cambios sin guardar» → «✓ Guardado») y aviso si intentas cerrar con cambios pendientes; (3) **protección contra pisar datos**: si la carga de lo guardado falla (sesión vencida, sin red) no se guarda nada encima y te lo avisa en rojo, en vez de sobrescribir con una pantalla vacía; la sesión se renueva sola y reintenta; (4) al **escribir un RNC** que coincide con una de tus empresas, se selecciona y carga sola; (5) **eliminar una fila pide confirmación**; (6) los totales se actualizan al instante.
 
 - **Estimación Fiscal: el botón del Anexo J ya no te saca de la pantalla**: antes «Llenar Anexo J» (junto a «Agregar tipo de gasto») cambiaba la pantalla al Anexo J del IR-2 y, al volver, caías en el resumen del IR-2 en vez de en Estimación. Ahora se llama **«Anexo J del IR-2 ↗»**, pide confirmación y abre el Anexo J en una **pestaña nueva**; la Estimación Fiscal (el 606/607 y los demás módulos que usas para enviar a la DGII) queda intacta donde estaba. Esa pestaña tiene un botón «Cerrar (volver a Estimación Fiscal)». Además, las consultas de Estimación ahora envían la sesión correctamente (antes daban 401 y NALA no cargaba).

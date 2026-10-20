@@ -162,15 +162,17 @@
     ['panel', '📊', 'Panel de control'], ['empresa', '🏢', 'Dashboard por empresa'], ['clientes', '🗂️', 'Empresas clientes'], ['rnc', '🔎', 'Consulta RNC'],
     ['lotes', '📥', 'Carga masiva y lotes'], ['auditoria', '🧾', 'Auditoría fiscal'], ['exportar', '📤', 'Exportar DGII 606/607'],
     ['equipo', '👥', 'Equipo y oficiales', 'team_manage', 'Administración'], ['config', '⚙️', 'Configuración', 'settings_manage', 'Administración'],
-    ['asistente', '💬', 'Asistente NALA (chat, IR-17)', null, 'Herramientas', true],
+    // 7º valor: true = oculto por ahora (se quita del menú y se bloquea por URL; para volver a mostrarlo basta quitar el true).
+    ['asistente', '💬', 'Asistente NALA (chat, IR-17)', null, 'Herramientas', true, true],
   ];
   // 6º valor: true = solo administradores (oculto del menú y bloqueado por URL).
   // Permiso requerido por vista (para ocultar del menú y bloquear el acceso directo por URL).
   NALA.navPerm = key => (NAV.find(n => n[0] === key) || [])[3] || null;
   NALA.navAdmin = key => !!((NAV.find(n => n[0] === key) || [])[5]);
+  NALA.navHidden = key => !!((NAV.find(n => n[0] === key) || [])[6]);
   function renderNav(active) {
     let section = '';
-    document.getElementById('nav').innerHTML = NAV.filter(([, , , perm, , adminOnly]) => (!perm || NALA.can(perm)) && (!adminOnly || NALA.state.me?.is_admin)).map(([key, icon, label, , sec]) => {
+    document.getElementById('nav').innerHTML = NAV.filter(([, , , perm, , adminOnly, hidden]) => !hidden && (!perm || NALA.can(perm)) && (!adminOnly || NALA.state.me?.is_admin)).map(([key, icon, label, , sec]) => {
       const sep = sec && sec !== section ? ((section = sec), `<div class="sep">${esc(sec)}</div>`) : '';
       return `${sep}<button class="${key === active ? 'active' : ''}" data-nav="${key}"><span>${icon}</span>${esc(label)}</button>`;
     }).join('');
@@ -188,6 +190,7 @@
     const needed = NALA.navPerm(view);
     if (needed && !NALA.can(needed)) { NALA.go('#/panel'); return; }
     if (NALA.navAdmin(view) && !NALA.state.me?.is_admin) { NALA.go('#/panel'); return; }
+    if (NALA.navHidden(view)) { NALA.go('#/panel'); return; }
     const def = NALA.views[view] || NALA.views.panel;
     if (NALA.beforeLeave && !(await NALA.beforeLeave())) return;
     NALA.beforeLeave = null;

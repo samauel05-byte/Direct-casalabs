@@ -131,7 +131,7 @@ select option{background:var(--surf2)}
     <span class="sec-lbl">Gastos NCF — Resumen por tipo de gasto</span>
     <div style="display:flex;gap:8px">
       <button class="btn-add" onclick="addRow('gastos')">+ Agregar tipo de gasto</button>
-      <button class="btn-add" onclick="goAnexoJ()">Llenar Anexo J</button>
+      <button class="btn-add" onclick="goAnexoJ()" title="Opcional: pasa estos gastos al Anexo J del IR-2 (abre otra pestaña)">Anexo J del IR-2 ↗</button>
     </div>
   </div>
   <div id="nala-gastos"></div>
@@ -687,10 +687,15 @@ async function saveAll(){
 }
 
 async function goAnexoJ(){
+  if(!RNC){alert('Elige primero una empresa.');return;}
+  if(!confirm('Esto guarda y abre el Anexo J del IR-2 en una pestaña nueva (no cambia esta pantalla). ¿Continuar?')) return;
+  // Se abre antes del await para que el navegador no lo bloquee como ventana emergente.
+  const w=window.open('about:blank','_blank');
+  if(!w){alert('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio.');return;}
   if(await saveAll()){
     const q=new URLSearchParams({rnc:RNC,nombre:NOMBRE,anio:ANIO,anexo:'J',origen:'gastos'});
-    location.href='/ir2/anexos.html?'+q;
-  }
+    w.location.href='/ir2/anexos.html?'+q;
+  } else { try{w.close();}catch{} }
 }
 
 function showBadge(){const b=document.getElementById('sbadge');b.classList.add('show');setTimeout(()=>b.classList.remove('show'),2000);}

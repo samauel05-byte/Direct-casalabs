@@ -12,6 +12,8 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 
 ## Módulos
 
+> El **Asistente NALA (chat, IR-17)** está oculto temporalmente (sin entrada en el menú y su URL `#/asistente` redirige al panel). Para reactivarlo, quita el 7º valor `true` de su entrada en `NAV` (`public/nala/js/app.js`).
+
 | Módulo | Qué hace |
 |---|---|
 | Panel de control | Indicadores del período (consolidado o por empresa), tendencia de 12 meses y empresas con pendientes. |

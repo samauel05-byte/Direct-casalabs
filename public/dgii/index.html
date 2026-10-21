@@ -438,7 +438,7 @@ const MODS={
     render(r,i){
       return`<tr>
         <td class="n">${i+1}</td>
-        <td>${inp(r,'periodo',i,'envios606',70)}</td>
+        <td><div style="display:flex;gap:6px;align-items:center">${r.origen==='nala'?'<span class="tag-nala" title="Viene de NALA (606/607 aprobado). Si lo editas, pasa a ser tuyo.">NALA</span>':''}${inp(r,'periodo',i,'envios606',70)}</div></td>
         <td>${inp(r,'tipo',i,'envios606',90)}</td>
         <td>${inp(r,'fecha_envio',i,'envios606',90)}</td>
         <td>${inp(r,'estado',i,'envios606',80)}</td>
@@ -544,7 +544,7 @@ function onCell(el){
   const{i,f:fld,m:mod}=el.dataset;
   const isNum=(MODS[mod]?.nums||new Set()).has(fld);
   DATA[mod][i][fld]=isNum?n(el.value):el.value;
-  if(mod==='gastos'&&DATA.gastos[i].origen==='nala') DATA.gastos[i].origen=''; // editada a mano: ya no se pisa
+  if((mod==='gastos'||mod==='envios606')&&DATA[mod][i].origen==='nala') DATA[mod][i].origen=''; // editada a mano: ya no se pisa
   // auto-calc ret adquirencia
   if(mod==='retenciones'&&(fld==='monto_ventas'||fld==='pct_ret')){
     DATA[mod][i].monto_retenido=Math.round(n(DATA[mod][i].monto_ventas)*n(DATA[mod][i].pct_ret))/100;
@@ -755,6 +755,7 @@ async function loadNala(){
     if(!r.ok){ NALA_ERR=r.status===403?'No tienes acceso a Estimación Fiscal.':'No se pudo consultar NALA ('+r.status+').'; renderNala(); return; }
     NALA_SRC=await r.json();
     applyNalaGastos();
+    applyNalaEnvios();
   }catch(e){ if(rnc===RNC&&anio===ANIO){ NALA_ERR='No se pudo consultar NALA (sin conexión).'; } }
   renderNala();
 }
@@ -768,6 +769,26 @@ function applyNalaGastos(){
   if(mine.length){ NALA_SYNC='manual'; return; }
   const same=JSON.stringify(cur.map(r=>[r.tipo_gasto,n(r.monto),n(r.cantidad_ncf)]))===JSON.stringify(fresh.map(r=>[r.tipo_gasto,r.monto,r.cantidad_ncf]));
   DATA.gastos=fresh; renderMod('gastos'); NALA_SYNC='auto';
+  if(!same) saveQuiet();
+}
+// Histórico de envíos: una fila por mes y formato con lo APROBADO en NALA. Las filas que escribiste o
+// importaste de la DGII no se tocan; las de NALA (etiqueta NALA) se refrescan en cada carga.
+function nalaEnvios(){
+  return (NALA_SRC?.meses||[]).filter(m=>m.aprobados>0).map(m=>{ const x=m.export;
+    return {origen:'nala',periodo:m.period,tipo:m.format,
+      fecha_envio:x&&x.fecha_envio?fdate(x.fecha_envio):'',
+      estado:x?(EST[x.estado]||x.estado):(m.auditoria==='completa'?'Listo para enviar':'En auditoría'),
+      nro_reg:m.aprobados,total_monto:n(m.total_monto),total_itbis:n(m.itbis),total_ret:n(m.itbis_retenido)+n(m.isr_retenido),
+      ref_dgii:x&&x.referencia?x.referencia:'',
+      obs:m.pendientes?`Faltan ${m.pendientes} por aprobar en NALA`:(m.auditoria==='completa'?'Auditoría completa en NALA':'')}; });
+}
+function applyNalaEnvios(){
+  if(!NALA_SRC||!NALA_SRC.client) return;
+  const mine=(DATA.envios606||[]).filter(r=>r.origen!=='nala'), old=(DATA.envios606||[]).filter(r=>r.origen==='nala');
+  const fresh=nalaEnvios();
+  const key=r=>JSON.stringify([r.periodo,r.tipo,r.fecha_envio,r.estado,n(r.nro_reg),n(r.total_monto),n(r.total_itbis),n(r.total_ret),r.ref_dgii,r.obs]);
+  const same=JSON.stringify(old.map(key))===JSON.stringify(fresh.map(key));
+  DATA.envios606=[...fresh,...mine]; renderMod('envios606');
   if(!same) saveQuiet();
 }
 function replaceGastosNala(){

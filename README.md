@@ -105,6 +105,7 @@ Contraseña del usuario (solo en memoria del navegador)
 | **Estimación Fiscal** | Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA |
 
 **Estimación Fiscal ← NALA**: `GET /api/ir2/resumen?rnc=…&anio=…&tipo=dgii-modulos&fuente=nala` (mismo permiso que Estimación; sin función nueva por el límite de 12 de Vercel Hobby) devuelve, vía `lib/nala/fiscal-summary.js`, el resumen **solo de comprobantes aprobados** de la empresa NALA con ese RNC/cédula en el año: `meses` (por período y formato: aprobados, pendientes, total, ITBIS, retenciones, auditoría completa/en proceso, último archivo y referencia), `gastos` (606 por tipo de bienes y servicios) y `resumen`. `public/dgii/index.html` lo consulta al elegir empresa/año, llena Gastos NCF (filas con `origen:'nala'`, que no pisan filas manuales) y muestra la tabla mensual en Envíos. Empresa sin registro en NALA → `client:null`.
+El histórico `envios606` se completa con `nalaEnvios()` (una fila por `meses[]` con aprobados > 0, `origen:'nala'`); `applyNalaEnvios()` reemplaza solo las filas `origen:'nala'` y conserva las manuales/importadas.
 
 El botón «Anexo J del IR-2 ↗» de Gastos NCF pide confirmación, guarda y abre `/ir2/anexos.html?…&origen=gastos` con `window.open` en pestaña nueva (no reemplaza el iframe de Estimación); con `origen=gastos` el botón de volver de esa página cierra la pestaña.
 

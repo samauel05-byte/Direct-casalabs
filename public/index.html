@@ -1557,12 +1557,13 @@ function openCami() {
   if (!_camiWin) toast('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio para abrir CAMI.','warn');
 }
 
+// NALA también se abre en su propia pestaña (como CAMI): si ya hay una abierta se le
+// da el foco sin recargarla. Esa pestaña usa esta como shell (sesión y envío a la DGII).
+let _nalaWin=null;
 function openNala() {
-  const frame=document.getElementById('nala-frame');
-  if (!frame.src || frame.src==='about:blank' || !frame.src.includes('nala')) {
-    frame.src='/nala/index.html';
-  }
-  show('view-nala');
+  if (_nalaWin && !_nalaWin.closed) { try { _nalaWin.focus(); return; } catch(e) {} }
+  _nalaWin=window.open('/nala/index.html','serp-nala');
+  if (!_nalaWin) toast('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio para abrir NALA.','warn');
 }
 
 function openNomina() {
@@ -1640,8 +1641,9 @@ window.addEventListener('message', e => {
   // de NALA y con la bóveda abierta. El archivo se adjunta a mano: la DGII no
   // permite adjuntarlo por código.
   if (e.data.action === 'nala-open-dgii-envio') {
-    if (e.source !== document.getElementById('nala-frame')?.contentWindow) return;
-    const reply = (ok, company) => { const fr = document.getElementById('nala-frame'); if (fr && fr.contentWindow) fr.contentWindow.postMessage({ action:'nala-dgii-envio-result', ok: !!ok, company: company || '' }, location.origin); };
+    if (e.source !== document.getElementById('nala-frame')?.contentWindow && e.source !== _nalaWin) return;
+    const from = e.source;
+    const reply = (ok, company) => { try { from.postMessage({ action:'nala-dgii-envio-result', ok: !!ok, company: company || '' }, location.origin); } catch (_) { /* pestaña cerrada */ } };
     const rnc = String(e.data.rnc || '').trim();
     if (!rnc) { toast('La exportación no trae RNC', 'warn'); reply(false); return; }
     if (!masterKey) { toast('Abre la bóveda (ingresa tu contraseña) para enviar a la DGII', 'warn'); reply(false); return; }

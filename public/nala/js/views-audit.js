@@ -704,13 +704,6 @@
       try { await NALA.api('POST', `invoices/${inv.id}/restore`, { reason: '' }); NALA.toast('Restaurado', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });
 
-    // Concurrent editing: hold a short lock while the workspace is open.
-    if (editable) {
-      const lock = () => NALA.api('POST', `invoices/${inv.id}/lock`).catch(e => { if (e.status === 423) { NALA.toast(e.message, 'err'); NALA.route(); } });
-      await lock();
-      const beat = setInterval(lock, 60000);
-      onCleanup(() => { clearInterval(beat); NALA.api('DELETE', `invoices/${inv.id}/lock`).catch(() => {}); });
-    }
   }
 
   NALA.views.auditoria = {

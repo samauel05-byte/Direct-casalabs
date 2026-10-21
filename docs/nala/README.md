@@ -231,7 +231,7 @@ npm run test:nala
 - `tests/nala/flow.test.js` — flujo completo por API sobre Postgres + PostgREST
   reales: permisos y aislamiento entre empresas operadoras, idempotencia,
   ZIP/PDF/RAR/duplicados, reintentos, recuperación de trabajos, reproceso sin
-  duplicar, bloqueo y versión, aprobación con advertencias, reubicación,
+  duplicar, control de versión (sin bloqueo de edición), aprobación con advertencias, reubicación,
   reversión, conciliación de indicadores, exportación 606/607, descarga de TXT
   y Excel, estados de envío y rutas existentes de SERP.
 - `tests/nala/ui.test.js` — Chromium: carga, procesamiento, auditoría, aprobación

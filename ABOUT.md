@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — el Excel se descarga con el nombre «606 CLIENTE 202608»**: al descargar el Excel de una exportación, el archivo se llama ahora **formato + nombre del cliente en MAYÚSCULAS + período**, por ejemplo `606 LATVIA 202608.xlsx` (o `607 …`). El Excel personalizado lleva el mismo nombre con «PERSONALIZADO» al final. Se quitan del nombre los caracteres que Windows no permite. El TXT conserva el nombre oficial de la DGII.
+
 - **NALA — la Moneda ya no se elige: es siempre DOP**: en la pantalla de auditoría el campo **Moneda** dejó de ser una lista (Sin confirmar, DOP, USD, EUR…) y ahora muestra **DOP fijo, sin poder cambiarlo**. Se quitaron también los campos de símbolo, tasa de cambio, fecha y fuente de la tasa, que ya no aplican.
 
 - **NALA — el TXT (y el Excel) salen en el orden en que se subió el lote**: antes las líneas del TXT/Excel se ordenaban por fecha del comprobante y NCF, lo que desacomodaba las facturas respecto a como se cargaron. Ahora el orden es **obligatorio y es el de carga**: primero por lote, luego por documento (el que se subió antes va primero) y dentro de cada documento por **página**, exactamente como aparecen en la Auditoría. La vista previa, el TXT, el Excel y la hoja de control comparten ese mismo orden. Aplica a las exportaciones que se generen de ahora en adelante (las ya generadas quedan como están).

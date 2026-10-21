@@ -98,6 +98,17 @@ test('validate: a repeated invoice is blocked with a clear message; the original
   assert.equal(original.issues.find(i => i.code === 'COPIA_POSTERIOR').severity, 'info');
 });
 
+test('606 TXT: las líneas salen en el ORDEN DE CARGA del lote (documento y página), no por fecha ni NCF', () => {
+  const mk = (id, ncf, fecha, extra) => approved({ ...base606, ncf, fecha_comprobante: fecha }, { id, ...extra });
+  const snap = formats.buildSnapshot({ format: '606', period: '202608', client, invoices: [
+    mk('x3', 'B0100000003', '2026-08-01', { _batch_at: '2026-09-01T10:00', _doc_at: '2026-09-01T10:00', document_id: 'd1', page_from: 3, page_to: 3 }),
+    mk('x1', 'B0100000009', '2026-08-30', { _batch_at: '2026-09-01T10:00', _doc_at: '2026-09-01T10:00', document_id: 'd1', page_from: 1, page_to: 1 }),
+    mk('y1', 'B0100000001', '2026-08-02', { _batch_at: '2026-09-01T10:00', _doc_at: '2026-09-01T10:05', document_id: 'd2', page_from: 1, page_to: 1 }),
+    mk('x2', 'B0100000005', '2026-08-15', { _batch_at: '2026-09-01T10:00', _doc_at: '2026-09-01T10:00', document_id: 'd1', page_from: 2, page_to: 2 }),
+  ] });
+  assert.deepEqual(snap.lines.map(l => l.invoice_id), ['x1', 'x2', 'x3', 'y1']);
+});
+
 test('606 TXT matches the official macro layout', () => {
   const snap = formats.buildSnapshot({ format: '606', period: '202608', client, invoices: [
     approved({ ...base606, isr_tipo_retencion: '2', isr_retenido: '100.00', fecha_pago: '2026-08-20' }, { id: 'b' }),

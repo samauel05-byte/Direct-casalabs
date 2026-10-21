@@ -12,6 +12,8 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 
 ## Módulos
 
+> **Orden de las líneas**: `buildSnapshot` ordena por orden de carga (`created_at` del lote → `created_at` del documento → `document_id` → `page_from` → `page_to` → `created_at` de la factura); `scopeInvoices` (exports.js) aporta esos datos. Solo sin datos de carga usa fecha + NCF.
+
 > **Moneda**: siempre DOP (`derive()` en `validate.js` la fija; la extracción, el guardado y el procesamiento de lotes escriben `moneda: 'DOP'`). No hay conversión por tasa ni avisos de moneda. La lista de auditoría muestra Subtotal/ITBIS/Total (`subtotal_dop`, `itbis_dop`, `total_dop`; subtotal = total − impuestos si aún no hay bienes/servicios).
 
 > **Excel con listas**: `lib/nala/excel.js` escribe en el 606 las columnas Tipo Bienes y Servicios y Forma de Pago con el texto de la opción de la herramienta de la DGII (`TOOL_606_LISTS` en `formats.js`) y les aplica validación de lista contra la hoja oculta `Listas`; en el Excel oficial esas celdas se desbloquean (la hoja sigue protegida). El TXT conserva el código de 2 dígitos.

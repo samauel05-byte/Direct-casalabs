@@ -13,6 +13,7 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 ## Módulos
 
 > **Excel con listas**: `lib/nala/excel.js` escribe en el 606 las columnas Tipo Bienes y Servicios y Forma de Pago con el texto de la opción de la herramienta de la DGII (`TOOL_606_LISTS` en `formats.js`) y les aplica validación de lista contra la hoja oculta `Listas`; en el Excel oficial esas celdas se desbloquean (la hoja sigue protegida). El TXT conserva el código de 2 dígitos.
+> El Excel oficial se reconstruye en cada descarga (`GET exports/:id/download?type=xlsx`) desde `snapshot`, no se sirve el archivo guardado; solo si la exportación no tiene snapshot se usa el de Storage.
 
 > **Apertura**: Direct abre NALA con `window.open('/nala/index.html','serp-nala')` (pestaña nueva; si ya existe se enfoca). NALA detecta su *shell* con `NALA.host()` (padre del iframe o `window.opener`) para leer el token, renovarlo (`directRefresh`), pedir el envío a la DGII (`nala-open-dgii-envio`) y volver (`NALA.goBack()`). El iframe `#nala-frame` de `public/index.html` sigue como respaldo pero ya no se usa al abrir.
 

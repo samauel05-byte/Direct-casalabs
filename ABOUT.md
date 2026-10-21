@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — eliminar un comprobante ya aprobado (p. ej. cuando la DGII da error al enviarlo)**: en un comprobante aprobado, quien tenga los permisos de excluir y revertir (el **Oficial** los tiene) ve el botón **«Eliminar (excluir)»**: pide el motivo, quita la aprobación y excluye el comprobante en un solo paso (queda en el historial y puede restaurarse). Si estaba en un archivo generado pero no enviado, ese archivo se marca como reemplazado para volver a generarlo sin esa factura; el comprobante deja de contarse en el 606/607. Se mantiene la protección de que, si ya está en una exportación **enviada o aceptada** por la DGII, no se puede eliminar sin rectificar.
+
 - **NALA — se quitó el bloqueo «Otro usuario está editando este comprobante»**: ya no se bloquea un comprobante cuando otra persona lo tiene abierto; cualquiera con permiso puede abrirlo, editarlo y aprobarlo (también en la aprobación masiva). Para que nadie pise el trabajo de otro se mantiene el control por versión: si alguien guardó mientras tú editabas, al guardar NALA avisa «fue modificado por otra persona, recargue» en vez de sobrescribir en silencio.
 
 - **NALA — el oficial puede volver a editar lo que aprobó**: el rol **Oficial** (quien carga y digita) ahora tiene el permiso **Revertir**, así que en un comprobante aprobado le aparece **«✎ Editar»** (lo reabre de un clic, queda registrado en el historial) y **«Revertir aprobación»**, y puede corregirlo y aprobarlo otra vez. Se mantiene la protección: si el comprobante ya está en una exportación **enviada o aceptada por la DGII**, no se puede reabrir (hay que rectificar). Quien necesite un caso distinto puede ajustarse por usuario en *Equipo y oficiales*.

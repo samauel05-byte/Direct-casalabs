@@ -12,6 +12,8 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 
 ## Módulos
 
+> **Eliminar un comprobante aprobado**: `POST invoices/:id/exclude` sobre un comprobante aprobado exige además el permiso `revert`; revierte la aprobación (mismas protecciones: no si está en una exportación enviada/aceptada; las generadas pasan a *superseded*) y lo excluye, todo en un paso y con evento en el historial.
+
 > El **Asistente NALA (chat, IR-17)** está oculto temporalmente (sin entrada en el menú y su URL `#/asistente` redirige al panel). Para reactivarlo, quita el 7º valor `true` de su entrada en `NAV` (`public/nala/js/app.js`).
 
 | Módulo | Qué hace |

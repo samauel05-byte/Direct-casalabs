@@ -12,6 +12,8 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 
 ## Módulos
 
+> **Apertura**: Direct abre NALA con `window.open('/nala/index.html','serp-nala')` (pestaña nueva; si ya existe se enfoca). NALA detecta su *shell* con `NALA.host()` (padre del iframe o `window.opener`) para leer el token, renovarlo (`directRefresh`), pedir el envío a la DGII (`nala-open-dgii-envio`) y volver (`NALA.goBack()`). El iframe `#nala-frame` de `public/index.html` sigue como respaldo pero ya no se usa al abrir.
+
 > **Eliminar un comprobante aprobado**: `POST invoices/:id/exclude` sobre un comprobante aprobado exige además el permiso `revert`; revierte la aprobación (mismas protecciones: no si está en una exportación enviada/aceptada; las generadas pasan a *superseded*) y lo excluye, todo en un paso y con evento en el historial.
 
 > El **Asistente NALA (chat, IR-17)** está oculto temporalmente (sin entrada en el menú y su URL `#/asistente` redirige al panel). Para reactivarlo, quita el 7º valor `true` de su entrada en `NAV` (`public/nala/js/app.js`).

@@ -44,11 +44,29 @@
     return `${crit ? `<span class="badge crit" title="Errores críticos">✕ ${crit}</span>` : ''}${warn ? ` <span class="badge warn" title="Advertencias">! ${warn}</span>` : ''}${!crit && !warn ? '<span class="badge ok">✓</span>' : ''}`;
   };
 
+  // ── Shell de Direct ────────────────────────────────────────────────────
+  // NALA corre dentro de Direct (iframe) o en su propia pestaña (window.open). En ambos
+  // casos habla con el shell de Direct: el padre del iframe o la pestaña que la abrió.
+  NALA.host = () => {
+    try {
+      if (window.parent !== window) return window.parent;
+      if (window.opener && !window.opener.closed) { void window.opener.location.origin; return window.opener; }
+    } catch (_) { /* aislado */ }
+    return null;
+  };
+  NALA.goBack = () => {
+    const h = NALA.host();
+    if (window.parent !== window) { try { h.postMessage({ action: 'showPortals' }, location.origin); } catch (_) { /* sin shell */ } return; }
+    try { if (h) h.focus(); } catch (_) { /* sin foco */ }
+    window.close();
+    setTimeout(() => { if (!window.closed) location.href = '/'; }, 300);
+  };
+
   // ── API (misma sesión que SERP; el JWT nunca va en la URL) ─────────────
   function authHeaders() {
     const headers = {};
     let token = ''; let sid = '';
-    try { token = window.parent.sessionStorage.getItem('dtoken') || sessionStorage.getItem('dtoken') || ''; } catch (_) { /* aislado */ }
+    try { token = (NALA.host() || window).sessionStorage.getItem('dtoken') || sessionStorage.getItem('dtoken') || ''; } catch (_) { /* aislado */ }
     try { sid = localStorage.getItem('direct_session_id') || ''; } catch (_) { /* sin storage */ }
     if (token) headers.Authorization = `Bearer ${token}`;
     if (sid) headers['X-Direct-Session'] = sid;
@@ -67,7 +85,7 @@
       // la sesión por terminada. Así ya no saca al usuario al inicio sin razón.
       if (res.status === 401 && !_retried) {
         let refreshed = null;
-        try { refreshed = window.parent && window.parent.directRefresh ? await window.parent.directRefresh() : null; } catch (_) { /* aislado */ }
+        try { const h = NALA.host(); refreshed = h && h.directRefresh ? await h.directRefresh() : null; } catch (_) { /* aislado */ }
         if (refreshed) return api(method, path, body, true);
         showSessionError();
       } else if (res.status === 401) {

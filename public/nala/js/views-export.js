@@ -145,7 +145,7 @@
       // 2) Pedir al shell de Direct que abra la OFV de esa empresa (auto-login
       //    con su credencial DGII cifrada). El archivo se adjunta a mano: la DGII
       //    no permite adjuntarlo por código.
-      try { window.parent.postMessage({ action: 'nala-open-dgii-envio', rnc, format: exp.format, period: exp.period, fileName: exp.file_name }, location.origin); } catch (_) { /* fuera del shell */ }
+      try { NALA.host().postMessage({ action: 'nala-open-dgii-envio', rnc, format: exp.format, period: exp.period, fileName: exp.file_name }, location.origin); } catch (_) { /* fuera del shell */ }
       NALA.toast('Descargué el TXT y estoy abriendo la Oficina Virtual…', 'ok');
       // 3) Guía fija (no un toast efímero) con los pasos en la OFV.
       const stack = root.querySelector('.stack');
@@ -223,7 +223,7 @@
     fmtEl.addEventListener('change', refresh); perEl.addEventListener('change', refresh); refresh();
     m.querySelector('#z-open').addEventListener('click', () => {
       if (!rnc) { NALA.toast('La empresa no tiene RNC o cédula registrado.', 'warn'); return; }
-      try { window.parent.postMessage({ action: 'nala-open-dgii-envio', rnc, format: fmtEl.value, period: perEl.value.replace('-', ''), fileName: '' }, location.origin); } catch (_) { /* fuera del shell */ }
+      try { NALA.host().postMessage({ action: 'nala-open-dgii-envio', rnc, format: fmtEl.value, period: perEl.value.replace('-', ''), fileName: '' }, location.origin); } catch (_) { /* fuera del shell */ }
       NALA.toast('Abriendo la Oficina Virtual de la empresa…', 'ok');
     });
     if (await p) NALA.route();

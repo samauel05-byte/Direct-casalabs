@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — la Moneda ya no se elige: es siempre DOP**: en la pantalla de auditoría el campo **Moneda** dejó de ser una lista (Sin confirmar, DOP, USD, EUR…) y ahora muestra **DOP fijo, sin poder cambiarlo**. Se quitaron también los campos de símbolo, tasa de cambio, fecha y fuente de la tasa, que ya no aplican.
+
 - **NALA — el TXT (y el Excel) salen en el orden en que se subió el lote**: antes las líneas del TXT/Excel se ordenaban por fecha del comprobante y NCF, lo que desacomodaba las facturas respecto a como se cargaron. Ahora el orden es **obligatorio y es el de carga**: primero por lote, luego por documento (el que se subió antes va primero) y dentro de cada documento por **página**, exactamente como aparecen en la Auditoría. La vista previa, el TXT, el Excel y la hoja de control comparten ese mismo orden. Aplica a las exportaciones que se generen de ahora en adelante (las ya generadas quedan como están).
 
 - **NALA — la moneda siempre es pesos y la lista muestra Subtotal, ITBIS y Total**: (1) en la lista de Auditoría fiscal ahora se ven las columnas **Subtotal**, **ITBIS** y **Total** de cada comprobante, además de la moneda; si todavía no se separó entre bienes y servicios, el subtotal se calcula del total menos los impuestos para que nunca salga vacío. (2) La **moneda es siempre pesos (DOP), obligatoria**: ya no aparece «?», NALA no pide confirmar la moneda, no exige tasa de cambio ni convierte nada; los montos del comprobante se toman tal cual, sin importar el símbolo del documento. Se aplicó a la lectura de facturas, al guardar y a la validación. Los comprobantes pendientes que tenían «?» o USD se pasaron a DOP; **los aprobados no se tocaron**.

@@ -41,21 +41,20 @@
     '606': [
       ['Proveedor (emisor)', ['emisor_nombre', 'emisor_id', 'tipo_id']], ['Comprador (receptor)', ['receptor_nombre', 'receptor_id']],
       ['Comprobante', ['ncf', 'ncf_modificado', 'fecha_comprobante', 'fecha_pago', 'tipo_bienes_servicios', 'forma_pago']],
-      ['Moneda', ['moneda', 'moneda_simbolo', 'tasa_cambio', 'tasa_fecha', 'tasa_fuente']],
+      ['Moneda', ['moneda']],
       ['Montos', ['monto_servicios', 'monto_bienes', 'itbis', 'isc', 'otros_impuestos', 'propina', 'total']],
       ['ITBIS y retenciones', ['itbis_retenido', 'itbis_proporcionalidad', 'itbis_costo', 'itbis_percibido', 'isr_tipo_retencion', 'isr_retenido', 'isr_percibido']],
     ],
     '607': [
       ['Cliente (receptor)', ['receptor_nombre', 'receptor_id', 'tipo_id']], ['Emisor', ['emisor_nombre', 'emisor_id']],
       ['Comprobante', ['ncf', 'ncf_modificado', 'fecha_comprobante', 'tipo_ingreso', 'fecha_retencion']],
-      ['Moneda', ['moneda', 'moneda_simbolo', 'tasa_cambio', 'tasa_fecha', 'tasa_fuente']],
+      ['Moneda', ['moneda']],
       ['Montos', ['monto_facturado', 'itbis', 'isc', 'otros_impuestos', 'propina', 'total']],
       ['Retenciones de terceros', ['itbis_retenido', 'itbis_percibido', 'isr_retenido', 'isr_percibido']],
       ['Formas de pago (incluyen impuestos)', ['pago_efectivo', 'pago_cheque', 'pago_tarjeta', 'pago_credito', 'pago_bonos', 'pago_permuta', 'pago_otros']],
     ],
   };
   const READONLY = new Set(['moneda_simbolo']);
-  const CURRENCIES = ['DOP', 'USD', 'EUR', 'CAD', 'GBP'];
   // "Incompleta": aún tiene algo que atender (error crítico o advertencia),
   // es decir, datos por llenar o revisar. Una factura limpia (✓) se salta.
   const isIncomplete = inv => (inv.critical_count || 0) > 0 || (inv.warning_count || 0) > 0;
@@ -68,7 +67,8 @@
     const catalog = { tipo_bienes_servicios: cat.tipoBienesServicios, forma_pago: cat.formaPago, isr_tipo_retencion: cat.tipoRetencionIsr, tipo_ingreso: cat.tipoIngreso, tipo_id: cat.tipoId }[key];
     if (key === 'tipo_id') return `<select data-k="${key}" ${dis}><option value="">Automático (según RNC/cédula)</option>${NALA.catalogOptions(catalog, v, { blank: false })}</select>`;
     if (catalog) return `<select data-k="${key}" ${dis}>${NALA.catalogOptions(catalog, v)}</select>`;
-    if (key === 'moneda') return `<select data-k="${key}" ${dis}><option value="">— Sin confirmar —</option>${CURRENCIES.map(c => `<option ${v === c ? 'selected' : ''}>${c}</option>`).join('')}${v && !CURRENCIES.includes(v) ? `<option selected>${esc(v)}</option>` : ''}</select>`;
+    // La moneda es siempre pesos (DOP), obligatoria: no se elige ni se puede cambiar.
+    if (key === 'moneda') return `<input data-k="${key}" value="DOP" disabled autocomplete="off">`;
     if (def.type === 'date') return `<input type="date" data-k="${key}" value="${esc(v)}" ${dis}>`;
     const amountHint = def.type === 'amount' ? ' title="Puedes escribir una fórmula: empieza con = o + (ej.: =5815-888 resta el ITBIS del total) y hace el cálculo solo."' : '';
     return `<input data-k="${key}" value="${esc(v)}" ${def.type === 'amount' || def.type === 'rate' ? 'inputmode="decimal" class="num"' : ''}${amountHint} ${dis} autocomplete="off">`;
@@ -510,7 +510,7 @@
       const pays = inv.format === '607' ? sumC([f.pago_efectivo, f.pago_cheque, f.pago_tarjeta, f.pago_credito, f.pago_bonos, f.pago_permuta, f.pago_otros]) : null;
       return `<div><small>Subtotal</small><b>${fmtC(sub)}</b></div><div><small>Impuestos</small><b>${fmtC(taxes)}</b></div><div><small>Total calculado</small><b>${fmtC(calc)}</b></div><div><small>Total</small><b>${fmtC(ext)}</b></div>
         <div class="${diff !== null && diff !== 0n ? 'bad' : ''}"><small>Diferencia</small><b>${fmtC(diff)}</b></div>${inv.format === '607' ? `<div class="${pays !== null && calc !== null && pays !== calc ? 'bad' : ''}"><small>Formas de pago</small><b>${fmtC(pays)}</b></div>` : ''}
-        ${f.moneda && f.moneda !== 'DOP' ? `<div><small>Total en DOP</small><b>${money(inv.total_dop)}</b></div>` : ''}<div><small>Moneda</small><b>${esc(f.moneda || '¿?')}</b></div>`;
+        <div><small>Moneda</small><b>DOP</b></div>`;
     }
 
     // "Total" se calcula solo: suma de las casillas de Montos (base + impuestos).

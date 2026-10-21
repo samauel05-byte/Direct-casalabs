@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — usuarios que solo aprueban y revierten (sin editar)**: ahora un usuario con los permisos **Aprobar** y **Revertir** pero **sin Editar** puede trabajar: en cada comprobante pendiente o revisado ve el botón **«Aprobar»** (aprueba directo, sin guardar cambios) y en uno aprobado **«Revertir aprobación»**; los datos le salen en solo lectura. Antes el botón Aprobar solo aparecía a quien también podía editar. Para crear ese perfil: en **NALA → Equipo y oficiales**, elegir al usuario, rol **Sólo lectura** y marcar solo **Aprobar** y **Revertir**.
+
 - **NALA — el Excel se descarga con el nombre «606 CLIENTE 202608»**: al descargar el Excel de una exportación, el archivo se llama ahora **formato + nombre del cliente en MAYÚSCULAS + período**, por ejemplo `606 LATVIA 202608.xlsx` (o `607 …`). El Excel personalizado lleva el mismo nombre con «PERSONALIZADO» al final. Se quitan del nombre los caracteres que Windows no permite. El TXT conserva el nombre oficial de la DGII.
 
 - **NALA — la Moneda ya no se elige: es siempre DOP**: en la pantalla de auditoría el campo **Moneda** dejó de ser una lista (Sin confirmar, DOP, USD, EUR…) y ahora muestra **DOP fijo, sin poder cambiarlo**. Se quitaron también los campos de símbolo, tasa de cambio, fecha y fuente de la tasa, que ya no aplican.

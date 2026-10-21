@@ -555,7 +555,7 @@
           </div>
           <div class="row" style="border-top:1px solid var(--border);padding-top:10px;margin-top:8px">
             ${editable ? '<button class="btn" id="undo" disabled>↶ Deshacer</button><button class="btn primary" id="save" disabled>Guardar</button>' : ''}
-            ${editable && NALA.can('approve') ? '<button class="btn ok" id="approve">Aprobar</button>' : ''}
+            ${['pending_review', 'reviewed'].includes(inv.status) && NALA.can('approve') ? '<button class="btn ok" id="approve">Aprobar</button>' : ''}
             ${inv.status === 'approved' && NALA.can('edit') && NALA.can('revert') ? '<button class="btn primary" id="edit-approved">✎ Editar</button>' : ''}
             ${inv.status === 'approved' && NALA.can('revert') ? '<button class="btn danger" id="revert">Revertir aprobación</button>' : ''}
             ${editable && NALA.can('relocate') ? '<button class="btn" id="relocate">Reubicar</button>' : ''}
@@ -648,7 +648,8 @@
     root.querySelector('#approve')?.addEventListener('click', async () => {
       try {
         let current = inv;
-        if (Object.keys(changedFields()).length || inv.status === 'pending_review') current = await save();
+        // Quien solo puede aprobar (sin permiso de editar) aprueba directo, sin guardar cambios.
+        if (NALA.can('edit') && (Object.keys(changedFields()).length || inv.status === 'pending_review')) current = await save();
         if (current.critical_count > 0) { NALA.toast('No se puede aprobar: hay errores críticos.', 'err'); NALA.route(); return; }
         const warnings = current.issues.filter(i => i.severity === 'warning');
         let body = { version: current.version };

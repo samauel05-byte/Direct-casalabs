@@ -12,6 +12,8 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 
 ## Módulos
 
+> **Perfil «solo aprobar y revertir»**: rol `lectura` + permisos `approve` y `revert` en *Equipo y oficiales*. En la auditoría el botón Aprobar depende solo de `approve` y del estado (pendiente/revisada); el guardado previo a aprobar solo se hace si el usuario tiene `edit`.
+
 > **Nombre del Excel**: `excelFileName()` en `lib/nala/api/exports.js` → `<formato> <CLIENTE EN MAYÚSCULAS> <AAAAMM>[ PERSONALIZADO].xlsx` (p. ej. `606 LATVIA 202608.xlsx`). El TXT mantiene su nombre oficial.
 
 > **Orden de las líneas**: `buildSnapshot` ordena por orden de carga (`created_at` del lote → `created_at` del documento → `document_id` → `page_from` → `page_to` → `created_at` de la factura); `scopeInvoices` (exports.js) aporta esos datos. Solo sin datos de carga usa fecha + NCF.

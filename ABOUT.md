@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — el oficial puede volver a editar lo que aprobó**: el rol **Oficial** (quien carga y digita) ahora tiene el permiso **Revertir**, así que en un comprobante aprobado le aparece **«✎ Editar»** (lo reabre de un clic, queda registrado en el historial) y **«Revertir aprobación»**, y puede corregirlo y aprobarlo otra vez. Se mantiene la protección: si el comprobante ya está en una exportación **enviada o aceptada por la DGII**, no se puede reabrir (hay que rectificar). Quien necesite un caso distinto puede ajustarse por usuario en *Equipo y oficiales*.
+
 - **NALA — «Asistente NALA (chat, IR-17)» oculto por ahora**: se quitó del menú lateral (sección Herramientas) y su dirección directa redirige al panel. El código sigue en el proyecto; para volver a mostrarlo basta quitar el indicador `hidden` de su entrada en `NAV` (`public/nala/js/app.js`).
 
 - **Estimación Fiscal más sólida y con guardado automático**: (1) al escribir en cualquier tabla ya **no se pierde el cursor** en cada letra (antes la tabla se reconstruía con cada tecla); (2) **se guarda solo** ~1.5 s después de cada cambio, con un indicador junto a Guardar («● Cambios sin guardar» → «✓ Guardado») y aviso si intentas cerrar con cambios pendientes; (3) **protección contra pisar datos**: si la carga de lo guardado falla (sesión vencida, sin red) no se guarda nada encima y te lo avisa en rojo, en vez de sobrescribir con una pantalla vacía; la sesión se renueva sola y reintenta; (4) al **escribir un RNC** que coincide con una de tus empresas, se selecciona y carga sola; (5) **eliminar una fila pide confirmación**; (6) los totales se actualizan al instante.

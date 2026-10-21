@@ -12,6 +12,8 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 
 ## Módulos
 
+> **Nombre del Excel**: `excelFileName()` en `lib/nala/api/exports.js` → `<formato> <CLIENTE EN MAYÚSCULAS> <AAAAMM>[ PERSONALIZADO].xlsx` (p. ej. `606 LATVIA 202608.xlsx`). El TXT mantiene su nombre oficial.
+
 > **Orden de las líneas**: `buildSnapshot` ordena por orden de carga (`created_at` del lote → `created_at` del documento → `document_id` → `page_from` → `page_to` → `created_at` de la factura); `scopeInvoices` (exports.js) aporta esos datos. Solo sin datos de carga usa fecha + NCF.
 
 > **Moneda en pantalla**: el campo «Moneda» de la auditoría es un campo fijo `DOP` (deshabilitado); ya no se muestran símbolo ni tasa.

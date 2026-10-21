@@ -559,7 +559,7 @@
             ${inv.status === 'approved' && NALA.can('edit') && NALA.can('revert') ? '<button class="btn primary" id="edit-approved">✎ Editar</button>' : ''}
             ${inv.status === 'approved' && NALA.can('revert') ? '<button class="btn danger" id="revert">Revertir aprobación</button>' : ''}
             ${editable && NALA.can('relocate') ? '<button class="btn" id="relocate">Reubicar</button>' : ''}
-            ${editable && NALA.can('exclude') ? '<button class="btn danger" id="exclude">Excluir</button>' : ''}
+            ${(editable || inv.status === 'approved' && NALA.can('revert')) && NALA.can('exclude') ? `<button class="btn danger" id="exclude">${inv.status === 'approved' ? 'Eliminar (excluir)' : 'Excluir'}</button>` : ''}
             ${inv.status === 'excluded' && NALA.can('exclude') ? '<button class="btn" id="restore">Restaurar</button>' : ''}
           </div></div></div></div>`;
 
@@ -688,7 +688,7 @@
       try { await NALA.api('POST', `invoices/${inv.id}/relocate`, r); NALA.toast('Comprobante reubicado', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });
     root.querySelector('#exclude')?.addEventListener('click', async () => {
-      const reason = await NALA.askReason('Excluir comprobante', { extra: '<p class="muted" style="margin-bottom:8px">No se reporta ni se cuenta en los indicadores. Puede restaurarse.</p>' });
+      const reason = await NALA.askReason(inv.status === 'approved' ? 'Eliminar comprobante aprobado' : 'Excluir comprobante', { extra: `<p class="muted" style="margin-bottom:8px">${inv.status === 'approved' ? 'Se quita la aprobación y el comprobante deja de reportarse (y sale de los archivos aún no enviados a la DGII). ' : ''}No se reporta ni se cuenta en los indicadores. Puede restaurarse.</p>` });
       if (!reason) return;
       try { await NALA.api('POST', `invoices/${inv.id}/exclude`, { reason }); NALA.toast('Excluido', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });

@@ -109,14 +109,14 @@
     const hasFixables = i => isIncomplete(i) || i.issues.some(x => x.code === 'DUPLICADO');
     const showFix = i => editableInv(i) && hasFixables(i);
     const unifiedCol = mode === 'unified' && !s.client;
-    const cols = (canBulk ? 1 : 0) + 9 + (unifiedCol ? 1 : 0);
+    const cols = (canBulk ? 1 : 0) + 11 + (unifiedCol ? 1 : 0);
     let bulkRefresh = null;
     // Celdas que la edición en línea refresca sin recargar toda la tabla.
     const fixBtn = i => showFix(i) ? ` <button class="btn sm fix-btn" data-fix="${i.id}" title="Corregir aquí, sin abrir el detalle">✎ Corregir</button>` : '';
     const reviewCell = i => `${NALA.issueBadges(i)}${fixBtn(i)}`;
     const cpCell = i => `${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div>`;
     const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted">${n + 1}</td><td class="mono" data-c="ncf">${esc(i.ncf || '—')}</td><td data-c="cp">${cpCell(i)}</td>
-      <td data-c="date">${esc(i.invoice_date || '—')}</td>${unifiedCol ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>${esc(i.currency || '?')}</td><td class="num" data-c="total">${money(i.total_dop)}</td><td data-c="status">${NALA.badge(i.status)}</td><td data-c="review">${reviewCell(i)}</td></tr>
+      <td data-c="date">${esc(i.invoice_date || '—')}</td>${unifiedCol ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>DOP</td><td class="num" data-c="subtotal">${money(i.subtotal_dop)}</td><td class="num" data-c="itbis">${money(i.itbis_dop)}</td><td class="num" data-c="total">${money(i.total_dop)}</td><td data-c="status">${NALA.badge(i.status)}</td><td data-c="review">${reviewCell(i)}</td></tr>
       <tr class="inline-edit" data-edit="${i.id}" hidden><td colspan="${cols}"></td></tr>`;
     root.innerHTML = `<div class="stack">
       <div class="tabs"><button class="${mode === 'batch' ? 'active' : ''}" id="t-batch">Vista por lotes</button><button class="${mode === 'unified' ? 'active' : ''}" id="t-uni">Vista unificada (empresa y período)</button></div>
@@ -134,7 +134,7 @@
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer" title="Marca todas las que tienen cotejo verde (sin errores ni avisos)"><input type="checkbox" id="sel-all"> Todas las de cotejo verde (${approvable.length})</label>
         <span class="spacer" style="flex:1"></span>
         <button class="btn ok" id="bulk-approve" disabled>✓ Aprobar seleccionadas (<span id="sel-count">0</span>)</button></div>` : ''}
-      ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th>#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${unifiedCol ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Total DOP</th><th>Estado</th><th>Revisión</th></tr>
+      ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th>#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${unifiedCol ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Subtotal</th><th class="num">ITBIS</th><th class="num">Total</th><th>Estado</th><th>Revisión</th></tr>
         ${invoices.map((i, n) => rowHtml(i, n)).join('')}</table></div>`
         : '<div class="card empty">No hay comprobantes con estos filtros.</div>'}</div>`;
     root.querySelector('#t-batch').addEventListener('click', () => NALA.go(`#/auditoria?batch=${batchList.batches[0]?.id || ''}`));

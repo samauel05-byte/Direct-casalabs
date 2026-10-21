@@ -139,9 +139,9 @@ test('procesamiento en segundo plano con reintentos, ZIP, PDF de varias facturas
   state.inv = { alfa: by('B0100000101'), beta: by('B0100000202'), delta: by('B0100000501'), otra: by('B0100000601'), dolar: by('B0100000701'), gamma: by('E310000000401'), zeta2: by('B0100000802') };
   const codes = i => i.issues.map(x => x.code);
   assert.ok(codes(state.inv.beta).includes('DIFERENCIA_TOTAL'));
-  assert.ok(codes(state.inv.delta).includes('TASA_OPCIONAL'));
+  assert.ok(!codes(state.inv.delta).includes('TASA_OPCIONAL'), 'ya no se pide tasa: todo es pesos');
   assert.ok(codes(state.inv.otra).includes('EMPRESA_INCORRECTA'));
-  assert.ok(codes(state.inv.dolar).includes('MONEDA_NO_IDENTIFICADA'));
+  assert.ok(!codes(state.inv.dolar).includes('MONEDA_NO_IDENTIFICADA'), 'la moneda siempre es pesos');
   const copies = list.invoices.filter(i => i.ncf === 'B0100000101');
   assert.equal(copies.length, 2);
   state.copy = copies.find(i => codes(i).includes('DUPLICADO'));
@@ -154,7 +154,7 @@ test('procesamiento en segundo plano con reintentos, ZIP, PDF de varias facturas
   assert.deepEqual(pdfInvoices.map(i => i.page_from).sort(), [1, 1, 2]);
   assert.equal(state.inv.delta.fields.monto_bienes, '100.00');
   assert.equal(state.inv.alfa.fields.itbis, '1800.00');
-  assert.equal(state.inv.dolar.fields.moneda, null, '"$" no se interpreta como USD ni DOP');
+  assert.equal(state.inv.dolar.fields.moneda, 'DOP', 'la moneda siempre es pesos (obligatorio)');
 });
 
 test('reprocesar fallidos no duplica y respeta correcciones humanas', async () => {
@@ -207,9 +207,10 @@ test('auditoría: versión, bloqueo, guardar ≠ aprobar, críticos bloquean, ad
   const delta = (await ok('admin', 'GET', `invoices/${state.inv.delta.id}`)).invoice;
   assert.equal(delta.critical_count, 0, 'sin tasa ya no hay críticos');
   // Al indicar la tasa, convierte exacto a DOP.
-  const fixed = await ok('admin', 'PATCH', `invoices/${delta.id}`, { version: delta.version, fields: { tasa_cambio: '60.2500', tipo_bienes_servicios: '09' } });
+  const fixed = await ok('admin', 'PATCH', `invoices/${delta.id}`, { version: delta.version, fields: { tipo_bienes_servicios: '09' } });
   assert.equal(fixed.invoice.critical_count, 0);
-  assert.equal(fixed.invoice.total_dop, '7109.50');
+  assert.equal(fixed.invoice.currency, 'DOP', 'siempre pesos: no hay conversión por tasa');
+  assert.equal(fixed.invoice.fields.moneda, 'DOP');
   state.inv.delta = (await ok('admin', 'POST', `invoices/${delta.id}/approve`, { version: fixed.invoice.version, accept_warnings: true, reason: 'Tasa BCRD del día' })).invoice;
   const dolar = (await ok('admin', 'GET', `invoices/${state.inv.dolar.id}`)).invoice;
   const dolarFixed = await ok('admin', 'PATCH', `invoices/${dolar.id}`, { version: dolar.version, fields: { moneda: 'DOP', tipo_bienes_servicios: '02' } });

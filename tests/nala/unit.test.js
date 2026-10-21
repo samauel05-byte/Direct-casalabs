@@ -55,21 +55,19 @@ test('validate: a correct 606 invoice has no critical issues', () => {
 test('validate: detects missing, invalid, mismatched and misplaced data', () => {
   const r = validate({ format: '606', period: '202607', client, fields: { ...base606, emisor_id: '12345', ncf: 'X1', total: '1500.00', receptor_id: '401506254', moneda: null, moneda_simbolo: '$', itbis_retenido: '50.00' } });
   const codes = r.issues.map(i => i.code);
-  for (const code of ['ID_INVALIDO', 'NCF_INVALIDO', 'DIFERENCIA_TOTAL', 'EMPRESA_INCORRECTA', 'FECHA_POSTERIOR_PERIODO', 'MONEDA_NO_IDENTIFICADA', 'FECHA_PAGO_REQUERIDA']) {
+  for (const code of ['ID_INVALIDO', 'NCF_INVALIDO', 'DIFERENCIA_TOTAL', 'EMPRESA_INCORRECTA', 'FECHA_POSTERIOR_PERIODO', 'FECHA_PAGO_REQUERIDA']) {
     assert.ok(codes.includes(code), `falta ${code}: ${codes}`);
   }
-  assert.match(r.issues.find(i => i.code === 'MONEDA_NO_IDENTIFICADA').message, /no asume/);
+  assert.ok(!codes.includes('MONEDA_NO_IDENTIFICADA'), 'la moneda siempre es pesos: ya no se pide confirmarla');
 });
 
-test('validate: foreign currency no longer blocks on rate (todo se reporta en DOP); converts when a rate is given', () => {
-  const usd = { ...base606, moneda: 'USD', monto_servicios: '100.00', itbis: '18.00', total: '118.00' };
-  const noRate = validate({ format: '606', period: '202608', fields: usd, client });
-  assert.ok(noRate.issues.some(i => i.code === 'TASA_OPCIONAL'), 'debe avisar (suave) que se puede indicar la tasa');
-  assert.ok(!noRate.issues.some(i => ['TASA_REQUERIDA', 'TASA_FECHA_REQUERIDA', 'TASA_FUENTE_REQUERIDA'].includes(i.code)), 'ya no exige tasa/fecha/fuente');
-  const ok = validate({ format: '606', period: '202608', client, fields: { ...usd, tasa_cambio: '60.25' } });
-  assert.equal(ok.critical_count, 0);
-  assert.equal(ok.computed.dop.monto_servicios, '6025.00');
-  assert.equal(ok.computed.dop.itbis, '1084.50');
+test('validate: la moneda es siempre pesos (DOP), sin importar el documento; no se convierte ni se exige tasa', () => {
+  for (const moneda of ['USD', null, 'EUR']) {
+    const r = validate({ format: '606', period: '202608', fields: { ...base606, moneda, monto_servicios: '100.00', itbis: '18.00', total: '118.00', tasa_cambio: '60.25' }, client });
+    assert.equal(r.computed.currency, 'DOP');
+    assert.ok(!r.issues.some(i => ['MONEDA_NO_IDENTIFICADA', 'MONEDA_INVALIDA', 'MONEDA_EXTRANJERA', 'TASA_OPCIONAL', 'TASA_INVALIDA'].includes(i.code)));
+    assert.equal(r.computed.dop, null);
+  }
 });
 
 test('validate: unknown amounts are not converted to zero', () => {

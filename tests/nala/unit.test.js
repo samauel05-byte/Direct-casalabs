@@ -151,6 +151,13 @@ test('Excel: identifiers as text, amounts as numbers, same order as TXT', async 
   assert.equal(ws.getRow(7).getCell(montoCol).value, 1000);
   assert.equal(ws.getRow(8).getCell(5).value, snap.lines[1].values[3]);
   assert.ok(ws.sheetProtection && ws.sheetProtection.sheet);
+  // Listas desplegables de la DGII (tipo de bienes y forma de pago), con el texto de la opción.
+  const tipoCol = 2 + snap.columns.findIndex(c => c.key === 'tipo_bienes_servicios');
+  const tipoCell = ws.getRow(7).getCell(tipoCol);
+  assert.match(tipoCell.value, /^\d\d ?-/);
+  assert.equal(tipoCell.dataValidation.type, 'list');
+  assert.equal(tipoCell.protection.locked, false);
+  assert.ok(wb.getWorksheet('Listas'));
   const custom = await excel.buildCustom(snap, ['x_counterpart', 'rnc_cedula', 'itbis']);
   const wb2 = new ExcelJS.Workbook(); await wb2.xlsx.load(custom);
   const ws2 = wb2.worksheets[0];

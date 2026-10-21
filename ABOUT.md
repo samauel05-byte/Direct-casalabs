@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — en el 606 el monto se arrastra siempre por «Monto Bienes»**: al leer una factura de compras, la base sin impuestos se coloca **siempre en Monto Bienes** (antes la lectura la mandaba a Servicios en la mayoría de los casos). Si el modelo la repartió o la puso en Servicios, se junta todo en Bienes; el auditor puede cambiarla a mano en cualquier comprobante y se respeta lo que ya corrigió. Esto también aplica al reprocesar un lote. Los **46 comprobantes pendientes** que estaban en Servicios sin que nadie los hubiera tocado se pasaron a Bienes (el total no cambia); los aprobados y los ya corregidos a mano **no se tocaron**. La opción de cada empresa «606 · Subtotal sin desglose va a» queda sin efecto: manda esta regla.
+
 - **NALA — usuarios que solo aprueban y revierten (sin editar)**: ahora un usuario con los permisos **Aprobar** y **Revertir** pero **sin Editar** puede trabajar: en cada comprobante pendiente o revisado ve el botón **«Aprobar»** (aprueba directo, sin guardar cambios) y en uno aprobado **«Revertir aprobación»**; los datos le salen en solo lectura. Antes el botón Aprobar solo aparecía a quien también podía editar. Para crear ese perfil: en **NALA → Equipo y oficiales**, elegir al usuario, rol **Sólo lectura** y marcar solo **Aprobar** y **Revertir**.
 
 - **NALA — el Excel se descarga con el nombre «606 CLIENTE 202608»**: al descargar el Excel de una exportación, el archivo se llama ahora **formato + nombre del cliente en MAYÚSCULAS + período**, por ejemplo `606 LATVIA 202608.xlsx` (o `607 …`). El Excel personalizado lleva el mismo nombre con «PERSONALIZADO» al final. Se quitan del nombre los caracteres que Windows no permite. El TXT conserva el nombre oficial de la DGII.

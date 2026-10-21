@@ -185,11 +185,10 @@ test('auditoría: versión, bloqueo, guardar ≠ aprobar, críticos bloquean, ad
   assert.equal((await ok('admin', 'GET', `invoices/${copy.id}`)).invoice.status, 'excluded');
   const alfa = (await ok('admin', 'GET', `invoices/${state.inv.alfa.id}`)).invoice;
   assert.ok(!alfa.issues.some(i => i.code === 'COPIA_POSTERIOR'), 'al descartar la copia, la original queda limpia');
-  // Concurrency: oficial locks the invoice; admin cannot save meanwhile.
+  // Concurrency: ya no hay bloqueo de edición; la versión evita pisar cambios.
   await ok('oficial', 'POST', `invoices/${alfa.id}/lock`);
   const fresh = (await ok('admin', 'GET', `invoices/${alfa.id}`));
-  assert.equal(fresh.lock.locked_by_other, true);
-  assert.equal((await api('admin', 'PATCH', `invoices/${alfa.id}`, { version: fresh.invoice.version, fields: { forma_pago: '02' } })).status, 423);
+  assert.equal(fresh.lock.locked_by_other, false, 'sin bloqueo entre usuarios');
   await ok('oficial', 'DELETE', `invoices/${alfa.id}/lock`);
   assert.equal((await api('admin', 'PATCH', `invoices/${alfa.id}`, { version: fresh.invoice.version - 1, fields: { forma_pago: '02' } })).status, 409, 'versión vieja');
   const saved = await ok('admin', 'PATCH', `invoices/${alfa.id}`, { version: fresh.invoice.version, fields: { tipo_bienes_servicios: '02' } });

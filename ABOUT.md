@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — se quitó el bloqueo «Otro usuario está editando este comprobante»**: ya no se bloquea un comprobante cuando otra persona lo tiene abierto; cualquiera con permiso puede abrirlo, editarlo y aprobarlo (también en la aprobación masiva). Para que nadie pise el trabajo de otro se mantiene el control por versión: si alguien guardó mientras tú editabas, al guardar NALA avisa «fue modificado por otra persona, recargue» en vez de sobrescribir en silencio.
+
 - **NALA — el oficial puede volver a editar lo que aprobó**: el rol **Oficial** (quien carga y digita) ahora tiene el permiso **Revertir**, así que en un comprobante aprobado le aparece **«✎ Editar»** (lo reabre de un clic, queda registrado en el historial) y **«Revertir aprobación»**, y puede corregirlo y aprobarlo otra vez. Se mantiene la protección: si el comprobante ya está en una exportación **enviada o aceptada por la DGII**, no se puede reabrir (hay que rectificar). Quien necesite un caso distinto puede ajustarse por usuario en *Equipo y oficiales*.
 
 - **NALA — «Asistente NALA (chat, IR-17)» oculto por ahora**: se quitó del menú lateral (sección Herramientas) y su dirección directa redirige al panel. El código sigue en el proyecto; para volver a mostrarlo basta quitar el indicador `hidden` de su entrada en `NAV` (`public/nala/js/app.js`).

@@ -12,6 +12,8 @@ un valor desconocido queda vacío, nunca se convierte en cero.
 
 ## Módulos
 
+> **Bienes vs. servicios (606)**: política fija: `toFields` (extractor.js) y `reprocess` (pipeline.js) dejan la base siempre en `monto_bienes` (`monto_servicios` = null), salvo campos corregidos a mano. Se ignora `default_split` de la empresa.
+
 > **Perfil «solo aprobar y revertir»**: rol `lectura` + permisos `approve` y `revert` en *Equipo y oficiales*. En la auditoría el botón Aprobar depende solo de `approve` y del estado (pendiente/revisada); el guardado previo a aprobar solo se hace si el usuario tiene `edit`.
 
 > **Nombre del Excel**: `excelFileName()` en `lib/nala/api/exports.js` → `<formato> <CLIENTE EN MAYÚSCULAS> <AAAAMM>[ PERSONALIZADO].xlsx` (p. ej. `606 LATVIA 202608.xlsx`). El TXT mantiene su nombre oficial.

@@ -467,6 +467,10 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Agregar empresa
       </button>
+      <button type="button" id="sync-official-btn" onclick="openSyncModal()" hidden title="Actualizar nombres y RNC con la lista oficial de empresas"
+        style="margin-left:auto;background:none;border:none;color:var(--text2,#7a9bc0);font-size:12px;cursor:pointer;text-decoration:underline;padding:6px 4px">
+        Sincronizar con lista oficial
+      </button>
       <button type="button" id="import-xlsx-btn" onclick="openImportModal()" title="Sincronizar desde Excel"
         style="margin-left:auto;background:none;border:none;color:var(--text2,#7a9bc0);font-size:12px;cursor:pointer;text-decoration:underline;padding:6px 4px">
         Sincronizar Excel
@@ -682,6 +686,30 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
     <div class="modal-ftr">
       <button class="btn btn-ghost" onclick="document.getElementById('modal-reset-pw').hidden=true">Cancelar</button>
       <button class="btn btn-pri" onclick="saveResetPw()">Restablecer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal sincronizar con la lista oficial de empresas -->
+<div id="modal-sync" class="modal-bg" hidden>
+  <div class="modal" style="max-width:640px">
+    <div class="modal-hdr">
+      <span class="modal-ttl">Sincronizar con la lista oficial</span>
+      <button class="icon-btn" onclick="closeSyncModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:12px">
+        Compara las empresas de la bóveda con la lista oficial (nombre y RNC de la DGII) y las actualiza. Las claves no se tocan: todo se hace en tu navegador.
+      </p>
+      <div id="sync-summary" style="background:var(--bg2);border-radius:8px;padding:12px;font-size:12px;color:var(--text2);max-height:320px;overflow:auto">Analizando…</div>
+      <label id="sync-new-wrap" hidden style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:10px;color:var(--text2)"><input type="checkbox" id="sync-new" checked> Agregar también las empresas nuevas (sin clave, para completarla después)</label>
+      <div id="sync-progress" hidden style="font-size:13px;margin-top:10px;color:var(--text2)"></div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn btn-ghost" onclick="closeSyncModal()">Cerrar</button>
+      <button class="btn btn-pri" id="sync-apply" onclick="applySync()" disabled>Aplicar cambios</button>
     </div>
   </div>
 </div>
@@ -1946,6 +1974,7 @@ async function renderCompaniesView() {
   // Encabezado: se quitó el banner con el nombre del portal (redundante: ya
   // entraste a ese portal). «Configurar URL» solo lo ve el administrador.
   const isAdmin = currentUser?.role === 'admin';
+  const syncBtn = document.getElementById('sync-official-btn'); if (syncBtn) syncBtn.hidden = !isAdmin;
   document.getElementById('portal-banner').innerHTML = isAdmin ? `
     <div style="display:flex;justify-content:flex-end;margin:0 0 10px">
       <button class="btn-cfg-portal" onclick="openPortalCfg('${activePortal}')">
@@ -2925,6 +2954,107 @@ async function startImport() {
     toast('Error al importar: '+e.message,'err');
     btn.disabled=false;
   }
+}
+
+/* ── Sincronizar nombres/RNC con la lista oficial (direct_clients) ──
+   Todo en el navegador: se descifra cada credencial, se cruza con la lista oficial
+   por RNC o por nombre exacto (sin sufijos legales) y se vuelve a cifrar con el
+   nombre/RNC oficial. No toca usuarios ni claves. Parecidos dudosos solo se listan. */
+let _syncPlan=null;
+function closeSyncModal(){ document.getElementById('modal-sync').hidden=true; }
+function syncNormName(s){
+  return String(s||'').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^A-Z0-9 ]/g,'').replace(/\b(SRL|EIRL|SL|SAS|SA|INC|RD|SRLS)\b/g,'').replace(/\s+/g,'');
+}
+function syncRncs(p){
+  const out=new Set();
+  for(const v of [p.rnc,p.tssRnc,p.cedula,p.rncCedula,p.username]){
+    const d=String(v||'').replace(/\D/g,''); if(d.length===9||d.length===11) out.add(d);
+  }
+  return out;
+}
+async function openSyncModal(){
+  if(currentUser?.role!=='admin'||!masterKey) return;
+  _syncPlan=null;
+  const sum=document.getElementById('sync-summary'), apply=document.getElementById('sync-apply');
+  document.getElementById('modal-sync').hidden=false;
+  document.getElementById('sync-new-wrap').hidden=true;
+  document.getElementById('sync-progress').hidden=true;
+  apply.disabled=true; sum.textContent='Analizando…';
+  try{
+    const res=await A.get('/api/clients');
+    const official=(res.clients||[]).filter(c=>c.legal_name);
+    const byRnc=new Map(), byName=new Map();
+    for(const c of official){
+      const r=String(c.rnc||c.cedula||'').replace(/\D/g,''); if(r) byRnc.set(r,c);
+      const k=syncNormName(c.legal_name); if(k) byName.set(k,c);
+    }
+    const updates=[], doubtful=[]; const matched=new Set();
+    for(const cred of credentials){
+      let p; try{ p=await C.dec(masterKey,cred.iv,cred.ct); }catch{ continue; }
+      let off=null;
+      for(const r of syncRncs(p)){ if(byRnc.has(r)){ off=byRnc.get(r); break; } }
+      if(!off) off=byName.get(syncNormName(p.companyName))||null;
+      if(!off){
+        const k=syncNormName(p.companyName);
+        if(k.length>=5){
+          const cand=official.filter(c=>{ const o=syncNormName(c.legal_name); return o.startsWith(k)||k.startsWith(o); });
+          if(cand.length) doubtful.push({name:p.companyName||'',inst:cred.institution,cand:cand.map(c=>c.legal_name)});
+        }
+        continue;
+      }
+      matched.add(off.id);
+      const offRnc=String(off.rnc||off.cedula||'').replace(/\D/g,'');
+      const nameChanged=(p.companyName||'').trim()!==off.legal_name;
+      const rncChanged=!!offRnc && String(p.rnc||'').replace(/\D/g,'')!==offRnc;
+      if(!nameChanged&&!rncChanged) continue;
+      updates.push({cred,plain:p,off,offRnc,from:p.companyName||'(sin nombre)',nameChanged,rncChanged});
+    }
+    const have=new Set(credentials.map(c=>c.id));
+    const fresh=official.filter(c=>!matched.has(c.id)&&!doubtful.some(d=>d.cand.includes(c.legal_name))&&!have.has(importedCredentialId(c.legal_name,'dgii')));
+    _syncPlan={updates,fresh};
+    const li=a=>a.map(x=>`<li>${x}</li>`).join('');
+    sum.innerHTML=
+      `<p><strong>${updates.length}</strong> accesos con nombre o RNC por actualizar.</p>`+
+      (updates.length?`<ul style="margin:6px 0 10px 18px">${li(updates.slice(0,40).map(u=>`${esc(u.from)} → <strong>${esc(u.off.legal_name)}</strong>${u.rncChanged?` · RNC ${esc(u.offRnc)}`:''}`))}${updates.length>40?`<li>… y ${updates.length-40} más</li>`:''}</ul>`:'')+
+      `<p><strong>${fresh.length}</strong> empresas de la lista oficial que no están en la bóveda.</p>`+
+      (fresh.length?`<ul style="margin:6px 0 10px 18px">${li(fresh.map(c=>`${esc(c.legal_name)}${c.rnc?` · ${esc(c.rnc)}`:''}`))}</ul>`:'')+
+      (doubtful.length?`<p><strong>${doubtful.length}</strong> parecidos dudosos (no se tocan, revísalos a mano):</p><ul style="margin:6px 0 0 18px">${li(doubtful.slice(0,30).map(d=>`${esc(d.name)} (${esc(d.inst)}) ≈ ${esc(d.cand.join(' / '))}`))}</ul>`:'');
+    document.getElementById('sync-new-wrap').hidden=!fresh.length;
+    apply.disabled=!(updates.length||fresh.length);
+    if(!updates.length&&!fresh.length) sum.innerHTML+='<p>Todo está al día.</p>';
+  }catch(e){ sum.textContent='Error: '+e.message; }
+}
+async function applySync(){
+  if(!_syncPlan||!masterKey) return;
+  const apply=document.getElementById('sync-apply'), prog=document.getElementById('sync-progress');
+  apply.disabled=true; prog.hidden=false; prog.textContent='Cifrando…';
+  const batch=[];
+  try{
+    for(const u of _syncPlan.updates){
+      const plain={...u.plain,companyName:u.off.legal_name};
+      if(u.offRnc) plain.rnc=u.offRnc;
+      const {iv,ct}=await C.enc(masterKey,plain);
+      batch.push({id:u.cred.id,institution:u.cred.institution,category:u.cred.category||'acceso',iv,ct});
+    }
+    if(document.getElementById('sync-new').checked&&!document.getElementById('sync-new-wrap').hidden){
+      for(const c of _syncPlan.fresh){
+        const r=String(c.rnc||c.cedula||'').replace(/\D/g,'');
+        const plain={companyName:c.legal_name,username:r,password:''}; if(r) plain.rnc=r;
+        const {iv,ct}=await C.enc(masterKey,plain);
+        batch.push({id:importedCredentialId(c.legal_name,'dgii'),institution:'dgii',category:'acceso',iv,ct});
+      }
+    }
+    for(let i=0;i<batch.length;i+=40){
+      prog.textContent=`Subiendo ${Math.min(i+40,batch.length)}/${batch.length}…`;
+      const res=await A.post('/api/credentials',{credentials:batch.slice(i,i+40)});
+      if(!res.ok) throw new Error(res.error||'Error en servidor');
+    }
+    const data=await A.get('/api/credentials'); credentials=data.credentials||[];
+    renderPortalGrid(); if(activePortal) await renderCompaniesView();
+    prog.textContent=`✓ ${batch.length} registros actualizados`; toast('Empresas sincronizadas','ok');
+    _syncPlan=null; setTimeout(closeSyncModal,1500);
+  }catch(e){ prog.textContent='Error: '+e.message; toast('Error: '+e.message,'err'); apply.disabled=false; }
 }
 
 initTheme();

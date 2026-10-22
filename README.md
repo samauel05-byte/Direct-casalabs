@@ -345,6 +345,8 @@ Aplica las migraciones de `supabase/migrations/` en orden. Entre otras: crean el
 
 ## Alta de una empresa nueva y carga por Excel
 
+**Sincronizar con la lista oficial (Direct).** Nombre y RNC de las empresas de la bóveda van dentro del `ct` cifrado de `direct_credentials`, por lo que solo se pueden cambiar en el navegador. El botón admin «Sincronizar con lista oficial» (`openSyncModal`/`applySync` en `public/index.html`) descifra cada credencial, la cruza con `GET /api/clients` (`direct_clients`) por RNC o nombre exacto (sin sufijos SRL/EIRL/SA…), y re-cifra con `companyName` y `rnc` oficiales vía `POST /api/credentials` (lotes de 40, mismos `id`). Opcionalmente crea las empresas oficiales ausentes como acceso `dgii` (`username` = RNC, clave vacía). Coincidencias por prefijo solo se listan.
+
 Cuando se vende el sistema a una firma nueva (p. ej. `Contadores del Este`), se crea primero su **tenant** y su administrador. Ese administrador no hereda usuarios, clientes ni credenciales de Save. Luego se sube el Excel de esa firma, que valida encabezados, formatos y duplicados y crea/actualiza solo sus clientes. Una carga debe ejecutarse siempre dentro del tenant correcto.
 
 El script `upload-companies.mjs` lee el Excel de credenciales y las sube a la bóveda cifrada:

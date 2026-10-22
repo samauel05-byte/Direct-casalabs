@@ -345,7 +345,7 @@ const MODS={
     nums:new Set(['monto','cantidad_ncf']),
     render(r,i){
       return`<tr>
-        <td><div style="display:flex;gap:6px;align-items:center">${r.origen==='nala'?'<span class="tag-nala" title="Viene de NALA (606 aprobado). Si lo editas, pasa a ser tuyo.">NALA</span>':''}${inp(r,'tipo_gasto',i,'gastos',260)}</div></td>
+        <td><div style="display:flex;gap:6px;align-items:center">${r.origen==='nala'?'<span class="tag-nala" title="Viene de NALA (606 aprobado) y se actualiza sola. Si la editas, pasa a ser tuya y NALA no la vuelve a agregar.">NALA</span>':''}${inp(r,'tipo_gasto',i,'gastos',260)}</div></td>
         <td>${ninp(r,'monto',i,'gastos',150)}</td>
         <td>${ninp(r,'cantidad_ncf',i,'gastos',120)}</td>
         <td><button class="btn-danger" onclick="delRow('gastos',${i})">✕</button></td>
@@ -512,7 +512,8 @@ function normalizeGastos(){
     tipo_gasto:r.tipo_gasto||'Sin clasificar',
     monto:r.monto ?? r.mtotal ?? (n(r.mserv)+n(r.mbienes)),
     cantidad_ncf:r.cantidad_ncf ?? (r.ncf ? 1 : 0),
-    origen:r.origen==='nala'?'nala':''
+    origen:r.origen==='nala'?'nala':'',
+    ...(r.ajuste_de?{ajuste_de:r.ajuste_de}:{})
   }));
 }
 
@@ -543,8 +544,12 @@ function renderAll(){MODKEYS.forEach(renderMod);}
 function onCell(el){
   const{i,f:fld,m:mod}=el.dataset;
   const isNum=(MODS[mod]?.nums||new Set()).has(fld);
+  const wasNala=(mod==='gastos'||mod==='envios606')&&DATA[mod][i].origen==='nala', tipoOrig=DATA[mod][i].tipo_gasto;
   DATA[mod][i][fld]=isNum?n(el.value):el.value;
-  if((mod==='gastos'||mod==='envios606')&&DATA[mod][i].origen==='nala') DATA[mod][i].origen=''; // editada a mano: ya no se pisa
+  if(wasNala){
+    DATA[mod][i].origen=''; // editada a mano: ya no se pisa
+    if(mod==='gastos') DATA[mod][i].ajuste_de=tipoOrig; // recuerda de qué línea de NALA viene, para no duplicarla
+  }
   // auto-calc ret adquirencia
   if(mod==='retenciones'&&(fld==='monto_ventas'||fld==='pct_ret')){
     DATA[mod][i].monto_retenido=Math.round(n(DATA[mod][i].monto_ventas)*n(DATA[mod][i].pct_ret))/100;
@@ -760,15 +765,23 @@ async function loadNala(){
   renderNala();
 }
 function nalaRows(){ return (NALA_SRC?.gastos||[]).map(g=>({tipo_gasto:g.tipo_gasto,monto:n(g.monto),cantidad_ncf:g.cantidad_ncf,origen:'nala'})); }
-// Llena Gastos NCF con lo de NALA si no hay filas propias; guarda en silencio si cambió.
+// Agrega a Gastos NCF lo aprobado en NALA (606). Las filas de NALA se refrescan solas en cada carga y las
+// que escribiste tú se conservan. Si ajustaste a mano una línea que venía de NALA, esa línea no se vuelve
+// a agregar (para no duplicarla). Guarda en silencio si cambió.
+let NALA_DUP=0;
 function applyNalaGastos(){
-  NALA_SYNC='';
+  NALA_SYNC=''; NALA_DUP=0;
   if(!NALA_SRC||!NALA_SRC.client) return;
-  const fresh=nalaRows(); const cur=DATA.gastos||[];
-  const mine=cur.filter(r=>r.origen!=='nala');
-  if(mine.length){ NALA_SYNC='manual'; return; }
-  const same=JSON.stringify(cur.map(r=>[r.tipo_gasto,n(r.monto),n(r.cantidad_ncf)]))===JSON.stringify(fresh.map(r=>[r.tipo_gasto,r.monto,r.cantidad_ncf]));
-  DATA.gastos=fresh; renderMod('gastos'); NALA_SYNC='auto';
+  const cur=DATA.gastos||[];
+  const old=cur.filter(r=>r.origen==='nala'), mine=cur.filter(r=>r.origen!=='nala');
+  const ajustadas=new Set(mine.map(r=>r.ajuste_de).filter(Boolean));
+  const fresh=nalaRows().filter(r=>!ajustadas.has(r.tipo_gasto));
+  const key=r=>JSON.stringify([r.tipo_gasto,n(r.monto),n(r.cantidad_ncf)]);
+  const same=JSON.stringify(old.map(key))===JSON.stringify(fresh.map(key));
+  const nombres=new Set(fresh.map(r=>String(r.tipo_gasto||'').trim().toLowerCase()));
+  NALA_DUP=mine.filter(r=>!r.ajuste_de&&nombres.has(String(r.tipo_gasto||'').trim().toLowerCase())).length;
+  DATA.gastos=[...fresh,...mine]; renderMod('gastos');
+  NALA_SYNC=mine.length?'merge':'auto';
   if(!same) saveQuiet();
 }
 // Histórico de envíos: una fila por mes y formato con lo APROBADO en NALA. Las filas que escribiste o
@@ -793,7 +806,7 @@ function applyNalaEnvios(){
 }
 function replaceGastosNala(){
   if(!NALA_SRC||!NALA_SRC.client) return;
-  if(!confirm('Esto reemplaza las filas de Gastos NCF que escribiste a mano por lo que tiene NALA (606 aprobado). ¿Continuar?')) return;
+  if(!confirm('Esto borra las filas de Gastos NCF que escribiste a mano y deja solo lo que tiene NALA (606 aprobado). ¿Continuar?')) return;
   DATA.gastos=nalaRows(); NALA_SYNC='auto'; renderMod('gastos'); renderNala(); saveQuiet();
 }
 // Guardado silencioso (sin alertas): mantiene el registro al día para Anexo J / IR-2.
@@ -822,7 +835,7 @@ function renderNala(){
   const r6=NALA_SRC.resumen['606']||{}, r7=NALA_SRC.resumen['607']||{};
   const aud=(r)=>`${r.meses_completos||0} mes(es) con auditoría completa`+(r.pendientes?` · <span class="warn">${r.pendientes} comprobante(s) sin aprobar en ${r.meses_en_proceso} mes(es)</span>`:'');
   const sync = NALA_SYNC==='auto' ? '<span class="ok">✓ Gastos NCF se llenó solo con esto</span>'
-    : NALA_SYNC==='manual' ? '<span class="warn">Tienes filas escritas a mano en Gastos NCF: NALA no las tocó.</span> <button class="btn-add" onclick="replaceGastosNala()">Reemplazar con NALA</button>' : '';
+    : NALA_SYNC==='merge' ? '<span class="ok">✓ El 606 de NALA se agregó a Gastos NCF</span> (tus filas escritas a mano se conservan y se suman).'+(NALA_DUP?` <span class="warn">Ojo: ${NALA_DUP} fila(s) tuyas tienen el mismo tipo de gasto que NALA; si es lo mismo, bórralas para no duplicar.</span>`:'')+' <button class="btn-add" onclick="replaceGastosNala()" title="Borra tus filas a mano y deja solo lo de NALA">Dejar solo NALA</button>' : '';
   const head=`<h4>Desde NALA · ${escH(NALA_SRC.client.nombre)} · ${NALA_SRC.anio}</h4>`;
   if(!r6.aprobados) g.innerHTML=box(head+`NALA todavía no tiene compras (606) aprobadas de ${NALA_SRC.anio}. En cuanto las auditen, aparecen aquí solas.<br>${aud(r6)}`);
   else g.innerHTML=box(head+`606 aprobado: <b>${r6.aprobados}</b> comprobantes · base RD$ <b>${f(r6.total_monto)}</b> · ITBIS RD$ ${f(r6.itbis)}<br>${aud(r6)}<br>${sync} <button class="btn-add" onclick="loadNala()" title="Volver a consultar NALA">Actualizar</button>`);

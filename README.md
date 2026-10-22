@@ -345,6 +345,8 @@ Aplica las migraciones de `supabase/migrations/` en orden. Entre otras: crean el
 
 ## Alta de una empresa nueva y carga por Excel
 
+**CAMI — detección de columnas.** `detectCols` (`public/cami/itbis-web.html`) busca primero por alias exactos; para `itbis_retenido` (606/607) y `retenido` (tarjetas) añade un respaldo que acepta cualquier encabezado con «reten…» que no sea ISR/renta/tipo/porcentaje (p. ej. «ITBIS Retenido por Terceros» del 607 de NALA). En NALA, el cuadro de advertencias de exportación (`askWarnings`) trae el motivo prellenado.
+
 **Sincronizar con la lista oficial (Direct).** Nombre y RNC de las empresas de la bóveda van dentro del `ct` cifrado de `direct_credentials`, por lo que solo se pueden cambiar en el navegador. El botón admin «Sincronizar con lista oficial» (`openSyncModal`/`applySync` en `public/index.html`) descifra cada credencial, la cruza con `GET /api/clients` (`direct_clients`) por RNC o nombre exacto (sin sufijos SRL/EIRL/SA…), y re-cifra con `companyName` y `rnc` oficiales vía `POST /api/credentials` (lotes de 40, mismos `id`). Opcionalmente crea las empresas oficiales ausentes como acceso `dgii` (`username` = RNC, clave vacía). Coincidencias por prefijo solo se listan.
 
 Cuando se vende el sistema a una firma nueva (p. ej. `Contadores del Este`), se crea primero su **tenant** y su administrador. Ese administrador no hereda usuarios, clientes ni credenciales de Save. Luego se sube el Excel de esa firma, que valida encabezados, formatos y duplicados y crea/actualiza solo sus clientes. Una carga debe ejecutarse siempre dentro del tenant correcto.

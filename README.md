@@ -345,6 +345,8 @@ Aplica las migraciones de `supabase/migrations/` en orden. Entre otras: crean el
 
 ## Alta de una empresa nueva y carga por Excel
 
+**Anexo J (`public/ir2/anexos.html`).** `importGastos` lee `data.gastos` de `GET /api/ir2/resumen?tipo=dgii-modulos` enviando `Authorization` y `X-Direct-Session` (de `localStorage.direct_session_id`); sin ese encabezado el servidor responde 401. Si la respuesta no es OK se muestra un aviso en `#source-note`.
+
 **Estimación Fiscal ← NALA (606).** `applyNalaGastos` (`public/dgii/index.html`) mezcla las filas `origen:'nala'` (refrescadas en cada carga desde `fuente=nala`) con las del usuario, que se conservan; una fila de NALA editada a mano pasa a ser del usuario y guarda `ajuste_de` (tipo de gasto original) para que no se vuelva a agregar. Aviso si una fila manual repite un tipo de gasto de NALA; «Dejar solo NALA» (`replaceGastosNala`) borra las manuales.
 
 **CAMI — detección de columnas.** `detectCols` (`public/cami/itbis-web.html`) busca primero por alias exactos; para `itbis_retenido` (606/607) y `retenido` (tarjetas) añade un respaldo que acepta cualquier encabezado con «reten…» que no sea ISR/renta/tipo/porcentaje (p. ej. «ITBIS Retenido por Terceros» del 607 de NALA). En NALA, el cuadro de advertencias de exportación (`askWarnings`) trae el motivo prellenado.

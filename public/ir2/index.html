@@ -194,6 +194,7 @@ td select:focus{border-color:var(--acc2)}
   <div class="tab" onclick="switchTab(3)">Conciliación Fiscal</div>
   <div class="tab" onclick="switchTab(4)">Cálculo IR-2</div>
   <div class="tab" onclick="switchTab(5)">Reporte Final</div>
+  <div class="tab" onclick="switchTab(6)">Formulario IR-2</div>
 </div>
 
 <div class="content">
@@ -449,6 +450,20 @@ td select:focus{border-color:var(--acc2)}
 <!-- ═══ TAB 5: Reporte Final ═══ -->
 <div class="section" id="sec-5">
   <div id="reporte-content"></div>
+</div>
+
+<!-- ═══ TAB 6: Formulario IR-2 (mismas casillas que el Excel oficial) ═══ -->
+<div class="section" id="sec-6">
+  <div class="card">
+    <div class="card-title">Formulario IR-2 — Declaración jurada de sociedades</div>
+    <div class="hint" style="margin:0 0 10px">Mismas casillas y fórmulas que el Excel oficial. Lo que el sistema ya sabe se llena solo (Estado de Resultados, Conciliación Fiscal y Cálculo IR-2); <b>todas las casillas se pueden editar</b>, incluso las calculadas. Una casilla escrita a mano se marca en amarillo y se puede devolver a automático con ↺.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm no-print" onclick="descargarFormIR2()">Descargar Excel IR-2</button>
+      <button class="btn btn-outline btn-sm no-print" onclick="resetFormIR2()">Volver todo a automático</button>
+    </div>
+  </div>
+  <div class="card"><div class="card-title">Datos generales</div><div id="frm-general" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px"></div></div>
+  <div class="card"><div class="card-title">Casillas</div><div id="frm-casillas"></div></div>
 </div>
 
 </div><!-- /content -->
@@ -749,6 +764,7 @@ function switchTab(n){
   document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
   document.querySelectorAll('.section').forEach((s,i)=>s.classList.toggle('active',i===n));
   if(n===5)recalcAll();
+  if(n===6)renderFormIR2();
 }
 
 /* ── CSV Import ── */
@@ -853,6 +869,64 @@ syncEmpresa();
 if(rows.length===0)recalcAll();
 </script>
 <!-- Guía central de empresas: autocompletar nombre ↔ RNC desde /api/clients -->
+<script src="/ir2/formulario.js"></script>
+<script>
+/* ── Formulario IR-2: UI ── */
+let FRM={manual:{},general:{}};
+const frmKey=()=>'ir2_form_'+(v('e-rnc')||'x')+'_'+(v('e-anio')||'x');
+function frmLoad(){ try{ const j=JSON.parse(localStorage.getItem(frmKey())||'null'); FRM=j&&j.manual?j:{manual:{},general:{}}; }catch(e){ FRM={manual:{},general:{}}; } FRM.general=FRM.general||{}; }
+function frmSave(){ try{ localStorage.setItem(frmKey(),JSON.stringify(FRM)); }catch(e){} }
+function frmAuto(){
+  const d=derivados();
+  return {AB18:d.ingresosBrutos,AB19:d.ingresosBrutos,AB20:d.utilidadAntesISR,U21:d.totalND,U22:d.totalEX,AB27:d.totalPE,T32:d.anticipos,T33:d.retenciones,T40:d.percibido};
+}
+function frmState(){
+  const inputs={...frmAuto()}, man=new Set();
+  for(const [c,val] of Object.entries(FRM.manual)){ inputs[c]=val; const def=IR2Form.CAS.find(x=>x.cell===c); if(def&&def.t==='calc') man.add(c); }
+  return {inputs,man,res:IR2Form.compute(inputs,man)};
+}
+function frmGeneralDefaults(){ const n=v('e-nombre'); return {anio:v('e-anio'),rnc:v('e-rnc'),razon:n,comercial:n}; }
+function frmGeneral(){ return {...frmGeneralDefaults(),...FRM.general}; }
+function renderFormIR2(){
+  frmLoad();
+  const g=frmGeneral();
+  document.getElementById('frm-general').innerHTML=IR2Form.GENERAL.map(f=>`<div class="isr-field"><label>${f.label}</label><input type="text" id="f-g-${f.id}" value="${esc(g[f.id]||'')}" oninput="frmGeneralInput('${f.id}',this.value)"></div>`).join('');
+  document.getElementById('frm-casillas').innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px">'+IR2Form.CAS.map(c=>`<tr style="border-bottom:1px solid var(--bdr)">
+      <td style="padding:6px 8px;width:46px;font-weight:700;color:var(--fg3);white-space:nowrap">${c.t==='pct'?'%':c.k}</td>
+      <td style="padding:6px 8px">${c.label}${c.t==='calc'?' <span style="color:var(--fg3);font-size:10px">(fórmula)</span>':''}</td>
+      <td style="padding:6px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" id="f-c-${c.cell}" style="width:150px;text-align:right" oninput="frmInput('${c.cell}',this.value)"> <button class="rm-btn no-print" id="f-r-${c.cell}" title="Volver a automático" style="visibility:hidden" onclick="frmRestore('${c.cell}')">↺</button></td></tr>`).join('')+'</table>';
+  frmRefresh();
+}
+function frmRefresh(skip){
+  const st=frmState();
+  for(const c of IR2Form.CAS){
+    const el=document.getElementById('f-c-'+c.cell), rb=document.getElementById('f-r-'+c.cell); if(!el) continue;
+    const isMan=Object.prototype.hasOwnProperty.call(FRM.manual,c.cell);
+    if(c.cell!==skip){ const x=st.res[c.cell]; el.value=(c.t==='pct'&&!x)?'':String(Math.round(x*100)/100); }
+    el.style.background=isMan?'#fff3bf':''; el.style.color=isMan?'#000':'';
+    if(rb) rb.style.visibility=isMan?'visible':'hidden';
+  }
+}
+function frmInput(cell,val){
+  const def=IR2Form.CAS.find(x=>x.cell===cell);
+  if(val===''&&def.t!=='pct') delete FRM.manual[cell]; else FRM.manual[cell]=parseFloat(val)||0;
+  if(def.t==='pct'&&val==='') delete FRM.manual[cell];
+  frmSave(); frmRefresh(cell);
+}
+function frmRestore(cell){ delete FRM.manual[cell]; frmSave(); frmRefresh(); }
+function resetFormIR2(){ if(!confirm('¿Volver todas las casillas a automático? Se pierde lo que escribiste a mano en el formulario.')) return; FRM.manual={}; frmSave(); frmRefresh(); }
+function frmGeneralInput(id,val){ FRM.general[id]=val; frmSave(); }
+async function descargarFormIR2(){
+  try{
+    if(typeof JSZip==='undefined') await new Promise((ok,bad)=>{ const el=document.createElement('script'); el.src='/cami/vendor/jszip.min.js'; el.onload=ok; el.onerror=()=>bad(new Error('No se pudo cargar el lector de Excel')); document.head.appendChild(el); });
+    const r=await fetch('/ir2/IR-2.template.xlsx'); if(!r.ok) throw new Error('No se pudo cargar la plantilla IR-2 ('+r.status+')');
+    const st=frmState(), g=frmGeneral();
+    const out=await IR2Form.buildXlsx(JSZip,await r.arrayBuffer(),{general:g,inputs:st.inputs,manual:st.man});
+    const name=('IR-2 '+(g.razon||g.rnc||'')+' '+(g.anio||'')).replace(/[\\/:*?"<>|]/g,'').trim().toUpperCase()+'.xlsx';
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+  }catch(e){ alert('No se pudo descargar: '+(e.message||e)); }
+}
+</script>
 <script src="/js/empresas.js"></script>
 <script>try{ SERP_EMPRESAS.attach('e-nombre','e-rnc'); }catch(e){}</script>
 <script src="/js/ai-assistant.js"></script>

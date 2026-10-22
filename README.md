@@ -345,6 +345,8 @@ Aplica las migraciones de `supabase/migrations/` en orden. Entre otras: crean el
 
 ## Alta de una empresa nueva y carga por Excel
 
+**Cron de Nómina.** `lib/nomina/cron.js` debe importar el cliente como `const supabase = require('../supabase')` (el módulo exporta el cliente directamente, no un objeto): con `{ supabase }` quedaba `undefined` y `/api/nomina/cron` (Vercel cron `0 13 * * *`) fallaba con «Cannot read properties of undefined (reading 'from')».
+
 **Formulario IR-2 (`public/ir2/`).** `formulario.js` define las casillas del formulario (`CAS`: celda de la plantilla, tipo `in`/`calc`/`pct`), sus fórmulas (`compute`, mismas del Excel oficial) y `buildXlsx`, que edita el XML de `IR-2.template.xlsx` (copia del Excel de la DGII sin vínculos externos ni datos de empresa; hoja protegida como el original) escribiendo solo los valores de las celdas: conserva diseño, celdas combinadas y fórmulas internas, y deja `fullCalcOnLoad`. Las casillas calculadas escritas a mano se escriben como valor fijo. La pestaña «Formulario IR-2» de `index.html` toma los valores automáticos de `derivados()` (A/B ← ingresos brutos, 1 ← utilidad antes de ISR, 2 ← no deducibles, 3 ← exentos, 8 ← pérdidas anteriores, 13 ← anticipos, 14 ← retenciones, 21 ← ISR percibido) y guarda lo manual en `localStorage` (`ir2_form_<rnc>_<año>`). Pruebas: `npm run test:ir2`.
 
 **Exportar Excel (Estimación Fiscal).** `exportEstimacion` (`public/dgii/index.html`) arma con SheetJS un libro con una hoja por módulo de `MODS` (columnas en `EXPORT_COLS`, totales en `EXPORT_SUMAR`) a partir de `DATA` y lo descarga como `ESTIMACION <NOMBRE> <AÑO>.xlsx`; sin llamadas al servidor.

@@ -345,6 +345,8 @@ Aplica las migraciones de `supabase/migrations/` en orden. Entre otras: crean el
 
 ## Alta de una empresa nueva y carga por Excel
 
+**Exportar Excel (Estimación Fiscal).** `exportEstimacion` (`public/dgii/index.html`) arma con SheetJS un libro con una hoja por módulo de `MODS` (columnas en `EXPORT_COLS`, totales en `EXPORT_SUMAR`) a partir de `DATA` y lo descarga como `ESTIMACION <NOMBRE> <AÑO>.xlsx`; sin llamadas al servidor.
+
 **Importar IR-2 (Excel).** `importIr2File` (`public/dgii/index.html`, pestaña Gastos NCF) lee con `/cami/vendor/xlsx.full.min.js` la hoja `606` del Excel del IR-2: localiza el encabezado («Tipo Bienes y Servicios Comprados», «Total Monto Facturado»), agrupa por código de tipo (01–11) y arma filas `{tipo_gasto:'NN - Nombre', monto, cantidad_ncf, ajuste_de}` con el catálogo de NALA. Reemplaza las filas de los tipos presentes y verifica RNC (hoja `J`) y año (Fecha Comprobante). Suma las líneas del 606, no el resumen del archivo (que puede diferir).
 
 **Anexo J (`public/ir2/anexos.html`).** `importGastos` lee `data.gastos` de `GET /api/ir2/resumen?tipo=dgii-modulos` enviando `Authorization` y `X-Direct-Session` (de `localStorage.direct_session_id`); sin ese encabezado el servidor responde 401. Si la respuesta no es OK se muestra un aviso en `#source-note`.

@@ -112,6 +112,7 @@ select option{background:var(--surf2)}
     </select>
     <input id="rnc-inp" class="hdr-inp" type="text" placeholder="RNC" style="width:100px" oninput="RNC=this.value.trim()" onchange="rncTyped(this.value)">
     <select id="anio-sel" class="hdr-sel" onchange="changeAnio(this.value)" style="width:68px"></select>
+    <button class="btn" onclick="exportEstimacion()" title="Descarga todas las pestañas en un Excel (una hoja por pestaña)">Exportar Excel</button>
     <button class="btn btn-save" onclick="saveAll()">Guardar</button>
   </div>
 </div>
@@ -858,6 +859,35 @@ async function importIr2File(inp){
     DATA.gastos=[...filas,...resto];
     renderMod('gastos'); renderNala(); markDirty(); saveQuiet();
   }catch(e){ alert('No se pudo importar: '+(e.message||e)); }
+}
+/* ── Exportar a Excel: una hoja por pestaña, con sus columnas y una fila de totales ── */
+const EXPORT_COLS={
+  gastos:[['tipo_gasto','Tipo de gasto'],['monto','Monto'],['cantidad_ncf','Cantidad NCF']],
+  inmuebles:[['matricula','Matrícula'],['tipo','Tipo'],['descripcion','Descripción'],['municipio','Municipio'],['provincia','Provincia'],['avaluo','Avalúo'],['anio_avaluo','Año avalúo'],['status','Status'],['obs','Observaciones']],
+  retenciones:[['periodo','Período'],['compania','Compañía'],['tipo_tarjeta','Tipo tarjeta'],['monto_ventas','Monto ventas'],['pct_ret','% retención'],['monto_retenido','Monto retenido'],['cert','Certificación'],['fecha_cert','Fecha cert.'],['status','Status']],
+  vehiculos:[['placa','Placa'],['marca','Marca'],['modelo','Modelo'],['anio','Año'],['color','Color'],['tipo','Tipo'],['vin','VIN'],['avaluo','Avalúo'],['status','Status'],['venc_marbete','Venc. marbete']],
+  envios606:[['periodo','Período'],['tipo','Tipo'],['fecha_envio','Fecha envío'],['estado','Estado'],['nro_reg','Nro. registros'],['total_monto','Total monto'],['total_itbis','Total ITBIS'],['total_ret','Total retenciones'],['ref_dgii','Ref. DGII'],['obs','Observaciones']],
+  'pagos-dga':[['dua','DUA'],['fecha_dua','Fecha DUA'],['pais','País'],['descripcion','Descripción'],['hs_code','HS code'],['valor_usd','Valor USD'],['tc','Tasa cambio'],['valor_rd','Valor RD$'],['arancel_pct','% arancel'],['arancel','Arancel'],['itbis','ITBIS'],['isc','ISC'],['otros','Otros'],['total','Total'],['fecha_pago','Fecha pago'],['status','Status']],
+};
+const EXPORT_SUMAR={gastos:['monto','cantidad_ncf'],inmuebles:['avaluo'],retenciones:['monto_ventas','monto_retenido'],vehiculos:['avaluo'],envios606:['nro_reg','total_monto','total_itbis','total_ret'],'pagos-dga':['valor_usd','valor_rd','arancel','itbis','isc','otros','total']};
+async function exportEstimacion(){
+  try{
+    if(!RNC){ alert('Elige una empresa primero.'); return; }
+    await loadXlsxLib();
+    const wb=XLSX.utils.book_new();
+    for(const mod of MODKEYS){
+      const cols=EXPORT_COLS[mod]; if(!cols) continue;
+      const nums=MODS[mod].nums, rows=DATA[mod]||[];
+      const aoa=[cols.map(c=>c[1]),...rows.map(r=>cols.map(([k])=>nums.has(k)?n(r[k]):(r[k]==null?'':r[k])))];
+      const sumar=EXPORT_SUMAR[mod]||[];
+      if(rows.length&&sumar.length) aoa.push(cols.map(([k],ix)=>sumar.includes(k)?Math.round(rows.reduce((t,r)=>t+n(r[k]),0)*100)/100:(ix===0?'TOTALES':'')));
+      const ws=XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols']=cols.map(([k,t])=>({wch:Math.max(12,Math.min(40,t.length+4,...rows.slice(0,200).map(r=>String(r[k]||'').length+2)))}));
+      XLSX.utils.book_append_sheet(wb,ws,(MODS[mod].label||mod).replace(/[\\/?*\[\]:]/g,'').slice(0,31));
+    }
+    const nombre=String(NOMBRE||RNC).replace(/[\\/:*?"<>|]/g,'').trim().toUpperCase();
+    XLSX.writeFile(wb,`ESTIMACION ${nombre} ${ANIO}.xlsx`);
+  }catch(e){ alert('No se pudo exportar: '+(e.message||e)); }
 }
 function replaceGastosNala(){
   if(!NALA_SRC||!NALA_SRC.client) return;

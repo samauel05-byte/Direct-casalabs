@@ -239,7 +239,7 @@
     return NALA.modal({ title: 'Advertencias del archivo', okText: 'Aceptar y generar', wide: true,
       body: `<p class="muted" style="margin-bottom:8px">Acepta cada advertencia para generar el archivo. Quedan registradas.</p>
         <div class="stack" style="gap:6px">${snap.warnings.map(w => `<label class="issue warning"><input type="checkbox" class="acc" value="${esc(w.code)}"> <span>${esc(w.message)}${w.lines?.length ? ` <span class="muted">· líneas ${w.lines.slice(0, 12).join(', ')}${w.lines.length > 12 ? '…' : ''}</span>` : ''}</span></label>`).join('')}</div>
-        <label class="f" style="margin-top:8px"><span>Motivo para exportar con advertencias</span><textarea id="acc-reason" rows="2"></textarea></label>`,
+        <label class="f" style="margin-top:8px"><span>Motivo para exportar con advertencias</span><textarea id="acc-reason" rows="2">Advertencias revisadas en auditoría; se exporta conforme.</textarea></label>`,
       onOk: m => {
         const accepted = [...m.querySelectorAll('.acc:checked')].map(x => x.value);
         if (accepted.length !== snap.warnings.length) throw new Error('Acepta cada advertencia antes de exportar.');

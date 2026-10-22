@@ -1111,7 +1111,7 @@ const AL607 = {
   monto_gravado:    ['monto_gravado','gravado','valor_gravado','importe_gravado','montogravado'],
   monto_exento:     ['monto_exento','exento','valor_exento','importe_exento','montoexento','no_gravado','montonogravado'],
   itbis_facturado:  ['itbis_facturado','itbis','itbisfacturado','monto_itbis','impuesto','itbisfact'],
-  itbis_retenido:   ['itbis_retenido','itbisretenido','retencion_itbis','itbis_ret','itbis_retenido_terceros','itbis_ret_terceros'],
+  itbis_retenido:   ['itbis_retenido','itbisretenido','retencion_itbis','itbis_ret','itbis_retenido_terceros','itbis_ret_terceros','itbis_retenido_por_terceros'],
   tasa_itbis:       ['tasa_itbis','tasa','porcentaje_itbis','pct_itbis','tasa_impuesto','tasaimpuesto','tasa_gravamen'],
   construccion:     ['construccion','es_construccion','tipo_operacion','operacion_construccion'],
   pago_efectivo:    ['monto_facturado_en_efectivo','monto_efectivo','efectivo','venta_efectivo','pagado_efectivo'],
@@ -1171,6 +1171,15 @@ function detectCols(headers, aliases) {
     for (const a of alts) {
       if (norm[normKey(a)]) { map[canon] = norm[normKey(a)]; break; }
     }
+  }
+  // Respaldo para el ITBIS retenido: el nombre varía mucho entre archivos
+  // («ITBIS Retenido por Terceros», «Retención ITBIS 30%», «ITBIS retenido ley 253-12»…).
+  // Si no hubo coincidencia exacta, se acepta el encabezado que mencione retención/retenido
+  // sin ser de renta (ISR) ni un porcentaje o tipo.
+  for (const canon of ['itbis_retenido','retenido']) {
+    if (!(canon in aliases) || map[canon]) continue;
+    const hit = Object.keys(norm).find(k => /reten/.test(k) && !/isr|renta|tipo|porcentaje|pct|porc/.test(k) && (canon==='retenido' || /itbis/.test(k)));
+    if (hit) map[canon] = norm[hit];
   }
   return map;
 }

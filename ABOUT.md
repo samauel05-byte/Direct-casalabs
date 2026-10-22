@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Estimación Fiscal — botón «Importar IR-2 (Excel)»**: en la pestaña Gastos NCF puedes subir el Excel del IR-2 (.xlsx o .xlsm). Lee su hoja **606** (una fila por comprobante), suma el *Total Monto Facturado* **por tipo de gasto** y llena la tabla con los mismos nombres que usa NALA («02 - Gastos por trabajos, suministros y servicios»…), con la cantidad de comprobantes. Los tipos que trae el archivo **reemplazan** las filas de ese tipo (de NALA o escritas a mano); las demás no se tocan, y NALA no vuelve a duplicar esos tipos. Antes de aplicar avisa si el **RNC** o el **año** del archivo no coinciden con la empresa abierta y pide confirmación. Todo se lee en el navegador. Alimenta también el Anexo J.
+
 - **Anexo J ya carga los gastos de Gastos NCF (incluido el 606 de NALA)**: al abrir «Anexo J del IR-2» desde Estimación Fiscal, la tabla salía vacía aunque Gastos NCF tuviera datos, porque la página pedía los gastos sin identificar la sesión y el servidor los rechazaba. Ahora los trae bien; y si por algún motivo no los puede cargar, lo dice con un aviso en vez de mostrar «cargada» con la tabla vacía.
 
 - **Estimación Fiscal — el 606 de NALA ahora SÍ se agrega a Gastos NCF**: antes, si la empresa ya tenía filas escritas a mano en Gastos NCF, el 606 aprobado en NALA solo se mostraba arriba y no se agregaba. Ahora **siempre se agrega** (filas con la etiqueta NALA, que se refrescan solas) y **tus filas se conservan y se suman**. Si una fila tuya tiene el mismo tipo de gasto que NALA, avisa para que la borres si es lo mismo y no se duplique; si ajustas a mano una fila de NALA, esa línea no se vuelve a agregar. Botón **«Dejar solo NALA»** por si prefieres borrar lo escrito a mano.

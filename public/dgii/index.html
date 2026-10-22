@@ -133,6 +133,8 @@ select option{background:var(--surf2)}
     <span class="sec-lbl">Gastos NCF — Resumen por tipo de gasto</span>
     <div style="display:flex;gap:8px">
       <button class="btn-add" onclick="addRow('gastos')">+ Agregar tipo de gasto</button>
+      <button class="btn-add" onclick="document.getElementById('ir2-file').click()" title="Sube el Excel del IR-2 (.xlsx/.xlsm): suma su hoja 606 por tipo de gasto y llena esta tabla">Importar IR-2 (Excel)</button>
+      <input type="file" id="ir2-file" accept=".xlsx,.xlsm,.xls" hidden onchange="importIr2File(this)">
       <button class="btn-add" onclick="goAnexoJ()" title="Opcional: pasa estos gastos al Anexo J del IR-2 (abre otra pestaña)">Anexo J del IR-2 ↗</button>
     </div>
   </div>
@@ -803,6 +805,59 @@ function applyNalaEnvios(){
   const same=JSON.stringify(old.map(key))===JSON.stringify(fresh.map(key));
   DATA.envios606=[...fresh,...mine]; renderMod('envios606');
   if(!same) saveQuiet();
+}
+/* ── Importar el Excel del IR-2 (.xlsx/.xlsm) ──
+   Lee la hoja «606» (una fila por comprobante), suma «Total Monto Facturado» por tipo de bienes y
+   servicios y llena Gastos NCF con el mismo formato que NALA («02 - Gastos por trabajos…»). Los tipos que
+   trae el archivo reemplazan las filas de ese tipo (de NALA o manuales); el resto no se toca. Todo en el
+   navegador. */
+const TIPOS_GASTO={'01':'Gastos de personal','02':'Gastos por trabajos, suministros y servicios','03':'Arrendamientos','04':'Gastos de activos fijos','05':'Gastos de representación','06':'Otras deducciones admitidas','07':'Gastos financieros','08':'Gastos extraordinarios','09':'Compras y gastos que formarán parte del costo de venta','10':'Adquisiciones de activos','11':'Gastos de seguros'};
+const normH=v=>String(v==null?'':v).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+async function loadXlsxLib(){
+  if(typeof XLSX!=='undefined') return;
+  await new Promise((ok,bad)=>{ const el=document.createElement('script'); el.src='/cami/vendor/xlsx.full.min.js'; el.onload=ok; el.onerror=()=>bad(new Error('No se pudo cargar el lector de Excel')); document.head.appendChild(el); });
+}
+async function importIr2File(inp){
+  const file=inp.files&&inp.files[0]; inp.value='';
+  if(!file) return;
+  try{
+    await loadXlsxLib();
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'});
+    const nm=wb.SheetNames.find(x=>x.trim()==='606');
+    if(!nm) throw new Error('El archivo no tiene la hoja «606». Sube el Excel del IR-2.');
+    const raw=XLSX.utils.sheet_to_json(wb.Sheets[nm],{header:1,defval:''});
+    let h=-1,cTipo=-1,cTot=-1,cNcf=-1,cPer=-1;
+    for(let i=0;i<Math.min(raw.length,60)&&h<0;i++){
+      const hs=raw[i].map(normH);
+      const t=hs.findIndex(x=>x.startsWith('tipo bienes y servicios')), m=hs.findIndex(x=>x==='total monto facturado');
+      if(t>=0&&m>=0){ h=i; cTipo=t; cTot=m; cNcf=hs.findIndex(x=>x==='ncf'); cPer=hs.findIndex(x=>x.startsWith('fecha comprobante')); }
+    }
+    if(h<0) throw new Error('No se encontró el encabezado «Tipo Bienes y Servicios Comprados» / «Total Monto Facturado» en la hoja 606.');
+    const agg=new Map(); let lineas=0; const years=new Set();
+    for(let i=h+1;i<raw.length;i++){
+      const r=raw[i]; const m=String(r[cTipo]||'').trim().match(/^(\d{1,2})/);
+      if(!m) continue;
+      const code=m[1].padStart(2,'0'); if(!TIPOS_GASTO[code]) continue;
+      const a=agg.get(code)||{monto:0,cant:0}; a.monto+=n(r[cTot]); a.cant++; agg.set(code,a); lineas++;
+      const y=String(cPer>=0?r[cPer]:'').slice(0,4); if(/^20\d\d$/.test(y)) years.add(y);
+    }
+    if(!lineas) throw new Error('La hoja 606 no tiene comprobantes con tipo de gasto.');
+    // Verificaciones: misma empresa y mismo año
+    const avisos=[];
+    const sj=wb.SheetNames.find(x=>x.trim()==='J');
+    if(sj&&RNC){ const jr=XLSX.utils.sheet_to_json(wb.Sheets[sj],{header:1,defval:''}); const fila=jr.slice(0,30).find(r=>r.some(c=>normH(c)==='rnc'));
+      const rncArch=fila?String(fila.find((c,ix)=>ix>0&&/\d{3}/.test(String(c)))||'').replace(/\D/g,''):'';
+      if(rncArch&&rncArch!==String(RNC).replace(/\D/g,'')) avisos.push(`El RNC del archivo (${rncArch}) no es el de la empresa abierta (${RNC}).`); }
+    if(years.size&&!years.has(String(ANIO))) avisos.push(`El archivo es del año ${[...years].join('/')} y estás en ${ANIO}.`);
+    const filas=[...agg.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([code,a])=>({tipo_gasto:`${code} - ${TIPOS_GASTO[code]}`,monto:Math.round(a.monto*100)/100,cantidad_ncf:a.cant,origen:'',ajuste_de:`${code} - ${TIPOS_GASTO[code]}`}));
+    const total=filas.reduce((t,r)=>t+r.monto,0);
+    const msg=(avisos.length?'⚠ '+avisos.join('\n⚠ ')+'\n\n':'')+`Se importarán ${filas.length} tipos de gasto (${lineas} comprobantes) por RD$ ${f(total)}.\nReemplazan las filas de esos mismos tipos (de NALA o escritas a mano); las demás no se tocan.\n\n¿Continuar?`;
+    if(!confirm(msg)) return;
+    const codes=new Set(filas.map(r=>r.tipo_gasto.slice(0,2)));
+    const resto=(DATA.gastos||[]).filter(r=>!codes.has(String(r.tipo_gasto||'').trim().slice(0,2)));
+    DATA.gastos=[...filas,...resto];
+    renderMod('gastos'); renderNala(); markDirty(); saveQuiet();
+  }catch(e){ alert('No se pudo importar: '+(e.message||e)); }
 }
 function replaceGastosNala(){
   if(!NALA_SRC||!NALA_SRC.client) return;

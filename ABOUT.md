@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Estimación Fiscal — el 606 de NALA ahora SÍ se agrega a Gastos NCF**: antes, si la empresa ya tenía filas escritas a mano en Gastos NCF, el 606 aprobado en NALA solo se mostraba arriba y no se agregaba. Ahora **siempre se agrega** (filas con la etiqueta NALA, que se refrescan solas) y **tus filas se conservan y se suman**. Si una fila tuya tiene el mismo tipo de gasto que NALA, avisa para que la borres si es lo mismo y no se duplique; si ajustas a mano una fila de NALA, esa línea no se vuelve a agregar. Botón **«Dejar solo NALA»** por si prefieres borrar lo escrito a mano.
+
 - **CAMI reconoce mejor el ITBIS retenido**: al cargar un 606/607 o un reporte de tarjeta, CAMI solo detectaba la columna por nombres exactos y no veía, por ejemplo, **«ITBIS Retenido por Terceros»** (el encabezado del 607 que genera NALA). Ahora, si no hay coincidencia exacta, acepta cualquier encabezado de retención de ITBIS («Retención ITBIS 30%», «Retención Ley 253-12», etc.), sin confundirlo con la retención de renta (ISR) ni con porcentajes o tipos.
 - **NALA — motivo prellenado al exportar con advertencias**: el cuadro «Advertencias del archivo» ya trae el motivo escrito («Advertencias revisadas en auditoría; se exporta conforme.»); sigues marcando cada advertencia y puedes editar el motivo.
 

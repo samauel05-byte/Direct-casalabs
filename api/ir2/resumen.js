@@ -5,6 +5,8 @@ module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
   const requestedType = req.method === 'POST' ? req.body?.tipo : req.query?.tipo;
+  // Análisis de ITBIS de CAMI (borrador automático y copias guardadas): otro permiso y otra tabla.
+  if ((req.query?.tipo || requestedType) === 'cami-analisis') return require('../../lib/cami-analisis').handle(req, res, session);
   // 'dgii-modulos' es el módulo de Estimación Fiscal (Anexos DGII); se rige por
   // el permiso de Estimación, igual que 'estimacion'. Se admite también IR-2.
   const isEstimate = requestedType === 'estimacion' || requestedType === 'dgii-modulos';

@@ -98,6 +98,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 ## Módulos
 
+**CAMI — cuadros de compras**: `process606` agrega `summary.compras` (`byNcf`, `byPago`, `byTipo`: cantidad, monto e ITBIS) usando `compraNcfCode`, `compraPagoKey` y `compraTipoKey` (alias nuevo `forma_pago` en `AL606`); `updateIT1` los muestra junto a los de ventas y oculta el bloque de ventas si no hay 607. Son informativos en pantalla (la plantilla oficial del IT-1 no trae casillas de compras por tipo).
+
 **CAMI — IT-1 con un solo archivo**: `updateIT1`/`exportIT1DGII` usan `it1S6()`/`it1S7()`, que devuelven el resumen cargado o uno vacío (`empty606Summary`/`empty607Summary`); el IT-1 se habilita con 606, 607 o ambos.
 
 **Conciliación bancaria** (`/conciliacion/`): herramienta 100 % del lado del navegador (sin API ni datos en el servidor). `engine.js` (UMD, también corre en Node) normaliza montos (`1,234.56`, `1.234,56`, `(500)`, `DB/CR`) y fechas (dd/mm/yyyy, ISO, serial Excel) a centavos/ISO, adivina columnas por encabezado y concilia 1 a 1: puntaje por referencia (exacta/parcial), diferencia de fecha (tolerancia configurable) y descripción; estados `auto` / `review` (monto repetido, fecha distinta, posible duplicado) / `confirmed`; separa cargos bancarios (comisión, impuesto 0.15 %, ITBIS, intereses…) y detecta duplicados por lado. La salida a Excel (SheetJS vendorizado) trae Resumen, Conciliados, Por revisar, Solo en banco/libros, Cargos y Duplicados. Visible en Accesos para admin y quienes tengan NALA, IR-2 o Estimación. Pruebas: `npm run test:conciliacion`.

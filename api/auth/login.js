@@ -100,5 +100,30 @@ module.exports = async (req, res) => {
     }
   }
 
+  // PATCH: migra la envoltura del secreto de bóveda a la llave v2 (600.000 iteraciones).
+  // Sólo del propio usuario y sólo si la sal anterior sigue siendo la guardada, para
+  // no pisar un cambio de contraseña hecho en otra sesión.
+  if (req.method === 'PATCH') {
+    const session = await authenticate(req);
+    if (!session) return res.status(401).json({ error: 'No autorizado' });
+    if (!await allow(req, 'kdf-upgrade', 5, 15 * 60 * 1000)) return res.status(429).json({ error: 'Demasiados intentos.' });
+    const { prevSalt, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+    const b64 = /^[A-Za-z0-9+/]+={0,2}$/;
+    if (typeof prevSalt !== 'string' || typeof userSalt !== 'string' || !/^v2\$[A-Za-z0-9+/]{22}={2}$/.test(userSalt)
+      || typeof vaultKeyIv !== 'string' || typeof vaultKeyCt !== 'string' || !b64.test(vaultKeyIv) || !b64.test(vaultKeyCt)
+      || vaultKeyIv.length > 32 || vaultKeyCt.length > 256) {
+      return res.status(400).json({ error: 'Datos inválidos' });
+    }
+    try {
+      const { data, error } = await supabase.from('direct_profiles')
+        .update({ user_key_salt: userSalt, vault_key_iv: vaultKeyIv, vault_key_ct: vaultKeyCt })
+        .eq('id', session.userId).eq('user_key_salt', prevSalt).select('id');
+      if (error) throw error;
+      return res.json({ ok: true, updated: (data || []).length });
+    } catch (e) {
+      console.error(e); return res.status(500).json({ error: 'Error interno del servidor' });
+    }
+  }
+
   res.status(405).end();
 };

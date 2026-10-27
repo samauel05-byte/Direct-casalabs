@@ -64,6 +64,7 @@ El relay se despliega automáticamente desde `main`.
 
 ## Seguridad
 
+- **KDF versionado de la bóveda**: la llave de usuario (contraseña → AES-GCM) se deriva con PBKDF2-SHA256. La sal guardada en `direct_profiles.user_key_salt` lleva su versión: `v2$<base64>` = 600.000 iteraciones; sin prefijo = legado (200.000). Al iniciar sesión con una sal legada, el cliente re-envuelve el **mismo** secreto de bóveda con una sal v2 (verifica que abre) y lo envía con `PATCH /api/auth/login` (`prevSalt` como compare-and-swap; sólo el propio usuario). La derivación del secreto aleatorio de 32 bytes hacia `masterKey` (`deriveKeyFromBytes`, 200.000) **no cambia**: cambiarla invalidaría todas las credenciales guardadas. Pruebas: `tests/direct/kdf*.test.js`.
 ```
 Contraseña del usuario (solo en memoria del navegador)
         │

@@ -98,6 +98,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 ## Módulos
 
+**CAMI ← NALA (autollenado)**: `GET /api/ir2/resumen?tipo=cami-nala&rnc=&periodo=AAAAMM` (`lib/cami-nala.js`, mismo permiso de CAMI/NALA y tenant; respeta `nala_member_clients`) devuelve, por formato, las filas **aprobadas** de `nala_invoices` armadas con `formats.buildSnapshot` y las etiquetas oficiales de la DGII (`headers` + `rows`), los pendientes, el resumen de consumo B02/E32 (<RD$250.000) y los e-CF excluidos del 607. `public/cami/itbis-web.html` (`loadFromNala`) lo pasa por `process606`/`process607` como si fuera un archivo (marca `fromNala`), sin pisar archivos subidos a mano salvo con el botón «Traer de NALA». Pruebas: `tests/cami/nala-source.test.js`.
+
 **CAMI — cuadros de compras**: `process606` agrega `summary.compras` (`byNcf`, `byPago`, `byTipo`: cantidad, monto e ITBIS) usando `compraNcfCode`, `compraPagoKey` y `compraTipoKey` (alias nuevo `forma_pago` en `AL606`); `updateIT1` los muestra junto a los de ventas y oculta el bloque de ventas si no hay 607. Son informativos en pantalla (la plantilla oficial del IT-1 no trae casillas de compras por tipo).
 
 **CAMI — IT-1 con un solo archivo**: `updateIT1`/`exportIT1DGII` usan `it1S6()`/`it1S7()`, que devuelven el resumen cargado o uno vacío (`empty606Summary`/`empty607Summary`); el IT-1 se habilita con 606, 607 o ambos.

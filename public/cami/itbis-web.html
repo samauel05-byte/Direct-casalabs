@@ -926,6 +926,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         <div class="field-grp"><label class="field-lbl" for="in-tipo-declaracion">Formulario</label><select class="field-inp" id="in-tipo-declaracion"><option value="IT-1">IT-1 mensual</option></select></div>
       </div>
       <div class="field-help" style="margin-top:10px;">RNC, razón social y período se colocarán automáticamente en el Anexo A y en el IT-1 oficial.</div>
+      <div id="nala-status" class="field-help" style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span id="nala-status-txt">Con el RNC y el período, CAMI trae solo el 606 y el 607 aprobados en NALA.</span><button class="btn btn-sm" id="btn-nala" type="button" title="Cargar el 606/607 aprobado en NALA para esta empresa y período">Traer de NALA</button></div>
     </div>
 
     <div class="prereq-card">
@@ -1119,9 +1120,9 @@ const AL607 = {
   pago_cheque:      ['monto_facturado_en_cheque_transferencia_deposito','monto_facturado_en_cheques_transferencias_depositos','cheque_transferencia_deposito','cheques_transferencias_depositos','cheque_transferencia','transferencia','deposito','monto_transferencia'],
   pago_tarjeta:     ['monto_facturado_en_tarjeta_debito_credito','monto_facturado_por_tarjetas_debito_credito','tarjeta_debito_credito','tarjeta_credito_debito','monto_tarjeta','pago_tarjeta','tarjeta'],
   pago_credito:     ['monto_facturado_a_credito','venta_a_credito','a_credito','monto_credito'],
-  pago_bonos:       ['monto_facturado_en_bonos_o_certificados_de_regalo','monto_facturado_en_bonos_o_certificados_de_regalos','bonos_certificados_regalo','bonos','certificados_regalo'],
+  pago_bonos:       ['bonos_o_certificados_de_regalo','monto_facturado_en_bonos_o_certificados_de_regalo','monto_facturado_en_bonos_o_certificados_de_regalos','bonos_certificados_regalo','bonos','certificados_regalo'],
   pago_permuta:     ['monto_facturado_en_permutas','permutas','permuta'],
-  pago_otras:       ['monto_facturado_en_otras_formas_de_venta','monto_facturado_en_otras_formas_de_ventas','otras_formas_de_venta','otras_formas','otros_medios_pago'],
+  pago_otras:       ['otras_formas_de_ventas','monto_facturado_en_otras_formas_de_venta','monto_facturado_en_otras_formas_de_ventas','otras_formas_de_venta','otras_formas','otros_medios_pago'],
 };
 
 const ALCARD = {
@@ -2298,6 +2299,56 @@ function exportXLS(mod) {
   XLSX.writeFile(wb,`${mod}_analisis.xlsx`);
   showToast(`Excel exportado: ${mod}_analisis.xlsx`);
 }
+
+/* ── Autollenado desde NALA (606/607 aprobados y auditados) ── */
+async function camiFetch(url,retried){
+  let tok=''; try{tok=window.__serpToken||sessionStorage.getItem('dtoken')||'';}catch(_){}
+  let sid=''; try{sid=localStorage.getItem('direct_session_id')||'';}catch(_){}
+  const h={}; if(tok)h.Authorization='Bearer '+tok; if(sid)h['X-Direct-Session']=sid;
+  const res=await fetch(url,{headers:h}); const j=await res.json().catch(()=>({}));
+  if(res.status===401&&!retried&&window.serpRequestToken){ const t=await window.serpRequestToken(); if(t) return camiFetch(url,true); }
+  if(!res.ok){const e=new Error(j.error||('Error '+res.status));e.status=res.status;throw e;}
+  return j;
+}
+let NALA_TIMER=null,NALA_BUSY=false;
+function nalaStatus(txt,cls){const el=$('nala-status-txt');if(el){el.textContent=txt;el.style.color=cls==='ok'?'var(--green,#15924a)':cls==='warn'?'var(--amber,#c2710c)':'';}}
+function nalaRowsFor(entry){return entry.rows.map(r=>{const o={};entry.headers.forEach(h=>{o[h]=r[h]==null?'':r[h];});return o;});}
+async function loadFromNala(force){
+  const rnc=($('in-rnc').value||'').replace(/\D/g,''),per=$('in-periodo').value;
+  if(!rnc||!per){ if(force) showToast('Indica el RNC y el período para traer los datos de NALA.','warn'); return; }
+  if(NALA_BUSY) return; NALA_BUSY=true; nalaStatus('Buscando en NALA…');
+  try{
+    const j=await camiFetch(`/api/ir2/resumen?tipo=cami-nala&rnc=${encodeURIComponent(rnc)}&periodo=${per.replace('-','')}`);
+    if(!j.client){ nalaStatus('Esta empresa no está registrada en NALA. Cárgala allí o sube los archivos aquí.','warn'); return; }
+    const parts=[],notes=[]; let loaded=0;
+    for(const fmt of ['606','607']){
+      const e=j.formatos[fmt]; if(!e) continue;
+      if(e.pendientes>0) notes.push(`${e.pendientes} del ${fmt} sin aprobar en NALA`);
+      if(!e.aprobados){ parts.push(`${fmt}: sin comprobantes aprobados`); continue; }
+      if(STATE[fmt]&&!STATE[fmt].fromNala&&!force){ parts.push(`${fmt}: ya cargaste un archivo (no se reemplazó)`); continue; }
+      const rows=nalaRowsFor(e);
+      const data=fmt==='606'?process606(rows):process607(rows); data.fromNala=true; STATE[fmt]=data;
+      const name=`NALA · ${j.client.legal_name} · ${e.rows.length} comprobante${e.rows.length===1?'':'s'} aprobado${e.rows.length===1?'':'s'}`;
+      if(fmt==='606')render606(data,name); else render607(data,name);
+      parts.push(`${fmt}: ${e.rows.length} aprobados`); loaded++;
+      if(fmt==='607'&&e.consumo&&e.consumo.count>0){
+        const set=(id,v)=>{const el=$(id); if(el&&(force||!(parseFloat(el.value)>0))) el.value=v;};
+        set('in-b02-count',e.consumo.count); set('in-b02-taxable',e.consumo.gravado); set('in-b02-exempt',e.consumo.exento); set('in-b02-itbis',e.consumo.itbis);
+        notes.push(`resumen de consumo B02/E32 (${e.consumo.count} facturas) cargado desde NALA`);
+      }
+      if(fmt==='607'&&e.ecf_excluidos>0) notes.push(`${e.ecf_excluidos} e-CF no entran al 607`);
+    }
+    updateIT1();
+    nalaStatus(`NALA · ${j.client.legal_name}: ${parts.join(' · ')}${notes.length?' — '+notes.join('; '):''}.`,notes.some(n=>/sin aprobar/.test(n))?'warn':'ok');
+    if(loaded) showToast('Datos traídos de NALA (solo lo aprobado).','ok');
+  }catch(e){ nalaStatus(e.status===401||e.status===403?'No se pudo leer NALA con tu sesión. Abre CAMI desde Direct.':('No se pudo leer NALA: '+(e.message||'error')),'warn'); }
+  finally{ NALA_BUSY=false; }
+}
+function scheduleNala(){ clearTimeout(NALA_TIMER); NALA_TIMER=setTimeout(()=>loadFromNala(false),700); }
+document.addEventListener('DOMContentLoaded',()=>{
+  ['in-rnc','in-periodo'].forEach(id=>{const el=$(id); if(el){el.addEventListener('change',scheduleNala); el.addEventListener('blur',scheduleNala);}});
+  const b=$('btn-nala'); if(b) b.onclick=()=>loadFromNala(true);
+});
 
 async function handleFile(file, mod) {
   const ext=fileExtension(file),kind=fileKind(file);

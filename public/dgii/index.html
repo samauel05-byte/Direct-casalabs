@@ -97,12 +97,13 @@ select option{background:var(--surf2)}
 .nala-tbl td.r,.nala-tbl th.r{text-align:right;font-variant-numeric:tabular-nums}
 .nala-tbl tr.tot td{font-weight:700;color:var(--acc3);border-top:2px solid var(--bdr2)}
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>/* Tipografia de marca Direct: Josefin Sans en titulos, Poppins en el resto */:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style></head>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>/* Tipografia de marca Direct: Josefin Sans en titulos, Poppins en el resto */:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style><script src="/serp-host.js"></script>
+</head>
 <body>
 
 <div class="hdr">
   <div class="hdr-l">
-    <button class="btn-back" onclick="window.parent.postMessage({action:'showPortals'},'*')">← Volver</button>
+    <button class="btn-back" onclick="serpBack()">← Volver</button>
     <div class="hdr-title">Estimación Fiscal</div>
   </div>
   <div class="hdr-r">
@@ -329,7 +330,7 @@ function requestRefresh(){
   return new Promise(resolve=>{
     let done=false;
     _awaitRefresh=(ok)=>{ if(done)return; done=true; resolve(ok); };
-    try{ window.parent.postMessage({action:'dgii-session-refresh'},'*'); }catch(e){ done=true; resolve(false); }
+    try{ const h=serpHost(); if(!h) throw 0; h.postMessage({action:'dgii-session-refresh'},location.origin); }catch(e){ done=true; resolve(false); }
     setTimeout(()=>{ if(!done){ done=true; _awaitRefresh=null; resolve(false); } },8000);
   });
 }
@@ -644,7 +645,7 @@ function parseEnviosText(text){
 function jalarDgii(){
   const rnc=(document.getElementById('rnc-inp')?.value||RNC||'').trim();
   if(!rnc){ alert('Ingresa un RNC primero'); return; }
-  window.parent.postMessage({action:'dgii-open-ofv', rnc}, '*');
+  { const h=serpHost(); if(h) h.postMessage({action:'dgii-open-ofv', rnc}, location.origin); }
 }
 let _enviosParsed=[];
 function toggleEnviosImport(forceClose){
@@ -1033,7 +1034,7 @@ function receiveCapturedEnvios(text){
   if(ri) ri.value=RNC;
   renderAnioSel();
   renderAll();
-  window.parent.postMessage({action:'dgii-ready'},'*');
+  { const h=serpHost(); if(h) h.postMessage({action:'dgii-ready'},location.origin); }
   setTimeout(()=>{ if(!_token) load(); },800);
 })();
 </script>

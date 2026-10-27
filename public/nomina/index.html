@@ -166,10 +166,11 @@
   @media print{ header.top, .tabs, .btn{ display:none !important; } }
   @media(max-width:620px){ main{ padding:12px; } .card{ padding:14px; } header.top{ padding:10px 12px; } }
 </style>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>/* Tipografia de marca Direct: Josefin Sans en titulos, Poppins en el resto */:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style></head>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>/* Tipografia de marca Direct: Josefin Sans en titulos, Poppins en el resto */:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style><script src="/serp-host.js"></script>
+</head>
 <body>
 <header class="top">
-  <button class="btn sm" title="Volver a Accesos" onclick="try{parent.postMessage({action:'showPortals'},location.origin)}catch(e){}">‹ Volver</button>
+  <button class="btn sm" title="Volver a Accesos" onclick="serpBack()">‹ Volver</button>
   <span class="brand"><span class="mk">N</span><b>Nómina</b></span>
   <button class="btn sm" id="curco" title="Cambiar o crear empresa">— Empresa —</button>
   <span class="spacer"></span>
@@ -202,7 +203,7 @@
   // ── sesión (misma que SERP; el JWT nunca va en la URL) ──
   function authHeaders(){
     const h = {}; let token='', sid='';
-    try { token = window.parent.sessionStorage.getItem('dtoken') || sessionStorage.getItem('dtoken') || ''; } catch(_){}
+    try { const h=window.serpHost&&window.serpHost(); token = (h&&h.sessionStorage.getItem('dtoken')) || sessionStorage.getItem('dtoken') || ''; } catch(_){}
     try { sid = localStorage.getItem('direct_session_id') || ''; } catch(_){}
     if (token) h.Authorization = 'Bearer '+token;
     if (sid) h['X-Direct-Session'] = sid;

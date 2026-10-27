@@ -544,18 +544,14 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 
 <!-- Nómina — a pantalla completa; el módulo trae su propio botón Volver. -->
 <div id="view-nomina" class="layer" hidden>
-  <iframe id="nomina-frame" src="" style="width:100%;height:100vh;border:none;display:block;"></iframe>
 </div>
 
 <!-- IR-2 -->
 <div id="view-ir2" class="layer" hidden style="padding:0">
-  <iframe id="ir2-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
 </div>
 <div id="view-dgii-modulos" class="layer" hidden style="padding:0">
-  <iframe id="dgii-modulos-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
 </div>
 <div id="view-monitor" class="layer" hidden style="padding:0">
-  <iframe id="monitor-frame" src="" style="width:100%;height:100dvh;border:none;display:block;"></iframe>
 </div>
 
 <!-- CAMI -->
@@ -1066,7 +1062,7 @@ function refreshSession(){
       sessionStorage.setItem('dexp',String(tokenExpiresAt));
       // El iframe de Estimación lee el token de sessionStorage; avisar por si
       // tiene un guardado en espera.
-      try{ const fr=document.getElementById('dgii-modulos-frame'); if(fr&&fr.contentWindow) fr.contentWindow.postMessage({action:'dgii-init', token: sessionToken, sessionId: activeSessionId, companies: null}, location.origin); }catch(e){}
+      try{ const fr=_modWin('dgii'); if(fr) fr.postMessage({action:'dgii-init', token: sessionToken, sessionId: activeSessionId, companies: null}, location.origin); }catch(e){}
       scheduleRefresh();
       return true;
     }catch(e){ return false; }
@@ -1594,51 +1590,36 @@ function openNala() {
   if (!_nalaWin) toast('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio para abrir NALA.','warn');
 }
 
-function openNomina() {
-  const frame=document.getElementById('nomina-frame');
-  if (!frame.src || frame.src==='about:blank' || !frame.src.includes('nomina')) {
-    frame.src='/nomina/index.html';
-  }
-  show('view-nomina');
+// Nómina, IR-2, Estimación Fiscal y Monitor DGII también se abren en su propia
+// pestaña (como CAMI y NALA). Se abren SIN noopener: la pestaña hereda una copia de
+// sessionStorage (token) y puede hablar con este shell vía window.opener. Si ya hay
+// una abierta, se le da el foco en vez de recargarla.
+const _modTabs={};
+const _modWin=k=>{ const w=_modTabs[k]; return (w&&!w.closed)?w:null; };
+function openModuleTab(key,url,label){
+  const w=_modWin(key);
+  if(w){ try{ w.focus(); return; }catch(e){} }
+  _modTabs[key]=window.open(url,'serp-'+key);
+  if(!_modTabs[key]) toast('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio para abrir '+label+'.','warn');
 }
-
-function openIr2() {
-  const frame = document.getElementById('ir2-frame');
-  if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('ir2')) {
-    frame.src = '/ir2/index.html';
-  }
-  show('view-ir2');
-}
-
-function openDgiiModulos() {
-  const frame = document.getElementById('dgii-modulos-frame');
-  if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('dgii')) {
-    frame.src = '/dgii/index.html';
-  }
-  show('view-dgii-modulos');
-}
-
-function openMonitor() {
-  const frame = document.getElementById('monitor-frame');
-  if (!frame.src || frame.src === 'about:blank' || !frame.src.includes('monitor')) {
-    frame.src = '/monitor/index.html';
-  }
-  show('view-monitor');
-}
+function openNomina(){ openModuleTab('nomina','/nomina/index.html','Nómina'); }
+function openIr2(){ openModuleTab('ir2','/ir2/index.html','IR-2'); }
+function openDgiiModulos(){ openModuleTab('dgii','/dgii/index.html','Estimación Fiscal'); }
+function openMonitor(){ openModuleTab('monitor','/monitor/index.html','el Monitor DGII'); }
 
 window.addEventListener('message', e => {
   if (!e.data) return;
   if (e.data.action === 'showPortals') showPortals();
   // Monitor DGII pide el token al cargar; se le envía al iframe de este origen.
   if (e.data.action === 'monitor-ready') {
-    const fr = document.getElementById('monitor-frame');
-    if (fr && fr.contentWindow) fr.contentWindow.postMessage({ action:'monitor-init', token: sessionToken, sessionId: activeSessionId, role: currentUser?.role || 'user', username: currentUser?.username || '' }, location.origin);
+    const fr = e.source;
+    if (fr && fr !== window) { try { fr.postMessage({ action:'monitor-init', token: sessionToken, sessionId: activeSessionId, role: currentUser?.role || 'user', username: currentUser?.username || '' }, location.origin); } catch (_) { /* pestaña cerrada */ } }
   }
   // «Jalar de DGII» (Estimación Fiscal): abre la Oficina Virtual de esa empresa
   // por el relay (auto-login), para ir a «Consulta de Envíos». El jalado de la
   // tabla se hará desde ahí. Solo se acepta desde el iframe de este origen.
   if (e.data.action === 'dgii-open-ofv') {
-    if (e.source !== document.getElementById('dgii-modulos-frame')?.contentWindow) return;
+    if (!e.source || e.source !== _modWin('dgii')) return;
     const rnc = String(e.data.rnc || '').trim();
     if (!rnc || !masterKey) { toast('Ingresa un RNC primero', 'warn'); return; }
     // El RNC puede venir con guiones/espacios o estar guardado en otro campo de
@@ -1694,25 +1675,25 @@ window.addEventListener('message', e => {
     })();
   }
   if (e.data.action === 'dgii-ready') {
-    const frame = document.getElementById('dgii-modulos-frame');
-    if (!frame || !frame.contentWindow) return;
+    const frame = e.source;
+    if (!frame || frame !== _modWin('dgii')) return;
     const creds = getCompanies('dgii');
     Promise.all(creds.map(async c => {
       try { const p = await C.dec(masterKey, c.iv, c.ct); return {rnc: String(p.rnc||p.cedula||p.rncCedula||p.username||''), nombre: p.companyName||''}; }
       catch { return null; }
     })).then(cos => {
       const companies = (cos||[]).filter(c => c && c.nombre);
-      frame.contentWindow.postMessage({action:'dgii-init', token: sessionToken, sessionId: activeSessionId, companies}, location.origin);
+      try { frame.postMessage({action:'dgii-init', token: sessionToken, sessionId: activeSessionId, companies}, location.origin); } catch (_) { /* pestaña cerrada */ }
     });
   }
   // El módulo de Estimación pide renovar la sesión cuando su guardado recibe un
   // 401 (token vencido). Se renueva aquí (tiene el refresh_token) y se le
   // devuelve el token nuevo para que reintente sin que el usuario relogee.
   if (e.data.action === 'dgii-session-refresh') {
-    if (e.source !== document.getElementById('dgii-modulos-frame')?.contentWindow) return;
+    if (!e.source || e.source !== _modWin('dgii')) return;
     refreshSession().then(ok => {
-      const fr = document.getElementById('dgii-modulos-frame');
-      if (fr && fr.contentWindow) fr.contentWindow.postMessage({action:'dgii-token', ok, token: ok?sessionToken:'', sessionId: activeSessionId}, location.origin);
+      const fr = _modWin('dgii');
+      if (fr) fr.postMessage({action:'dgii-token', ok, token: ok?sessionToken:'', sessionId: activeSessionId}, location.origin);
     });
   }
   // Jalado automático 606/607: el relay (pestaña de la Oficina Virtual abierta
@@ -1722,8 +1703,8 @@ window.addEventListener('message', e => {
   if (e.data.type === 'serp-dgii-capture') {
     if (e.origin !== 'https://portal-rd-relay.samauel05.workers.dev') return;
     const text = typeof e.data.text === 'string' ? e.data.text : '';
-    const fr = document.getElementById('dgii-modulos-frame');
-    if (fr && fr.contentWindow) fr.contentWindow.postMessage({action:'dgii-envios-captured', text, url: String(e.data.url||'')}, location.origin);
+    const fr = _modWin('dgii');
+    if (fr) fr.postMessage({action:'dgii-envios-captured', text, url: String(e.data.url||'')}, location.origin);
     toast('Datos traídos de la DGII — revisa en Estimación Fiscal','ok');
   }
 });

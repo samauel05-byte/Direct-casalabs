@@ -182,8 +182,16 @@ tenant+empresa; sin fila = defaults). Endpoints `GET/PUT
 empleado y, por cada período en que aparece, sus ingresos/deducciones/neto ya
 calculados (con `computeRow`) más los acumulados. El frontend lo muestra como
 «Ficha»: datos del empleado, KPIs acumulados y la tabla de períodos (cada fila
-abre su período). Préstamos, descuentos y adicionales son simples **columnas**
+abre su período). La ficha trae avatar, datos y antigüedad, KPIs (salario mensual, neto promedio y acumulados), una gráfica de neto por período y, en cada fila, los botones 🧾 (imprimir) y ⬇ (PDF) del **volante de ese período**, armado con las celdas ya calculadas del historial. Préstamos, descuentos y adicionales son simples **columnas**
 (tipo monto, signo − o +) que se capturan en la celda del empleado en el período.
+
+## Volantes de pago
+
+Un solo modelo (`buildSlip`) alimenta la vista de impresión (HTML, A4 vertical) y el PDF (jsPDF): encabezado de la empresa, datos del empleado (cédula, NSS, puesto, ingreso, salario), **ingresos y deducciones itemizados** (solo columnas incluidas en el total y con monto), **NETO A COBRAR con su monto en letras**, declaración firmable, tabla TSS de 11 columnas y firmas. Se usa igual desde el período (todos o uno) y desde la ficha (cualquier período histórico).
+
+## Uso amigable
+
+Aviso de **cambios sin guardar** (indicador, confirmación al cambiar de pestaña/período y al cerrar la ventana; `Ctrl+S` guarda), confirmación al **Cerrar** un período, menú **Exportar ▾** que agrupa volantes/PDF/Excel/reporte/CSV, ayuda «¿Cómo se usa?» descartable, tooltips en pestañas y botones, buscador de empleados y estado vacío guiado.
 
 ## Pruebas
 

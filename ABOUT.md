@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Nómina: volantes y ficha del empleado renovados, y más fácil de usar**: el **volante** ahora detalla cada **ingreso y deducción**, muestra el **neto a cobrar con su monto en letras**, los datos del empleado y la tabla TSS (se imprime en A4 o se baja en PDF). La **ficha del empleado** tiene avatar, antigüedad, neto promedio, gráfica de los últimos períodos y el **volante de cualquier período** con un clic. Además: aviso de cambios sin guardar (y `Ctrl+S`), confirmación al cerrar un período, menú **Exportar**, ayuda «¿Cómo se usa?», buscador de empleados y textos de ayuda en botones. También se pusieron los **nombres oficiales** a las empresas de Nómina según su RNC.
+
 - **Nombre de la firma y de los oficiales en NALA**: la organización dueña del sistema ahora se llama **SAVE CONSULTORES SRL** (y el sistema ya no vuelve a poner «Save»). En «Equipo» y en la columna «Le toca a» de los lotes se muestra el nombre de usuario del oficial; si el listado de usuarios no lo trae, se consulta por id en vez de mostrar el código.
 
 - **NALA: se ve a quién le toca cada empresa**: en «Carga masiva y lotes», el administrador (con permiso de gestionar equipo) ve una columna **«Le toca a»** con los oficiales asignados a la empresa de cada lote, o «Sin asignar».

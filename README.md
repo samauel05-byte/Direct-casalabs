@@ -64,6 +64,7 @@ El relay se despliega automáticamente desde `main`.
 
 ## Seguridad
 
+- **Token Digital DGII (TOTP)**: `public/js/totp.js` implementa RFC 6238 con WebCrypto (HMAC-SHA1/256/512, 6–8 dígitos, periodo configurable; acepta clave base32 o enlace `otpauth://`). La clave se guarda en el campo `totp` del secreto cifrado de la credencial DGII (igual que `dgiiCodes`); el código se calcula sólo en el navegador. Nota de seguridad: guardar contraseña y segundo factor en la misma bóveda reduce la protección del 2FA al secreto de la bóveda; se acepta por conveniencia operativa del contador. Pruebas con los vectores de la RFC: `tests/direct/totp.test.js`.
 - **KDF versionado de la bóveda**: la llave de usuario (contraseña → AES-GCM) se deriva con PBKDF2-SHA256. La sal guardada en `direct_profiles.user_key_salt` lleva su versión: `v2$<base64>` = 600.000 iteraciones; sin prefijo = legado (200.000). Al iniciar sesión con una sal legada, el cliente re-envuelve el **mismo** secreto de bóveda con una sal v2 (verifica que abre) y lo envía con `PATCH /api/auth/login` (`prevSalt` como compare-and-swap; sólo el propio usuario). La derivación del secreto aleatorio de 32 bytes hacia `masterKey` (`deriveKeyFromBytes`, 200.000) **no cambia**: cambiarla invalidaría todas las credenciales guardadas. Pruebas: `tests/direct/kdf*.test.js`.
 ```
 Contraseña del usuario (solo en memoria del navegador)

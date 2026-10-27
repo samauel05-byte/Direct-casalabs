@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Nombre de la firma y de los oficiales en NALA**: la organización dueña del sistema ahora se llama **SAVE CONSULTORES SRL** (y el sistema ya no vuelve a poner «Save»). En «Equipo» y en la columna «Le toca a» de los lotes se muestra el nombre de usuario del oficial; si el listado de usuarios no lo trae, se consulta por id en vez de mostrar el código.
+
 - **NALA: se ve a quién le toca cada empresa**: en «Carga masiva y lotes», el administrador (con permiso de gestionar equipo) ve una columna **«Le toca a»** con los oficiales asignados a la empresa de cada lote, o «Sin asignar».
 
 - **Cada módulo de Direct abre en su propia pestaña**: Nómina, IR-2, Estimación Fiscal y Monitor DGII ahora se abren en otra pestaña (igual que NALA y CAMI) en vez de reemplazar la pantalla de Accesos. Si ya hay una abierta, se le da el foco sin perder lo que tengas digitado; «Volver» cierra la pestaña y regresa a Accesos. Además se completó el **RNC** de ALMA 6 Inversiones, Annibel, Asociación de Artesanos e Inversiones Rodqui en Nómina.

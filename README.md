@@ -95,6 +95,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 ## Módulos
 
+**Apertura de módulos**: NALA, CAMI, Nómina, IR-2, Estimación Fiscal y Monitor DGII se abren cada uno en su propia pestaña (`window.open` sin `noopener`, nombre `serp-<módulo>`; si ya existe se le da el foco). La pestaña hereda una copia de `sessionStorage` (token) y habla con el shell de Direct por `window.opener` mediante `public/serp-host.js` (`serpHost()`, `serpBack()` y tema `direct_theme`). El shell valida el origen de cada mensaje contra la ventana registrada (`_modWin`).
+
 | Módulo | Descripción |
 |--------|-------------|
 | **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos de contraseña, historial de entradas y permisos por empresa |

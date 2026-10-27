@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Token Digital de la DGII dentro de Direct**: en la ficha de una empresa de la DGII hay un campo nuevo, «Token Digital DGII — clave del QR». Se pega la **clave en texto** (o el enlace del QR) que la DGII entrega al registrar el token, y Direct muestra el **código de 6 dígitos con cuenta regresiva de 30 s** y botón **Copiar**, igual que la app del celular. Al entrar a la Oficina Virtual el código queda visible en el panel mientras se inicia sesión. La clave se guarda **cifrada en la bóveda** como el resto de los accesos. Al guardarla se muestra una vista previa para comprobar que coincide con el celular.
+
 - **NALA: los filtros solo aparecen donde se usan**: «Empresa activa», «Período», «Formato» y la etiqueta «Vista consolidada» ya no se muestran en pantallas donde no sirven (Consulta RNC, Empresas clientes, Equipo, Configuración). Siguen en Panel, Dashboard por empresa, Carga masiva, Auditoría y Exportar.
 
 - **Nueva herramienta: Conciliación bancaria (versión 1)**: sube el **extracto del banco** y tu **libro auxiliar o Excel contable** del mismo período y el sistema los compara por monto, fecha y referencia. Te muestra lo **conciliado**, lo **dudoso para que tú decidas** (✓ es la misma / ✕ no coincide), lo que **solo está en el banco**, lo que **solo está en tus libros**, los **cargos bancarios sin registrar** (comisiones, 0.15 % Ley 288-04, intereses) y los **registros duplicados**. Descargas un Excel con el resumen y las diferencias pendientes. Todo se procesa en tu navegador (los archivos no se suben). Aparece en Accesos, en «Herramientas contables», para administradores y usuarios con NALA, IR-2 o Estimación. Próximas fases: pagos que agrupan varias facturas, reglas por banco y guardar conciliaciones.

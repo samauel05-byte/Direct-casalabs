@@ -504,6 +504,11 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
         <input id="co-dgii-codes" type="text" placeholder="Cód1,Cód2,Cód3,… (separados por coma)" autocomplete="off">
         <small style="color:var(--text3);font-size:11px;margin-top:4px;display:block">Un código por posición, en orden (posición 1 = primer código, etc.)</small>
       </div>
+      <div class="field" id="co-totp-row" hidden>
+        <label>Token Digital DGII — clave del QR <span style="color:var(--text3);font-weight:400;font-size:11px">(opcional)</span></label>
+        <input id="co-totp" type="text" placeholder="Clave en texto (ej. JBSW Y3DP EHPK 3PXP) o enlace otpauth://…" autocomplete="off" oninput="totpPreview()">
+        <small id="co-totp-prev" style="color:var(--text3);font-size:11px;margin-top:4px;display:block">Pegue la clave que dio la DGII al registrar el token. Se guarda cifrada y Direct mostrará el código de 6 dígitos que cambia cada 30 s.</small>
+      </div>
     </div>
     <div class="modal-ftr" id="modal-co-ftr">
       <button class="btn btn-ghost" onclick="closeCompanyModal()">Cancelar</button>
@@ -811,6 +816,12 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
     <span class="cred-label">Tarjeta</span>
     <span class="cred-val" id="ch-tarjeta"></span>
     <button class="cred-copy" id="ch-copy-tarjeta" onclick="chCopy('tarjeta')">Copiar</button>
+  </div>
+  <div class="cred-row" id="ch-row-totp" hidden>
+    <span class="cred-label">Token</span>
+    <span class="cred-val" id="ch-totp" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:20px;font-weight:800;letter-spacing:2px">······</span>
+    <span id="ch-totp-left" style="font-size:12px;color:var(--text3);min-width:30px;text-align:right"></span>
+    <button class="cred-copy" id="ch-copy-totp" onclick="chCopy('totp')">Copiar</button>
   </div>
   <div id="ch-row-ovi" hidden>
     <div style="border-top:1px solid rgba(255,255,255,.08);margin:10px 0 8px"></div>
@@ -2172,7 +2183,7 @@ async function cleanAllDupes() {
 }
 
 /* ── Auto-login ── */
-let _chUser='', _chPass='', _chCedula='', _chTarjeta='', _chUrl='', _chDgiiCodes=[];
+let _chUser='', _chPass='', _chCedula='', _chTarjeta='', _chUrl='', _chDgiiCodes=[], _chTotp='', _chTotpCode='', _chTotpTimer=null;
 
 function parseDgiiCodes(value) {
   if (Array.isArray(value)) return value.map(v => String(v ?? '').trim()).filter(Boolean);
@@ -2235,6 +2246,7 @@ async function enterCompany(credId) {
   _chPass=(instKey==='tss' ? (plain.tssClass||plain.password) : plain.password)||'';
   _chCedula=plain.cedula||plain.rnc||''; _chTarjeta=plain.tarjeta||''; _chUrl=loginUrl;
   _chDgiiCodes = parseDgiiCodes(plain.dgiiCodes);
+  _chTotp = instKey==='dgii' ? (plain.totp||'') : '';
 
   if (instKey==='tss' && (!_chUser || !_chPass || !_chCedula)) {
     newTab?.close();
@@ -2281,6 +2293,7 @@ async function enterCompany(credId) {
     tarjetaRow.hidden=true;
   }
 
+  startTotpRow();
   document.getElementById('ch-pass').textContent='••••••••••';
   document.getElementById('ch-pass').className='cred-val pw';
   document.getElementById('ch-eye').textContent='Ver';
@@ -2341,6 +2354,8 @@ async function enterCompany(credId) {
       <button class="cred-btn cred-btn-dismiss" onclick="closeCredHelper()">Cerrar</button>`;
     document.getElementById('ch-sub').textContent = inst.name + ' · Auto-login en progreso — credenciales copiadas';
     // Do NOT show the credential helper automatically — auto-login fires silently
+    // (salvo que la empresa tenga Token Digital: se deja visible el código con su cuenta regresiva).
+    if (_chTotp) { document.getElementById('ch-sub').textContent = inst.name + ' · Auto-login en progreso — token abajo'; document.getElementById('cred-helper').hidden=false; }
     return;
   }
 
@@ -2429,9 +2444,36 @@ function chTogglePw() {
   else { el.textContent='••••••••••'; el.classList.add('pw'); el.classList.remove('pw-show'); btn.textContent='Ver'; }
 }
 
+// Token Digital (TOTP): código actual con cuenta regresiva, calculado en el navegador.
+function stopTotpRow() { if (_chTotpTimer) { clearInterval(_chTotpTimer); _chTotpTimer=null; } _chTotpCode=''; }
+function startTotpRow() {
+  stopTotpRow();
+  const row=document.getElementById('ch-row-totp'); row.hidden=!_chTotp;
+  if (!_chTotp) return;
+  const tick=async()=>{
+    try {
+      const r=await TOTP.generate(_chTotp); _chTotpCode=r.code;
+      document.getElementById('ch-totp').textContent=r.code.slice(0,3)+' '+r.code.slice(3);
+      const left=document.getElementById('ch-totp-left'); left.textContent=r.remaining+'s'; left.style.color=r.remaining<=5?'var(--red,#dc2626)':'';
+    } catch (e) { document.getElementById('ch-totp').textContent='Clave inválida'; document.getElementById('ch-totp-left').textContent=''; }
+  };
+  tick(); _chTotpTimer=setInterval(tick,1000);
+}
+// Vista previa en el formulario de la empresa (para comprobar que coincide con la app del celular).
+let _totpPrevTimer=null;
+function totpPreview() {
+  const v=document.getElementById('co-totp').value.trim(), el=document.getElementById('co-totp-prev');
+  if (_totpPrevTimer) { clearInterval(_totpPrevTimer); _totpPrevTimer=null; }
+  const idle='Pegue la clave que dio la DGII al registrar el token. Se guarda cifrada y Direct mostrará el código de 6 dígitos que cambia cada 30 s.';
+  if (!v) { el.style.color='var(--text3)'; el.textContent=idle; return; }
+  if (!TOTP.isValid(v)) { el.style.color='var(--red,#dc2626)'; el.textContent='La clave no parece válida (solo letras A–Z y números 2–7, o un enlace otpauth://).'; return; }
+  const tick=async()=>{ try { const r=await TOTP.generate(v); el.style.color='var(--green,#15924a)'; el.textContent='Código ahora: '+r.code.slice(0,3)+' '+r.code.slice(3)+' ('+r.remaining+' s). Compruebe que es el mismo que muestra la app del celular.'; } catch(_){} };
+  tick(); _totpPrevTimer=setInterval(tick,1000);
+}
+
 async function chCopy(which) {
-  const val=which==='user'?_chUser:which==='cedula'?_chCedula:which==='tarjeta'?_chTarjeta:_chPass;
-  const btnId=which==='user'?'ch-copy-user':which==='cedula'?'ch-copy-cedula':which==='tarjeta'?'ch-copy-tarjeta':'ch-copy-pass';
+  const val=which==='user'?_chUser:which==='cedula'?_chCedula:which==='tarjeta'?_chTarjeta:which==='totp'?_chTotpCode:_chPass;
+  const btnId=which==='user'?'ch-copy-user':which==='cedula'?'ch-copy-cedula':which==='tarjeta'?'ch-copy-tarjeta':which==='totp'?'ch-copy-totp':'ch-copy-pass';
   const btn=document.getElementById(btnId);
   try { await navigator.clipboard.writeText(val); btn.textContent='✓'; btn.classList.add('copied'); setTimeout(()=>{ btn.textContent='Copiar'; btn.classList.remove('copied'); },1800); }
   catch { toast('No se pudo copiar','warn'); }
@@ -2483,7 +2525,7 @@ function chOpenDirect() {
   toast('Portal abierto · Usuario copiado — pégalo en el formulario', 'ok');
 }
 
-function closeCredHelper() { document.getElementById('cred-helper').hidden=true; }
+function closeCredHelper() { document.getElementById('cred-helper').hidden=true; stopTotpRow(); }
 
 function chLookupCode() {
   const pos = parseInt(document.getElementById('ch-code-pos').value, 10);
@@ -2523,6 +2565,8 @@ async function openCompanyModal(credId) {
   const tarjetaRow=document.getElementById('co-tarjeta-row');
   const isDGII = activePortal==='dgii';
   codesRow.hidden = !isDGII;
+  document.getElementById('co-totp-row').hidden = !isDGII;
+  document.getElementById('co-totp').value='';
   tarjetaRow.hidden = false;
   tarjetaRow.querySelector('label').innerHTML = isDGII
     ? 'Tarjeta / código de acceso DGII <span style="color:var(--text3);font-weight:400;font-size:11px">(opcional)</span>'
@@ -2538,7 +2582,7 @@ async function openCompanyModal(credId) {
         document.getElementById('co-user').value=plain.username||'';
         document.getElementById('co-pass').value=plain.password||'';
         document.getElementById('co-tarjeta').value=plain.tarjeta||'';
-        if (isDGII) document.getElementById('co-dgii-codes').value=plain.dgiiCodes||'';
+        if (isDGII) { document.getElementById('co-dgii-codes').value=plain.dgiiCodes||''; document.getElementById('co-totp').value=plain.totp||''; }
       } catch {
         document.getElementById('co-name').value='';
         document.getElementById('co-user').value='';
@@ -2563,9 +2607,10 @@ async function openCompanyModal(credId) {
       <button class="btn btn-pri" onclick="saveCompany()">Guardar</button>`;
   }
   document.getElementById('modal-company').hidden=false;
+  totpPreview();
 }
 
-function closeCompanyModal() { document.getElementById('modal-company').hidden=true; }
+function closeCompanyModal() { document.getElementById('modal-company').hidden=true; if (_totpPrevTimer) { clearInterval(_totpPrevTimer); _totpPrevTimer=null; } }
 
 async function saveCompany() {
   const credId=document.getElementById('modal-co-id').value;
@@ -2580,6 +2625,8 @@ async function saveCompany() {
   if (activePortal==='dgii') {
     const codes=document.getElementById('co-dgii-codes').value.trim();
     if (codes) payload.dgiiCodes=codes;
+    const totp=document.getElementById('co-totp').value.trim();
+    if (totp) { if (!TOTP.isValid(totp)) { toast('La clave del Token Digital no es válida','warn'); return; } payload.totp=totp; }
   }
 
   const id = credId || (activePortal+'_'+Date.now());
@@ -3069,6 +3116,7 @@ async function applySync(){
 
 initTheme();
 </script>
+<script src="/js/totp.js"></script>
 <script src="/js/direct-extras.js"></script>
 <script>boot();</script>
 </body>

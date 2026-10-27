@@ -31,3 +31,25 @@ window.serpBack = function () {
   apply();
   window.addEventListener('storage', function (e) { if (e.key === 'direct_theme') apply(); });
 })();
+
+// Token de sesión de Direct para las pestañas de módulos. Direct lo publica en el canal
+// «serp-session» al iniciar/renovar sesión; aquí se mantiene el último recibido y, si hace
+// falta, se le pide a una pestaña de Direct abierta (que renueva si está por vencer).
+(function () {
+  let ch = null; try { ch = new BroadcastChannel('serp-session'); } catch (_) { return; }
+  const waiters = [];
+  ch.onmessage = function (e) {
+    const d = e.data; if (!d || d.type !== 'token' || !d.token) return;
+    try { sessionStorage.setItem('dtoken', d.token); if (d.sid) localStorage.setItem('direct_session_id', d.sid); } catch (_) { /* sin storage */ }
+    window.__serpToken = d.token;
+    while (waiters.length) waiters.shift()(d.token);
+  };
+  // → token nuevo, o null si no hay ninguna pestaña de Direct que responda (en ~4 s).
+  window.serpRequestToken = function () {
+    return new Promise(function (resolve) {
+      const t = setTimeout(function () { const i = waiters.indexOf(done); if (i >= 0) waiters.splice(i, 1); resolve(null); }, 4000);
+      function done(tok) { clearTimeout(t); resolve(tok); }
+      waiters.push(done); ch.postMessage({ type: 'need' });
+    });
+  };
+})();

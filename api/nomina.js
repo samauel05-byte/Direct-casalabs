@@ -17,6 +17,7 @@ function cronAuthorized(req) {
 
 const ROUTES = [
   ['GET', /^me$/, ctx => api.me(ctx)],
+  ['GET', /^dashboard$/, ctx => api.dashboard(ctx)],
   ['GET', /^clients$/, ctx => api.listClients(ctx)],
   ['POST', /^clients$/, (ctx, q, b) => api.createClient(ctx, b)],
   ['PATCH', /^clients\/([^/]+)$/, (ctx, q, b, m) => api.updateClient(ctx, m[1], b)],

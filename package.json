@@ -6,7 +6,7 @@
     "test:direct": "node --test tests/direct/logos.test.js tests/direct/worker.test.js",
     "test:nala": "node --test tests/nala/unit.test.js && node --test --test-concurrency=1 tests/nala/flow.test.js && node --test --test-concurrency=1 tests/nala/ui.test.js",
     "test:monitor": "node --test tests/monitor/unit.test.js tests/monitor/check.test.js",
-    "test:nomina": "node --test tests/nomina/unit.test.js",
+    "test:nomina": "node --test tests/nomina/unit.test.js tests/nomina/dashboard.test.js",
     "test:ir2": "node --test tests/ir2/formulario.test.js",
     "test:cami": "node --test tests/cami/analisis.test.js",
     "nala:local": "node tests/nala/support/stack.js"

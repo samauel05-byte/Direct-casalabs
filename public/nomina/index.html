@@ -120,6 +120,50 @@
   .nvtot{ display:flex; gap:20px; justify-content:flex-end; margin-top:14px; padding-top:12px; border-top:1px solid var(--line2); font-size:14px; } .nvtot .neto b{ color:var(--accent); font-size:17px; }
   .ajs{ border:1px solid var(--line); border-radius:13px; padding:14px 16px; margin-bottom:12px; background:var(--panel2); } .ajs h3{ font-size:12px; margin:0 0 10px; color:var(--accent); text-transform:uppercase; letter-spacing:.4px; }
   .ajs .grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; }
+
+  /* ── Legibilidad del tema claro (etiquetas, botones peligrosos y totales) ── */
+  :root[data-theme="light"] .pill.ok{ color:#15803d; background:#dcfce7; border-color:#86efac; }
+  :root[data-theme="light"] .pill.calc{ color:#1d4ed8; background:#dbeafe; border-color:#93c5fd; }
+  :root[data-theme="light"] .pill.warn{ color:#b45309; background:#fef3c7; border-color:#fcd34d; }
+  :root[data-theme="light"] .pill.crit{ color:#b91c1c; background:#fee2e2; border-color:#fca5a5; }
+  :root[data-theme="light"] .badge.ok{ color:#15803d; } :root[data-theme="light"] .badge.warn{ color:#b45309; } :root[data-theme="light"] .badge.crit{ color:#b91c1c; }
+  :root[data-theme="light"] .btn.danger{ color:#b91c1c; background:#fef2f2; border-color:#fecaca; }
+  :root[data-theme="light"] .btn.danger:hover{ background:#fee2e2; border-color:#fca5a5; }
+  :root[data-theme="light"] .total-kpis .k.neto .v{ color:#b45309; } :root[data-theme="light"] .total-kpis .k.aportes .v{ color:#1d4ed8; }
+  :root[data-theme="light"] .total-kpis .k.ok .v{ color:#15803d; } :root[data-theme="light"] .total-kpis .k.crit .v{ color:#b91c1c; }
+  :root[data-theme="light"] .toast.ok{ color:#15803d; border-color:#86efac; } :root[data-theme="light"] .toast.err{ color:#b91c1c; border-color:#fca5a5; }
+  :root[data-theme="light"] .nvsec h3, :root[data-theme="light"] .ajs h3, :root[data-theme="light"] .brand b, :root[data-theme="light"] a{ color:#b45309; }
+  :root[data-theme="light"] .tabs button.active{ color:#1a1203; }
+  :root[data-theme="light"] .cal .step.next{ background:#fffbeb; }
+  :root[data-theme="light"] .co-av{ box-shadow:none; }
+  .pill.warn{ color:var(--accent2); border-color:rgba(245,158,11,.45); background:rgba(245,158,11,.1); }
+  .pill.crit{ color:#fca5a5; border-color:rgba(248,113,113,.45); background:rgba(248,113,113,.1); }
+  .total-kpis .k.ok .v{ color:#86efac; } .total-kpis .k.ok::before{ background:#22c55e; }
+  .total-kpis .k.crit .v{ color:#fca5a5; } .total-kpis .k.crit::before{ background:#ef4444; }
+  .total-kpis .k.warn::before{ background:#f59e0b; }
+  .total-kpis .k .sub{ font-size:11px; color:var(--muted); margin-top:2px; }
+  /* Avatares: color propio por persona/empresa (antes quedaban sin fondo y la letra blanca desaparecía en tema claro). */
+  .av{ background:#475569; text-shadow:0 1px 1px rgba(0,0,0,.25); }
+  .co-av{ width:34px; height:34px; border-radius:10px; color:#fff; font-weight:800; font-size:12px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; text-shadow:0 1px 1px rgba(0,0,0,.25); }
+  /* Columna del empleado fija al desplazar la tabla ancha de la quincena. */
+  #grid th:first-child, #grid td:first-child{ position:sticky; left:0; z-index:2; background:var(--panel); box-shadow:1px 0 0 var(--line); }
+  #grid th:first-child{ z-index:3; background:var(--panel2); }
+  #grid tr.tot td:first-child{ background:var(--panel2); }
+  /* Panel */
+  .panel-head{ display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap; margin:0 0 14px; } .panel-head h1{ margin:0; }
+  .cal .steps{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px; }
+  .cal .step{ border:1px solid var(--line); border-radius:13px; padding:12px 14px; background:var(--panel2); position:relative; }
+  .cal .step .sl{ font-size:11px; text-transform:uppercase; letter-spacing:.4px; color:var(--muted); }
+  .cal .step .sd{ font-size:19px; font-weight:800; margin-top:3px; } .cal .step .sn{ font-size:12px; color:var(--muted); margin-top:1px; }
+  .cal .step.done{ opacity:.6; } .cal .step.next{ border-color:var(--accent); background:var(--accent-soft); } .cal .step.next .sn{ color:var(--accent); font-weight:700; }
+  .cal .bar{ height:7px; border-radius:99px; background:var(--line); overflow:hidden; margin-top:12px; } .cal .bar i{ display:block; height:100%; background:linear-gradient(90deg,var(--accent),#d97706); border-radius:99px; }
+  .chips{ display:flex; gap:6px; flex-wrap:wrap; } .chips button{ border-radius:999px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+  .chips button.on{ background:var(--accent); color:var(--accentink); border-color:transparent; } .chips button .n{ opacity:.75; margin-left:4px; }
+  .coname{ display:flex; align-items:center; gap:10px; } .coname .cn{ font-weight:700; } .coname .cr{ font-size:11px; color:var(--faint); }
+  td.arrow{ text-align:right; color:var(--muted); } tr.clickable:hover td.arrow{ color:var(--accent); }
+  .attn{ border:1px solid rgba(248,113,113,.35); background:rgba(248,113,113,.07); border-radius:12px; padding:10px 14px; margin-bottom:12px; font-size:13px; }
+  :root[data-theme="light"] .attn{ background:#fef2f2; border-color:#fecaca; color:#7f1d1d; }
+  @media print{ header.top, .tabs, .btn{ display:none !important; } }
   @media(max-width:620px){ main{ padding:12px; } .card{ padding:14px; } header.top{ padding:10px 12px; } }
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>/* Tipografia de marca Direct: Josefin Sans en titulos, Poppins en el resto */:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style></head>
@@ -133,8 +177,9 @@
 </header>
 <main>
   <div class="tabs" id="tabs">
+    <button data-tab="panel" class="active">Panel</button>
     <button data-tab="empresas">Empresas</button>
-    <button data-tab="nomina" class="active">Nómina</button>
+    <button data-tab="nomina">Nómina</button>
     <button data-tab="empleados">Empleados</button>
     <button data-tab="columnas">Columnas</button>
     <button data-tab="ajustes">Ajustes</button>
@@ -148,6 +193,8 @@
   const esc = v => String(v==null?'':v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const money = v => (v==null||v===''||!isFinite(Number(v))) ? '0.00' : Number(v).toLocaleString('es-DO',{minimumFractionDigits:2,maximumFractionDigits:2});
   const numfmt = v => (v==null||v==='') ? '' : Number(v).toLocaleString('es-DO',{maximumFractionDigits:2});
+  const AVC=['#2563eb','#7c3aed','#db2777','#ea580c','#059669','#0891b2','#a16207','#4f46e5','#be123c','#0f766e'];
+  const avStyle = s => { let h=0; for(const ch of String(s||'')) h=(h*31+ch.charCodeAt(0))>>>0; return 'background:'+AVC[h%AVC.length]; };
   const initials = s => { const w=String(s||'').trim().split(/\s+/).filter(Boolean); return (((w[0]||'')[0]||'?')+((w[1]||'')[0]||'')).toUpperCase(); };
   // Aportes del empleador (espejo de lib/nomina/compute.js), con las tasas de Ajustes.
   function empAportes(base, exempt){ const st=S.period&&S.period.settings; if(!st||exempt) return 0; const b=Number(base)||0; const f=(st.period_type==='mensual')?1:0.5; const e=st.empleador||{}, em=st.empleado||{}; const ts=Number(em.tope_sfs)||b, ta=Number(em.tope_afp)||b; const afp=round2(Math.min(b,ta)*(e.afp||0)*f), sfs=round2(Math.min(b,ts)*(e.sfs||0)*f), srl=round2(Math.min(b,ts)*(e.srl||0)*f), inf=round2(b*(e.infotep||0)*f); return round2(afp+sfs+srl+inf); }
@@ -215,7 +262,7 @@
   }
 
   // ── estado ──
-  const S = { clients:[], clientId:'', tab:'nomina', columns:[], employees:[], periods:[], period:null, lastPeriodId:null };
+  const S = { clients:[], clientId:'', tab:'panel', dash:null, pf:'todas', pq:'', columns:[], employees:[], periods:[], period:null, lastPeriodId:null };
   const view = $('#view');
   const TYPE_LABEL = { monto:'Monto (RD$)', numero:'Número', texto:'Texto', formula:'Fórmula' };
 
@@ -231,7 +278,7 @@
     S.clientId = (saved && S.clients.some(c=>c.id===saved)) ? saved : (S.clients[0]?.id || '');
     if(!S.clientId) S.tab='empresas';
     $('#curco').onclick = ()=>{ S.tab='empresas'; S.period=null; syncTabs(); render(); };
-    $('#tabs').onclick = e => { const b=e.target.closest('[data-tab]'); if(!b)return; S.tab=b.dataset.tab; S.period=null; syncTabs(); render(); };
+    $('#tabs').onclick = e => { const b=e.target.closest('[data-tab]'); if(!b)return; S.tab=b.dataset.tab; S.period=null; if(S.tab==='empresas') S.dash=null; syncTabs(); render(); };
     syncTabs(); await loadClient(); updateCurco(); render();
   }
 
@@ -248,6 +295,7 @@
 
   function render(){
     if(S.tab==='empresas') return renderEmpresas();
+    if(S.tab==='panel') return renderPanel();
     if(!S.clientId){ S.tab='empresas'; syncTabs(); return renderEmpresas(); }
     if(S.period) return renderPeriod();
     if(S.tab==='nomina') return renderNomina();
@@ -256,12 +304,73 @@
     if(S.tab==='ajustes') return renderAjustes();
   }
 
+  // ── PANEL: todas las empresas de un vistazo + calendario de la quincena ──
+  const MES3=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const fdia = iso => { const [y,m,d]=String(iso).split('-').map(Number); return d+' '+MES3[m-1]; };
+  const enDias = n => n<0 ? 'hace '+(-n)+(n===-1?' día':' días') : n===0 ? 'hoy' : n===1 ? 'mañana' : 'en '+n+' días';
+  async function useCompany(id, periodId){ await selectClient(id); S.tab='nomina'; S.lastPeriodId=periodId||null; syncTabs(); render(); }
+  async function renderPanel(cached){
+    if(!cached){ view.innerHTML = '<div class="card empty">Cargando el panel…</div>'; await loadDash(); }
+    if(S.tab!=='panel'||S.period) return;
+    const d=S.dash;
+    if(!d){ view.innerHTML = `<div class="card empty"><b>No se pudo cargar el panel.</b><br>${esc(S.dashErr||'')}<br><br><button class="btn primary" id="pn-retry">Reintentar</button></div>`; $('#pn-retry').onclick=renderPanel; return; }
+    const c=d.calendario, r=d.resumen;
+    const steps=[['Corte de novedades',c.corte,c.dias_corte],['Generación de la nómina',c.generacion,c.dias_generacion],['Día de pago',c.pago,c.dias_pago]];
+    const nextIdx = steps.findIndex(x=>x[2]>=0);
+    const startDay = c.ciclo.endsWith('-A') ? 1 : 16; const pd = Number(c.pago.slice(8)); const td = Number(c.hoy.slice(8));
+    const pct = c.hoy.slice(0,7)===c.pago.slice(0,7) ? Math.max(0,Math.min(100,Math.round((td-startDay)/(pd-startDay)*100))) : 0;
+    const filtros=[['todas','Todas',d.empresas.filter(e=>e.activa).length],['abiertas','Abiertas',r.abiertas],['bloqueadas','Cerradas a novedades',r.bloqueadas],['cerradas','Cerradas',r.cerradas],['atencion','Requieren atención',r.atencion]];
+    const rows = d.empresas.filter(e=>{
+      if(S.pf==='todas' && !e.activa) return false;
+      if(S.pf==='abiertas' && e.estado!=='abierta') return false;
+      if(S.pf==='bloqueadas' && e.estado!=='bloqueada') return false;
+      if(S.pf==='cerradas' && e.estado!=='cerrada') return false;
+      if(S.pf==='atencion' && !e.atencion) return false;
+      const q=S.pq.trim().toLowerCase(); return !q || (e.nombre.toLowerCase().includes(q) || String(e.rnc||'').includes(q));
+    });
+    const attn = d.empresas.filter(e=>e.atencion);
+    view.innerHTML = `<div class="panel-head"><div><h1>Panel de nómina</h1><div class="muted">${r.empresas} empresas activas · ${r.empleados} empleados</div></div><span class="spacer"></span><button class="btn sm" id="pn-csv" title="Descargar este resumen">⇩ CSV resumen</button><button class="btn sm" id="pn-ref">↻ Actualizar</button></div>
+      <div class="card cal"><div class="row"><h2>Quincena en curso</h2><span class="pill">${esc(c.etiqueta.replace('Nómina ',''))}</span><span class="spacer"></span><span class="muted">Hoy es ${fdia(c.hoy)}</span></div>
+        <div class="bar"><i style="width:${pct}%"></i></div>
+        <div class="steps">${steps.map((x,i)=>`<div class="step ${x[2]<0?'done':i===nextIdx?'next':''}"><div class="sl">${x[0]}</div><div class="sd">${fdia(x[1])}</div><div class="sn">${x[2]<0?'✓ ':''}${enDias(x[2])}</div></div>`).join('')}</div></div>
+      <div class="total-kpis" style="margin:0 0 16px">
+        <div class="k"><div class="label">Empresas activas</div><div class="v">${r.empresas}</div><div class="sub">${r.abiertas} abiertas · ${r.cerradas} cerradas</div></div>
+        <div class="k"><div class="label">Empleados</div><div class="v">${r.empleados}</div><div class="sub">en nómina activa</div></div>
+        <div class="k neto"><div class="label">Neto de la quincena</div><div class="v">${money(r.neto)}</div><div class="sub">${r.en_curso} de ${r.empresas} empresas con nómina abierta</div></div>
+        <div class="k aportes"><div class="label">Aportes del empleador</div><div class="v">${money(r.aportes)}</div><div class="sub">TSS e INFOTEP estimados</div></div>
+        <div class="k ${r.atencion?'crit':'ok'}"><div class="label">Requieren atención</div><div class="v">${r.atencion}</div><div class="sub">${r.atencion?'revisa la lista de abajo':'todo en orden ✓'}</div></div></div>
+      ${attn.length?`<div class="attn"><b>⚠ Requieren atención:</b> ${attn.slice(0,8).map(e=>`<a href="#" data-go="${e.id}">${esc(e.nombre)}</a> (${e.estado==='sin_empleados'?'sin empleados':e.estado==='sin_periodo'?'sin nómina':'nómina atrasada'})`).join(' · ')}${attn.length>8?` · y ${attn.length-8} más`:''}</div>`:''}
+      <div class="card"><div class="row" style="margin-bottom:12px"><input id="pn-q" placeholder="🔎 Buscar empresa o RNC…" value="${esc(S.pq)}" style="width:260px;max-width:100%;flex:0 0 auto"><div class="chips">${filtros.map(f=>`<button class="btn ${S.pf===f[0]?'on':''}" data-pf="${f[0]}">${f[1]}<span class="n">${f[2]}</span></button>`).join('')}</div></div>
+        ${rows.length?`<div class="table-wrap"><table><tr><th>Empresa</th><th class="num">Empleados</th><th>Nómina</th><th>Estado</th><th class="num">Bruto</th><th class="num">Neto</th><th></th></tr>
+          ${rows.map(e=>`<tr class="clickable" data-open="${e.id}" data-per="${e.periodo?e.periodo.id:''}"><td><div class="coname"><span class="co-av" style="${avStyle(e.nombre)}">${esc(initials(e.nombre))}</span><div><div class="cn">${e.fijada?'📌 ':''}${esc(e.nombre)}</div><div class="cr mono">${esc(e.rnc||'sin RNC')}${e.auto?'':' · automática desactivada'}</div></div></div></td>
+            <td class="num">${e.empleados}</td><td>${e.periodo?esc(e.periodo.etiqueta.replace('Nómina ','')):'<span class="muted">—</span>'}</td><td>${estadoPill(e)}</td>
+            <td class="num">${e.totales?money(e.totales.bruto):'—'}</td><td class="num">${e.totales?'<b>'+money(e.totales.neto)+'</b>':'—'}</td><td class="arrow">Abrir ›</td></tr>`).join('')}</table></div>`
+          :'<div class="empty">Ninguna empresa coincide con ese filtro.</div>'}</div>`;
+    $('#pn-ref').onclick=()=>renderPanel();
+    $('#pn-csv').onclick=()=>{ const h=['Empresa','RNC','Empleados','Nómina','Estado','Bruto','Neto','Aportes empleador']; const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+      const lines=[h.map(q).join(',')].concat(d.empresas.map(e=>[e.nombre,e.rnc||'',e.empleados,e.periodo?e.periodo.etiqueta:'',(ESTADO[e.estado]||['',''])[1].replace('🔒 ','')+(e.atrasada?' (atrasada)':''),e.totales?e.totales.bruto:'',e.totales?e.totales.neto:'',e.totales?e.totales.aportes:''].map(q).join(',')));
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'})); a.download='resumen-nomina-'+c.hoy+'.csv'; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500); };
+    view.querySelectorAll('[data-pf]').forEach(b=> b.onclick=()=>{ S.pf=b.dataset.pf; renderPanelBody(); });
+    $('#pn-q').oninput=e=>{ S.pq=e.target.value; clearTimeout(S._pqT); S._pqT=setTimeout(renderPanelBody,150); };
+    view.querySelectorAll('tr[data-open]').forEach(tr=> tr.onclick=()=> useCompany(tr.dataset.open, tr.dataset.per));
+    view.querySelectorAll('[data-go]').forEach(a=> a.onclick=e=>{ e.preventDefault(); const e2=d.empresas.find(x=>x.id===a.dataset.go); useCompany(a.dataset.go, e2&&e2.periodo?e2.periodo.id:''); });
+  }
+  // Filtrar/buscar no vuelve a pedir datos: se redibuja con lo que ya está en S.dash.
+  function renderPanelBody(){ if(!S.dash) return renderPanel(); renderPanel(true); const q=$('#pn-q'); if(q&&S.pq){ q.focus(); q.setSelectionRange(q.value.length,q.value.length); } }
+
   // ── EMPRESAS (propias de Nómina: el usuario crea la empresa y le sube la nómina) ──
-  function renderEmpresas(){
+  const ESTADO = { abierta:['ok','Abierta'], bloqueada:['warn','🔒 Cerrada a novedades'], cerrada:['','✓ Cerrada'], sin_empleados:['crit','Sin empleados'], sin_periodo:['crit','Sin nómina'], inactiva:['','Inactiva'] };
+  const estadoPill = e => { const [cls,txt]=ESTADO[e.estado]||['','—']; return `<span class="pill ${cls}">${txt}</span>${e.atrasada?' <span class="pill crit">Atrasada</span>':''}`; };
+  async function loadDash(){ try{ S.dash = await api('GET','dashboard'); S.dashErr=''; }catch(e){ S.dash=null; S.dashErr=e.message||'Error'; } }
+  async function renderEmpresas(){
+    if(!S.dash) await loadDash();
+    if(S.tab!=='empresas') return;
+    const dm = new Map(((S.dash&&S.dash.empresas)||[]).map(e=>[e.id,e]));
     view.innerHTML = `<div class="card"><div class="row"><h2>Empresas</h2><span class="spacer"></span><button class="btn primary" id="addco">+ Nueva empresa</button></div>
-      ${S.clients.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th>RNC</th><th>Estado</th><th></th></tr>
-        ${S.clients.map(c=>`<tr class="clickable" data-open="${c.id}"><td>${c.pinned?'📌 ':''}<b>${esc(c.legal_name)}</b>${c.id===S.clientId?' <span class="pill ok">Seleccionada</span>':''}${c.auto_nomina===false?' <span class="pill">Auto off</span>':''}</td><td class="mono">${esc(c.rnc||'—')}</td><td>${c.active===false?'<span class="pill">Inactiva</span>':'<span class="pill ok">Activa</span>'}</td>
-          <td class="num"><button class="btn sm" data-pin="${c.id}" title="${c.pinned?'Quitar de fijadas':'Fijar arriba'}">${c.pinned?'📌':'📍'}</button> ${c.id===S.clientId?'':`<button class="btn sm primary" data-use="${c.id}">Usar</button> `}<button class="btn sm" data-edco="${c.id}">Editar</button> <button class="btn sm danger" data-delco="${c.id}">Borrar</button></td></tr>`).join('')}</table></div>`
+      ${S.clients.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th class="num">Empleados</th><th>Quincena</th><th class="num">Neto</th><th></th></tr>
+        ${S.clients.map(c=>{ const e=dm.get(c.id); return `<tr class="clickable" data-open="${c.id}"><td><div class="coname"><span class="co-av" style="${avStyle(c.legal_name)}">${esc(initials(c.legal_name))}</span><div><div class="cn">${c.pinned?'📌 ':''}${esc(c.legal_name)}${c.id===S.clientId?' <span class="pill ok">Seleccionada</span>':''}${c.auto_nomina===false?' <span class="pill">Auto off</span>':''}</div><div class="cr mono">${esc(c.rnc||'sin RNC')}</div></div></div></td>
+          <td class="num">${e?e.empleados:'—'}</td><td>${c.active===false?'<span class="pill">Inactiva</span>':(e?estadoPill(e):'—')}</td><td class="num">${e&&e.totales?'<b>'+money(e.totales.neto)+'</b>':'—'}</td>
+          <td class="num"><button class="btn sm" data-pin="${c.id}" title="${c.pinned?'Quitar de fijadas':'Fijar arriba'}">${c.pinned?'📌':'📍'}</button> ${c.id===S.clientId?'':`<button class="btn sm primary" data-use="${c.id}">Usar</button> `}<button class="btn sm" data-edco="${c.id}">Editar</button> <button class="btn sm danger" data-delco="${c.id}">Borrar</button></td></tr>`; }).join('')}</table></div>`
         : '<div class="empty">Aún no tiene empresas.<br><br>Cree la primera para empezar a cargarle su nómina.</div>'}
       <p class="hint">Cada empresa tiene sus propias columnas, empleados, ajustes (tasas de ley) y períodos de nómina.</p></div>`;
     $('#addco').onclick=()=>companyModal(null);
@@ -270,7 +379,7 @@
     view.querySelectorAll('[data-use]').forEach(b=> b.onclick=e=>{ e.stopPropagation(); use(b.dataset.use); });
     view.querySelectorAll('[data-edco]').forEach(b=> b.onclick=e=>{ e.stopPropagation(); companyModal(S.clients.find(x=>x.id===b.dataset.edco)); });
     view.querySelectorAll('[data-delco]').forEach(b=> b.onclick=async e=>{ e.stopPropagation(); const c=S.clients.find(x=>x.id===b.dataset.delco); if(!confirm(`¿Borrar la empresa "${c.legal_name}"? Se eliminarán sus columnas, empleados y períodos.`))return;
-      try{ await api('DELETE',`clients/${c.id}`); const {clients}=await api('GET','clients'); S.clients=clients||[];
+      try{ await api('DELETE',`clients/${c.id}`); S.dash=null; const {clients}=await api('GET','clients'); S.clients=clients||[];
         if(S.clientId===c.id){ S.clientId=S.clients[0]?.id||''; try{ S.clientId?localStorage.setItem('nomina_client_id',S.clientId):localStorage.removeItem('nomina_client_id'); }catch(_){} await loadClient(); updateCurco(); }
         render(); toast('Empresa borrada','ok'); }catch(err){ fail(err);} });
     view.querySelectorAll('tr[data-open]').forEach(tr=> tr.onclick=()=> use(tr.dataset.open));
@@ -283,7 +392,7 @@
       <label class="row" style="gap:8px"><input type="checkbox" id="m-co-auto" ${(co?co.auto_nomina!==false:true)?'checked':''} style="width:auto"> Nómina automática (se genera sola cada quincena)</label>`,
       async()=>{ const legal_name=$('#m-co-name').value.trim(); if(!legal_name){ toast('Escriba el nombre','err'); return false; }
         const body={ legal_name, rnc:$('#m-co-rnc').value.trim(), auto_nomina:$('#m-co-auto').checked }; if(co) body.active=$('#m-co-active').checked;
-        try{ const r=await api(co?'PATCH':'POST', co?`clients/${co.id}`:'clients', body); const {clients}=await api('GET','clients'); S.clients=clients||[];
+        try{ const r=await api(co?'PATCH':'POST', co?`clients/${co.id}`:'clients', body); S.dash=null; const {clients}=await api('GET','clients'); S.clients=clients||[];
           if(!co){ await selectClient(r.client.id); S.tab='nomina'; syncTabs(); } else updateCurco();
           render(); toast('Guardado','ok'); return true; }catch(e){ fail(e); return false; } });
   }
@@ -496,7 +605,7 @@
     const head = `<div class="card"><div class="row">
       <select id="per-sel" style="min-width:230px;font-weight:700">${S.periods.map(x=>`<option value="${x.id}" ${x.id===p.id?'selected':''}>${esc(x.label)}</option>`).join('')}</select>
       <button class="btn sm" id="per-new">+ Nuevo</button>
-      ${closed?'<span class="pill">Cerrado</span>':locked?'<span class="pill" style="color:var(--accent2)">🔒 Novedades cerradas (corte)</span>':'<span class="pill ok">Borrador</span>'}${d.settings?`<span class="pill">${d.settings.period_type==='mensual'?'Mensual':'Quincenal'}</span>`:''}<span class="spacer"></span>
+      ${closed?'<span class="pill">Cerrado</span>':locked?'<span class="pill warn">🔒 Novedades cerradas (corte)</span>':'<span class="pill ok">Borrador</span>'}${d.settings?`<span class="pill">${d.settings.period_type==='mensual'?'Mensual':'Quincenal'}</span>`:''}<span class="spacer"></span>
       <button class="btn sm" id="volantes">🧾 Volantes</button>
       <button class="btn sm" id="pdf-all">⤓ PDF</button>
       <button class="btn sm" id="export">⇩ Excel</button>
@@ -514,7 +623,7 @@
       ${cols.map(c=>`<th class="num" title="${esc(c.key)}">${esc(c.label)}${c.type==='formula'?' <span class="pill calc">fx</span>':''}</th>`).join('')}
       <th class="num">Ingresos</th><th class="num">Deducciones</th><th class="num">Neto</th></tr>
       ${(d.rows||[]).map(r=>`<tr data-emp="${r.employee.id}" data-name="${esc(String(r.employee.full_name||'').toLowerCase())} ${esc(String(r.employee.position||'').toLowerCase())}"><td>
-        <div class="emp"><span class="av">${esc(initials(r.employee.full_name))}</span><div><div class="en">${esc(r.employee.full_name)}</div><div class="sub">${esc(r.employee.position||'—')}${r.employee.forma_pago?' · '+esc(r.employee.forma_pago):''}</div><div class="cid mono">${esc(r.employee.identifier||'')}</div></div></div>
+        <div class="emp"><span class="av" style="${avStyle(r.employee.full_name)}">${esc(initials(r.employee.full_name))}</span><div><div class="en">${esc(r.employee.full_name)}</div><div class="sub">${esc(r.employee.position||'—')}${r.employee.forma_pago?' · '+esc(r.employee.forma_pago):''}</div><div class="cid mono">${esc(r.employee.identifier||'')}</div></div></div>
         <div class="row" style="gap:4px;margin-top:5px"><button class="btn sm primary" data-nov="${r.employee.id}" title="Novedad / detalle">✎ Novedad</button><button class="btn sm" data-slip="${r.employee.id}" title="Imprimir volante">🧾</button><button class="btn sm" data-pdf="${r.employee.id}" title="Descargar PDF">⤓</button></div></td>
         ${cols.map(c=>{
           if(c.type==='formula') return `<td class="num" data-calc="${c.key}">${money(r.cells[c.key])}</td>`;

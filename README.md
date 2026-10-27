@@ -100,7 +100,7 @@ Contraseña del usuario (solo en memoria del navegador)
 | **Direct** | Bóveda de credenciales con portales gubernamentales y auto-login; inicio con avisos de contraseña, historial de entradas y permisos por empresa |
 | **CAMI** | Herramienta ITBIS — cálculo de IVA / facturas 606/607 e IT-1 |
 | **NALA** | Flujo fiscal 606 y 607: carga masiva, extracción OCR/IA, validación, auditoría, aprobación y exportación DGII; chat IA e IR-17; informativo en cero para períodos sin operaciones (ver `docs/nala/README.md`) |
-| **Nómina** | Nómina por empresa con **empresas propias del módulo** (pestaña Empresas: el usuario crea la empresa y le sube la nómina): columnas dinámicas (monto/número/texto/fórmula sin `eval`), empleados, períodos editables con totales/neto y exportación a Excel (ver `docs/nomina/README.md`) |
+| **Nómina** | **Panel general** (todas las empresas, calendario de la quincena, neto/aportes, qué requiere atención, CSV) y nómina por empresa con **empresas propias del módulo** (pestaña Empresas: el usuario crea la empresa y le sube la nómina): columnas dinámicas (monto/número/texto/fórmula sin `eval`), empleados, períodos editables con totales/neto y exportación a Excel (ver `docs/nomina/README.md`) |
 | **IR-2** | Declaración de renta |
 | **Estimación Fiscal** | Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA |
 

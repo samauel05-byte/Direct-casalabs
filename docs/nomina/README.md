@@ -6,6 +6,29 @@ el usuario las crea dentro de Nómina (pestaña **Empresas**) y les sube la nóm
 Es el **núcleo**: empresas → columnas dinámicas → empleados → períodos editables
 con totales/neto → Excel.
 
+## Panel (pantalla de inicio)
+
+La primera pestaña, **Panel**, resume **todas las empresas** del tenant de un vistazo:
+calendario de la **quincena en curso** (corte de novedades, generación y pago, con los
+días que faltan), KPIs (empresas activas, empleados, **neto** y **aportes del empleador**
+de la quincena, empresas que **requieren atención**) y una tabla por empresa con
+empleados, nómina, **estado** (Abierta / Cerrada a novedades / Cerrada / Sin empleados /
+Sin nómina / Atrasada), bruto y neto. Se filtra por estado, se busca por nombre o RNC, se
+abre la empresa con un clic y se descarga un **CSV resumen**. «Requieren atención» =
+sin empleados, sin nómina, o con el último período anterior a la quincena previa (el
+cron no la alcanzó).
+
+- `GET /api/nomina/dashboard` (`api.dashboard`) lee todo en bloque (paginado, PostgREST
+  corta en 1000 filas) y delega el cálculo en `lib/nomina/dashboard.js` (`summarize`, pura):
+  usa el **mismo `computePeriod`** que la nómina, así que los totales coinciden con los de
+  cada período.
+- `lib/nomina/calendar.js` — reglas de fechas de la quincena (corte 12/26, generación
+  13/28, pago 15/fin de mes, hora de RD), compartidas por el cron y el panel.
+- La pestaña **Empresas** también muestra empleados, estado de la quincena y neto por empresa.
+- La tabla de la quincena deja **fija la columna del empleado** al desplazarla; las
+  iniciales de cada persona/empresa llevan color propio; y se corrigió el contraste del
+  **tema claro** (etiquetas, botones «Borrar», totales).
+
 ## Acceso y alcance
 
 - Permiso propio **`access_nomina`** en `direct_profiles` (como `access_nala`).
@@ -165,7 +188,7 @@ abre su período). Préstamos, descuentos y adicionales son simples **columnas**
 ## Pruebas
 
 ```bash
-npm run test:nomina   # evaluador de fórmulas + cálculo del período
+npm run test:nomina   # evaluador de fórmulas + cálculo del período + panel y calendario
 ```
 
 ## Pendiente (fuera del núcleo)

@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **CAMI: cuadros de compras en el IT-1**: igual que ya había para ventas, el cuadre del IT-1 ahora muestra las **compras (606)** por **tipo de comprobante** (B01, B02, B03, B04, B11, B13, B14, B15, B16, B17…), por **forma de pago** (efectivo, cheque/transferencia, tarjeta, crédito, permuta, notas de crédito, mixto) y por **tipo de bienes y servicios** (01 gastos de personal … 11 seguros), con la cantidad de comprobantes y el monto de cada uno, neto de notas de crédito. Solo se muestran los cuadros del archivo que se cargó (si no hay 607 no aparecen ceros de ventas).
+
 - **CAMI: ya no se pierde la sesión al guardar el análisis**: si pasaba un rato (o se volvía a iniciar sesión en Direct) y CAMI mostraba «Sin sesión de Direct», ahora CAMI le pide un token nuevo a cualquier pestaña de Direct abierta y reintenta solo. Direct publica la sesión renovada en un canal interno del navegador (solo entre pestañas del mismo sitio). El aviso también se puede tocar para reintentar.
 
 - **CAMI: el IT-1 ya no exige 606 y 607 a la vez**: si un cliente solo tiene compras (o solo ventas), basta cargar el archivo que tenga y el cuadre del IT-1 se genera igual (lo que falta cuenta como cero). También se puede descargar el formato oficial de la DGII. Los avisos del módulo ahora dicen «opcional» en el 606 y en el 607.

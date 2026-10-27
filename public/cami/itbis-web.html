@@ -1098,6 +1098,7 @@ const AL606 = {
   itbis_adelantado: ['itbis_por_adelantar','itbis_adelantado','itbisporadelantar','credito_itbis','itbiscreditofiscal','itbis_credito','por_adelantar'],
   itbis_costo:      ['itbis_llevado_al_costo','itbis_costo','itbisllevadoalcosto','itbis_al_costo','costo_itbis'],
   pct_retencion:    ['porcentaje_retencion','pct_retencion','porc_retencion','retencion_pct','porcentajeretencion'],
+  forma_pago:       ['forma_de_pago','forma_pago','formadepago','formapago','forma_de_pago_','tipo_de_pago','metodo_de_pago'],
 };
 
 const AL607 = {
@@ -1469,6 +1470,30 @@ function loadFile(file, sheetHint) {
   });
 }
 
+// ── Cuadros de compras (606): por tipo de comprobante, forma de pago y tipo de bien/servicio ──
+const COMPRA_NCF_LABEL={'01':'B01 / E31 — Crédito fiscal','02':'B02 / E32 — Consumo','03':'B03 / E33 — Notas de débito','04':'B04 / E34 — Notas de crédito','11':'B11 / E41 — Proveedores informales','12':'B12 — Registro único de ingresos','13':'B13 / E43 — Gastos menores','14':'B14 / E44 — Regímenes especiales','15':'B15 / E45 — Gubernamentales','16':'B16 / E46 — Exportaciones','17':'B17 / E47 — Pagos al exterior'};
+const COMPRA_PAGO_LABEL={cash:'Efectivo',transfer:'Cheque / transferencia / depósito',card:'Tarjeta débito / crédito',credit:'Compra a crédito',swap:'Permuta',creditNote:'Notas de crédito',mixed:'Mixto',none:'Sin forma de pago indicada'};
+const COMPRA_TIPO_LABEL={'01':'01 — Gastos de personal','02':'02 — Trabajos, suministros y servicios','03':'03 — Arrendamientos','04':'04 — Activos fijos','05':'05 — Representación','06':'06 — Otras deducciones admitidas','07':'07 — Gastos financieros','08':'08 — Gastos extraordinarios','09':'09 — Costo de venta','10':'10 — Adquisiciones de activos','11':'11 — Seguros'};
+function compraNcfCode(ncf){
+  const m=String(ncf||'').toUpperCase().replace(/[^A-Z0-9]/g,'').match(/^[BE](\d{2})/);
+  if(!m)return 'sin';
+  const c=m[1];
+  if(c==='31')return '01';if(c==='32')return '02';if(c==='33')return '03';if(c==='34')return '04';
+  if(c==='41')return '11';if(c==='43')return '13';if(c==='44')return '14';if(c==='45')return '15';if(c==='46')return '16';if(c==='47')return '17';
+  return COMPRA_NCF_LABEL[c]?c:'sin';
+}
+function compraPagoKey(v){
+  const raw=String(v==null?'':v).trim();if(!raw)return 'none';
+  const n=normKey(raw),code=raw.match(/^0?([1-7])\b/);
+  if(code)return ['','cash','transfer','card','credit','swap','creditNote','mixed'][+code[1]];
+  if(/efectivo/.test(n))return 'cash';if(/cheque|transfer|deposito/.test(n))return 'transfer';if(/tarjeta/.test(n))return 'card';
+  if(/nota/.test(n))return 'creditNote';if(/credito/.test(n))return 'credit';if(/permuta/.test(n))return 'swap';if(/mixto/.test(n))return 'mixed';
+  return 'none';
+}
+function compraTipoKey(v){const m=String(v==null?'':v).trim().match(/^0?(\d{1,2})\b/);if(!m)return null;const k=String(+m[1]).padStart(2,'0');return COMPRA_TIPO_LABEL[k]?k:null;}
+function emptyCompras(){return {byNcf:{},byPago:{},byTipo:{}};}
+function addTo(map,key,row){const e=map[key]||(map[key]={count:0,monto:0,itbis:0});e.count+=1;e.monto=r2(e.monto+(row._total||0));e.itbis=r2(e.itbis+(row._itbis||0));}
+
 function process606(rows) {
   if (!rows.length) throw new Error('Archivo vacío.');
   const headers = Object.keys(rows[0]);
@@ -1495,8 +1520,14 @@ function process606(rows) {
       const ratio = p._ret / p._itbis;
       p._pct = Math.abs(ratio - 1.0) < 0.08 ? 100 : Math.abs(ratio - 0.30) < 0.08 ? 30 : r2(ratio*100);
     } else { p._pct = 0; }
+    p._ncfKey=compraNcfCode(cm.ncf?r[cm.ncf]:'');
+    p._pagoKey=compraPagoKey(cm.forma_pago?r[cm.forma_pago]:'');
+    p._tipoKey=compraTipoKey(cm.tipo_comprobante?r[cm.tipo_comprobante]:'');
     return p;
   });
+  const compras=emptyCompras();
+  data.forEach(r=>{addTo(compras.byNcf,r._ncfKey,r);addTo(compras.byPago,r._pagoKey,r);if(r._tipoKey)addTo(compras.byTipo,r._tipoKey,r);});
+  compras.hasPago=!!cm.forma_pago;compras.hasTipo=data.some(r=>r._tipoKey);
   const totServ=r2(sum(data,'_serv')),totBien=r2(sum(data,'_bien')),totTotal=r2(sum(data,'_total'));
   const totItbis=r2(sum(data,'_itbis')),totAdel=r2(sum(data,'_adel')),totCosto=r2(sum(data,'_costo')),totRet=r2(sum(data,'_ret'));
   const credServ=r2(data.reduce((n,r)=>n+(r._serv+r._bien>0?r._adel*r._serv/(r._serv+r._bien):0),0));
@@ -1504,7 +1535,7 @@ function process606(rows) {
   const ret30rows=data.filter(r=>Math.abs(r._pct-30)<8),ret100rows=data.filter(r=>Math.abs(r._pct-100)<8);
   const ret30={monto:r2(sum(ret30rows,'_ret')),count:ret30rows.length},ret100={monto:r2(sum(ret100rows,'_ret')),count:ret100rows.length};
   const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
-  return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
+  return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
 }
 
 function process607(rows) {
@@ -1928,7 +1959,7 @@ function cuadreRows(rows){
 
 // El IT-1 se arma con lo que haya: si un cliente sólo tiene compras (606) o sólo ventas (607),
 // la parte que falta cuenta como cero en vez de bloquear el cuadre.
-function empty606Summary(){return {registros:0,totServ:0,totBien:0,totTotal:0,totItbis:0,totAdel:0,totCosto:0,totRet:0,credServ:0,credBien:0,ret30:{monto:0,count:0},ret100:{monto:0,count:0}};}
+function empty606Summary(){return {registros:0,totServ:0,totBien:0,totTotal:0,totItbis:0,totAdel:0,totCosto:0,totRet:0,credServ:0,credBien:0,ret30:{monto:0,count:0},ret100:{monto:0,count:0},compras:emptyCompras()};}
 function empty607Summary(){
   const g=()=>({count:0,monto:0}),t=()=>({monto:0,itbis:0,count:0});
   return {registros:0,totTotal:0,totGrav:0,totExento:0,totItbis:0,totRet:0,byTasa:{t18:t(),t16:t(),t10:t(),t9:t(),t8:t(),t0:t()},
@@ -2006,7 +2037,18 @@ function updateIT1() {
     {lbl:'Bonos o certificados',amt:p.bonds},{lbl:'Permutas',amt:p.swap},{lbl:'Otras formas de venta',amt:p.other},
   ];
   if(Math.abs(sales.discrepancy)>.01) paymentRows.push({lbl:'Diferencia entre ventas brutas y formas de pago',amt:sales.discrepancy,muted:true});
-  $('cuadre-body').innerHTML=`<div class="cuadre-group-title">Ventas por tipo de comprobante</div>${cuadreRows(ncfRows)}<div class="cuadre-group-title">Ventas por forma de pago</div>${cuadreRows(paymentRows)}<div class="cuadre-group-title">Liquidación del ITBIS</div>${cuadreRows(taxRows)}`;
+  const cp=s6.compras||emptyCompras();
+  const compraRows=(map,labels,order)=>order.filter(k=>map[k]).map(k=>({lbl:`${labels[k]||'Sin NCF o tipo reconocible'}`,source:`${fmtI(map[k].count)} comp.`,sign:map[k].monto<0?'−':undefined,amt:Math.abs(map[k].monto)}));
+  const ncfOrder=['01','02','03','04','11','12','13','14','15','16','17','sin'];
+  const comprasNcfRows=compraRows(cp.byNcf,{...COMPRA_NCF_LABEL},ncfOrder);
+  const comprasPagoRows=compraRows(cp.byPago,COMPRA_PAGO_LABEL,Object.keys(COMPRA_PAGO_LABEL));
+  const comprasTipoRows=compraRows(cp.byTipo,COMPRA_TIPO_LABEL,['01','02','03','04','05','06','07','08','09','10','11']);
+  const compraTotal=r2(Object.values(cp.byNcf).reduce((n,v)=>n+v.monto,0));
+  const comprasHtml=has606?`<div class="cuadre-group-title">Compras por tipo de comprobante</div>${cuadreRows([...comprasNcfRows,{lbl:'Total compras facturadas (neto de notas de crédito)',amt:compraTotal}])}`
+    +(cp.hasPago?`<div class="cuadre-group-title">Compras por forma de pago</div>${cuadreRows(comprasPagoRows)}`:'')
+    +(cp.hasTipo?`<div class="cuadre-group-title">Compras por tipo de bienes y servicios</div>${cuadreRows(comprasTipoRows)}`:''):'';
+  const ventasHtml=has607?`<div class="cuadre-group-title">Ventas por tipo de comprobante</div>${cuadreRows(ncfRows)}<div class="cuadre-group-title">Ventas por forma de pago</div>${cuadreRows(paymentRows)}`:'';
+  $('cuadre-body').innerHTML=`${ventasHtml}${comprasHtml}<div class="cuadre-group-title">Liquidación del ITBIS</div>${cuadreRows(taxRows)}`;
   const isPagar=resultado>0, isEven=resultado===0;
   $('ct-lbl').textContent=isEven?'CUADRE EXACTO':isPagar?'ITBIS A PAGAR':'SALDO A FAVOR';
   $('ct-val').textContent=fmtM(Math.abs(resultado));

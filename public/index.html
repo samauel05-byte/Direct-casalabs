@@ -892,6 +892,8 @@ const TOOL_ICONS = {
   clients: _ico('<circle cx="9" cy="8" r="3.1"/><path d="M3.6 19c0-3 2.5-5 5.4-5s5.4 2 5.4 5"/><path d="M16 6.6a3 3 0 0 1 0 6"/><path d="M15.6 14.2c2.5.3 4.4 2.3 4.4 4.8"/>', '62%'),
   // Monitor DGII — pulso de monitoreo.
   monitor: _ico('<path d="M3 12h3.5l2-6 3 12 2.5-7 1.5 3H21"/>', '66%'),
+  // Conciliación bancaria — banco con columnas y una marca de verificación.
+  conciliacion: _ico('<path d="M3.5 9.5 12 4l8.5 5.5"/><path d="M5.5 10v7M9.8 10v7M14.2 10v7M18.5 10v7"/><path d="M3.5 19.5h17"/>', '60%'),
 };
 
 const INST = {
@@ -949,6 +951,7 @@ const INST = {
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
   'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
   clients: { name:'Clientes', desc:'Gestión de clientes por empresa', grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'CLI', tool:true },
+  conciliacion: { name:'Conciliación bancaria', desc:'Compara el extracto del banco con tu libro auxiliar: conciliados, dudosos y diferencias', grad:'linear-gradient(135deg,#0e7490 0%,#22d3ee 100%)', abbr:'CON', tool:true },
   monitor: { name:'Monitor DGII', desc:'Disponibilidad de los servicios de facturación electrónica (e-CF)', grad:'linear-gradient(135deg,#be123c 0%,#f43f5e 100%)', abbr:'MON', tool:true },
 };
 
@@ -1629,6 +1632,7 @@ function openModuleTab(key,url,label){
 function openNomina(){ openModuleTab('nomina','/nomina/index.html','Nómina'); }
 function openIr2(){ openModuleTab('ir2','/ir2/index.html','IR-2'); }
 function openDgiiModulos(){ openModuleTab('dgii','/dgii/index.html','Estimación Fiscal'); }
+function openConciliacion(){ openModuleTab('conciliacion','/conciliacion/index.html','Conciliación bancaria'); }
 function openMonitor(){ openModuleTab('monitor','/monitor/index.html','el Monitor DGII'); }
 
 window.addEventListener('message', e => {
@@ -1821,6 +1825,7 @@ function renderPortalGrid() {
   if (currentUser?.access_nomina || currentUser?.role==='admin') allowed.push('nomina');
   if (currentUser?.access_ir2) allowed.push('ir2');
   if (currentUser?.access_estimacion) allowed.push('dgii-modulos');
+  if (currentUser?.role==='admin' || currentUser?.access_nala || currentUser?.access_ir2 || currentUser?.access_estimacion) allowed.push('conciliacion');
   allowed.push('clients');
   // Monitor DGII: estado público del servicio, visible para cualquier usuario
   // autorizado; la configuración y las alertas quedan limitadas a admin (API).
@@ -1830,11 +1835,11 @@ function renderPortalGrid() {
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Otros accesos',            keys:['digisign','gdmail','nexo'] },
-    { label:'Herramientas contables',   keys:['nala','nomina','cami','ir2','dgii-modulos','clients','monitor'] },
+    { label:'Herramientas contables',   keys:['nala','nomina','cami','ir2','dgii-modulos','conciliacion','clients','monitor'] },
   ];
 
   const PLAY='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
-  const TOOL_OPEN={nala:openNala, nomina:openNomina, ir2:openIr2, 'dgii-modulos':openDgiiModulos, clients:openClients, cami:openCami, monitor:openMonitor};
+  const TOOL_OPEN={nala:openNala, nomina:openNomina, ir2:openIr2, 'dgii-modulos':openDgiiModulos, conciliacion:openConciliacion, clients:openClients, cami:openCami, monitor:openMonitor};
   function makeCard(key,inst){
     const isTool=!!inst.tool||!!inst.openRelay||!!inst.openDirect;
     const cos=isTool?[]:getCompanies(key);
@@ -1849,7 +1854,7 @@ function renderPortalGrid() {
     });
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
     const nominaLabel=nominaCount==null?'Cargando…':`${nominaCount} empresa${nominaCount===1?'':'s'}`;
-    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='nomina'?nominaLabel:key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='monitor'?'Estado DGII':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
+    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='nomina'?nominaLabel:key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='monitor'?'Estado DGII':key==='conciliacion'?'Banco vs libros':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
     const countHtml=isTool
       ?`<div class="p-count"${key==='nomina'?' id="nomina-count"':''}>${toolLabel}</div>`
       :`<div class="p-count${cos.length?'':' empty'}">${cos.length?`${cos.length} empresa${cos.length>1?'s':''}`:'Sin empresas'}</div>`;

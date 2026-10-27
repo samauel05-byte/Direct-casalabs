@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Conciliación bancaria</title>
+<style>
+:root{--bg:#f6f2ea;--card:#fffdf9;--card2:#f1ebe0;--line:rgba(60,44,26,.14);--fg:#1e1810;--muted:#6a5c4b;--acc:#0a5fd4;--accink:#fff;--ok:#15924a;--warn:#c2710c;--bad:#dc2626;--okbg:#e7f6ec;--warnbg:#fff4e0;--badbg:#fdeaea}
+:root[data-theme="dark"]{--bg:#0f141b;--card:#171e28;--card2:#1e2733;--line:rgba(255,255,255,.12);--fg:#e8edf3;--muted:#9aa8b8;--acc:#4c8dff;--accink:#fff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--okbg:rgba(74,222,128,.12);--warnbg:rgba(251,191,36,.12);--badbg:rgba(248,113,113,.12)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,sans-serif}
+header{display:flex;gap:12px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+header h1{font-size:17px;margin:0}main{max-width:1180px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}.card h2{margin:0 0 4px;font-size:15px}
+.hint{color:var(--muted);font-size:12.5px;margin:2px 0 10px}
+.btn{border:1px solid var(--line);background:var(--card2);color:var(--fg);border-radius:8px;padding:7px 12px;font:inherit;font-weight:600;cursor:pointer}.btn:hover{border-color:var(--acc)}
+.btn.primary{background:var(--acc);color:var(--accink);border-color:transparent}.btn.sm{padding:4px 9px;font-size:12px}.btn.ok{background:var(--okbg);color:var(--ok)}.btn.bad{background:var(--badbg);color:var(--bad)}.btn:disabled{opacity:.5;cursor:not-allowed}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}@media(max-width:820px){.two{grid-template-columns:1fr}}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:18px;text-align:center;cursor:pointer;background:var(--card2)}.drop.on{border-color:var(--acc)}.drop b{display:block;margin-bottom:2px}
+.drop.loaded{border-style:solid;border-color:var(--ok);background:var(--okbg)}
+.map{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:10px}.map label{display:flex;flex-direction:column;font-size:11.5px;color:var(--muted);gap:2px}
+select,input[type=number]{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font:inherit;max-width:100%}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.spacer{flex:1}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}
+.k{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}.k .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}.k .v{font-size:20px;font-weight:800}.k .s{font-size:12px;color:var(--muted)}
+.k.ok .v{color:var(--ok)}.k.warn .v{color:var(--warn)}.k.bad .v{color:var(--bad)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.tabs button{border:1px solid var(--line);background:var(--card2);color:var(--fg);border-radius:999px;padding:6px 13px;font:inherit;font-weight:600;cursor:pointer}.tabs button.on{background:var(--acc);color:var(--accink);border-color:transparent}
+.tabs .n{opacity:.8;margin-left:4px}
+.tw{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:10px}table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{padding:6px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{position:sticky;top:0;background:var(--card2);font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.neg{color:var(--bad)}.pos{color:var(--ok)}
+.pill{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11px;font-weight:700}.pill.warn{background:var(--warnbg);color:var(--warn)}.pill.ok{background:var(--okbg);color:var(--ok)}
+.empty{padding:22px;text-align:center;color:var(--muted)}.note{font-size:12px;color:var(--muted)}
+.pair td{border-bottom:none}.pair+.pair2 td{border-bottom:1px solid var(--line)}
+</style>
+<script src="/serp-host.js"></script>
+</head>
+<body>
+<header><button class="btn sm" onclick="serpBack()" title="Volver a Accesos">‹ Volver</button><h1>🏦 Conciliación bancaria</h1><span class="spacer"></span><span class="note">Todo se procesa en su navegador; los archivos no se suben a ningún servidor.</span></header>
+<main>
+<div class="card" id="c-files"><h2>1. Cargue los dos archivos</h2><p class="hint">Extracto del banco y libro auxiliar (o Excel de movimientos) del mismo período. Acepta Excel (.xlsx, .xls) y CSV.</p>
+<div class="two">
+  <div><div class="drop" id="drop-bank" tabindex="0"><b>🏦 Extracto bancario</b><span class="note">Haga clic o arrastre el archivo aquí</span></div><input type="file" id="f-bank" accept=".xlsx,.xls,.csv,.txt" hidden><div id="map-bank"></div></div>
+  <div><div class="drop" id="drop-book" tabindex="0"><b>📒 Libro auxiliar / Excel contable</b><span class="note">Haga clic o arrastre el archivo aquí</span></div><input type="file" id="f-book" accept=".xlsx,.xls,.csv,.txt" hidden><div id="map-book"></div></div>
+</div>
+<div class="row" style="margin-top:14px"><label class="row" style="gap:6px">Tolerancia de fecha: <input type="number" id="tol" min="0" max="30" value="3" style="width:70px"> días</label><span class="spacer"></span><button class="btn primary" id="go" disabled>Conciliar</button></div>
+</div>
+<div id="out"></div>
+</main>
+<script src="/cami/vendor/xlsx.full.min.js"></script>
+<script src="/conciliacion/engine.js"></script>
+<script>
+(function(){
+  const E=window.Conciliacion, $=s=>document.querySelector(s);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const side={bank:null,book:null}; let R=null, tab='revisar';
+  const FIELDS=[['fecha','Fecha'],['desc','Descripción'],['ref','Referencia / No.'],['monto','Monto (una columna)'],['debito','Débito / salida'],['credito','Crédito / entrada']];
+
+  function readFile(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=()=>rej(new Error('No se pudo leer el archivo'));
+    fr.onload=()=>{ try{ const wb=XLSX.read(fr.result,{type:'array',cellDates:false}); res(wb); }catch(e){ rej(new Error('Formato de archivo no reconocido')); } }; fr.readAsArrayBuffer(file); }); }
+  function sheetRows(wb,name){ return XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null,blankrows:false}); }
+
+  async function load(which,file){
+    try{
+      const wb=await readFile(file); const names=wb.SheetNames; const s={name:file.name,wb,sheet:names[0],all:null,hi:0,map:{},signo:1};
+      side[which]=s; setSheet(which,s.sheet); 
+    }catch(e){ alert(e.message); }
+  }
+  function setSheet(which,name){
+    const s=side[which]; s.sheet=name; s.all=sheetRows(s.wb,name); s.hi=E.findHeaderRow(s.all); remap(which); 
+  }
+  function remap(which){
+    const s=side[which]; const headers=(s.all[s.hi]||[]).map((h,i)=>h==null||h===''?`Columna ${i+1}`:String(h)); s.headers=headers; s.map=E.guessMap(headers);
+    s.signo = (which==='book' && s.map.debito!=null && s.map.credito!=null) ? -1 : 1; renderMap(which);
+  }
+  function renderMap(which){
+    const s=side[which], box=$('#map-'+which), drop=$('#drop-'+which);
+    drop.classList.add('loaded'); drop.innerHTML=`<b>${which==='bank'?'🏦':'📒'} ${esc(s.name)}</b><span class="note">${s.all.length-s.hi-1} filas · clic para cambiar</span>`;
+    const opt=(sel)=>`<option value="">— ninguna —</option>`+s.headers.map((h,i)=>`<option value="${i}" ${String(sel)===String(i)?'selected':''}>${esc(h)}</option>`).join('');
+    const sheets=s.wb.SheetNames.length>1?`<label>Hoja<select data-sheet>${s.wb.SheetNames.map(n=>`<option ${n===s.sheet?'selected':''}>${esc(n)}</option>`).join('')}</select></label>`:'';
+    box.innerHTML=`<div class="map">${sheets}<label>Fila de encabezados<input type="number" min="1" value="${s.hi+1}" data-hi style="width:90px"></label>${FIELDS.map(([k,l])=>`<label>${l}<select data-k="${k}">${opt(s.map[k])}</select></label>`).join('')}</div>
+      <label class="row note" style="margin-top:8px;gap:6px"><input type="checkbox" data-signo ${s.signo===-1?'checked':''}><span>${which==='book'?'En este libro el <b>débito</b> es entrada de dinero al banco (lo normal en un auxiliar de banco)':'Invertir signo (usar si los retiros vienen en positivo)'}</span></label>
+      <div class="note" id="prev-${which}" style="margin-top:6px"></div>`;
+    box.querySelector('[data-sheet]')?.addEventListener('change',e=>setSheet(which,e.target.value));
+    box.querySelector('[data-hi]').addEventListener('change',e=>{ s.hi=Math.max(0,(+e.target.value||1)-1); remap(which); });
+    box.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('change',()=>{ s.map[el.dataset.k]=el.value===''?null:+el.value; if(el.dataset.k==='monto'&&el.value!=='') { s.map.debito=null; s.map.credito=null; } preview(which); }));
+    box.querySelector('[data-signo]').addEventListener('change',e=>{ s.signo=e.target.checked?-1:1; if(which==='bank') s.signo=e.target.checked?-1:1; });
+    preview(which);
+  }
+  function build(which){ const s=side[which]; const rows=s.all.slice(s.hi+1); const m={...s.map}; if(m.monto!=null) { m.debito=null; m.credito=null; } else m.monto=null;
+    return E.normalizeRows(rows,m,{signo:s.signo,prefix:which==='bank'?'B':'L'}); }
+  function preview(which){
+    const {rows,errors}=build(which); const el=$('#prev-'+which); const bad=side[which].map.fecha==null||(side[which].map.monto==null&&side[which].map.debito==null&&side[which].map.credito==null);
+    el.innerHTML=bad?'<span class="neg">Falta indicar la columna de fecha y la de monto (o débito/crédito).</span>':`${rows.length} movimientos leídos${errors.length?` · <span class="neg">${errors.length} filas ignoradas (sin monto válido)</span>`:''}${rows[0]?` · ej.: ${esc(rows[0].date||'sin fecha')} · ${E.fmtMoney(rows[0].amount)}`:''}`;
+    $('#go').disabled=!(side.bank&&side.book);
+  }
+  function drop(which){
+    const d=$('#drop-'+which), f=$('#f-'+which);
+    d.onclick=()=>f.click(); d.onkeydown=e=>{ if(e.key==='Enter'||e.key===' ') f.click(); };
+    f.onchange=()=>{ if(f.files[0]) load(which,f.files[0]); };
+    d.ondragover=e=>{ e.preventDefault(); d.classList.add('on'); }; d.ondragleave=()=>d.classList.remove('on');
+    d.ondrop=e=>{ e.preventDefault(); d.classList.remove('on'); if(e.dataTransfer.files[0]) load(which,e.dataTransfer.files[0]); };
+  }
+  drop('bank'); drop('book');
+
+  $('#go').onclick=()=>{
+    const b=build('bank'), k=build('book');
+    if(!b.rows.length||!k.rows.length){ alert('No se leyeron movimientos en uno de los archivos. Revise el mapeo de columnas.'); return; }
+    const res=E.reconcile(b.rows,k.rows,{dayTol:+$('#tol').value||0});
+    R={res,bank:b.rows,book:k.rows}; tab=res.pairs.some(p=>p.status==='review')?'revisar':'conciliados'; show(); $('#out').scrollIntoView({behavior:'smooth'});
+  };
+
+  const money=c=>`<span class="${c<0?'neg':'pos'}">${E.fmtMoney(c)}</span>`;
+  const fd=d=>d?d.split('-').reverse().join('/'):'—';
+  function rowsOf(r){ return `<td>${fd(r.date)}</td><td>${esc(r.desc)}</td><td>${esc(r.ref)}</td><td class="num">${money(r.amount)}</td>`; }
+  function show(){
+    const {res}=R, s=E.summarize(res);
+    const rev=res.pairs.filter(p=>p.status==='review'), conc=res.pairs.filter(p=>p.status==='auto'||p.status==='confirmed');
+    const dups=[...res.duplicates.bank.map(g=>({side:'Banco',g})),...res.duplicates.book.map(g=>({side:'Libros',g}))];
+    const tabs=[['revisar','Por revisar',rev.length],['conciliados','Conciliados',conc.length],['banco','Solo en el banco',res.onlyBank.length],['libro','Solo en libros',res.onlyBook.length],['cargos','Cargos bancarios',res.fees.length],['dups','Duplicados',dups.length]];
+    $('#out').innerHTML=`<div class="card"><div class="row"><h2>2. Resultado</h2><span class="spacer"></span><button class="btn primary" id="exp">⇩ Descargar Excel</button></div>
+      <div class="kpis"><div class="k ok"><div class="l">Conciliados</div><div class="v">${s.conciliados}</div><div class="s">${E.fmtMoney(s.montoConciliado)}</div></div>
+      <div class="k warn"><div class="l">Por revisar</div><div class="v">${s.revisar}</div><div class="s">${E.fmtMoney(s.montoRevisar)}</div></div>
+      <div class="k bad"><div class="l">Solo en el banco</div><div class="v">${s.soloBanco}</div><div class="s">${E.fmtMoney(s.montoSoloBanco)}</div></div>
+      <div class="k bad"><div class="l">Solo en libros</div><div class="v">${s.soloLibro}</div><div class="s">${E.fmtMoney(s.montoSoloLibro)}</div></div>
+      <div class="k"><div class="l">Cargos del banco</div><div class="v">${s.cargos}</div><div class="s">${E.fmtMoney(s.montoCargos)}</div></div></div>
+      <p class="note">Diferencia pendiente (banco − libros, sin contar lo por revisar): <b>${E.fmtMoney(s.diferenciaPendiente)}</b></p>
+      <div class="tabs">${tabs.map(([k,l,n])=>`<button data-tab="${k}" class="${tab===k?'on':''}">${l}<span class="n">${n}</span></button>`).join('')}</div><div id="tbl"></div></div>`;
+    document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>{ tab=b.dataset.tab; show(); });
+    $('#exp').onclick=exportXlsx; renderTab(rev,conc,dups);
+  }
+  const table=(head,body,empty)=>body?`<div class="tw"><table><tr>${head}</tr>${body}</table></div>`:`<div class="empty">${empty}</div>`;
+  const H4='<th>Fecha</th><th>Descripción</th><th>Referencia</th><th class="num">Monto</th>';
+  function renderTab(rev,conc,dups){
+    const t=$('#tbl'), {res}=R; let h='';
+    if(tab==='revisar'){
+      h=table('<th>Banco</th><th>Libros</th><th class="num">Monto</th><th>Motivo</th><th></th>',rev.map(p=>`<tr><td>${fd(p.bank.date)} · ${esc(p.bank.desc)}<br><span class="note">${esc(p.bank.ref)}</span></td><td>${fd(p.book.date)} · ${esc(p.book.desc)}<br><span class="note">${esc(p.book.ref)}</span></td><td class="num">${money(p.bank.amount)}</td><td><span class="pill warn">${esc(p.why)}</span></td><td style="white-space:nowrap"><button class="btn sm ok" data-ok="${p.bank.id}">✓ Es la misma</button> <button class="btn sm bad" data-no="${p.bank.id}">✕ No coincide</button></td></tr>`).join(''),'No hay movimientos por revisar.');
+      if(rev.length) h='<div class="row" style="margin-bottom:8px"><button class="btn sm ok" id="ok-all">✓ Confirmar todos</button></div>'+h;
+    } else if(tab==='conciliados') h=table('<th>Fecha banco</th><th>Fecha libros</th><th>Descripción banco</th><th>Descripción libros</th><th>Referencia</th><th class="num">Monto</th><th>Criterio</th>',conc.map(p=>`<tr><td>${fd(p.bank.date)}</td><td>${fd(p.book.date)}</td><td>${esc(p.bank.desc)}</td><td>${esc(p.book.desc)}</td><td>${esc(p.bank.ref||p.book.ref)}</td><td class="num">${money(p.bank.amount)}</td><td>${p.status==='confirmed'?'<span class="pill ok">Confirmado</span>':esc(p.why)}</td></tr>`).join(''),'Aún no hay conciliados.');
+    else if(tab==='banco') h=table(H4,res.onlyBank.map(r=>`<tr>${rowsOf(r)}</tr>`).join(''),'Todo lo del banco tiene correspondencia en libros.')+'<p class="note">Movimientos del banco que no están en sus libros: probablemente falta registrarlos.</p>';
+    else if(tab==='libro') h=table(H4,res.onlyBook.map(r=>`<tr>${rowsOf(r)}</tr>`).join(''),'Todo lo de libros aparece en el banco.')+'<p class="note">Registrados en libros pero no vistos en el banco: pueden ser cheques en tránsito o depósitos pendientes.</p>';
+    else if(tab==='cargos') h=table(H4,res.fees.map(r=>`<tr>${rowsOf(r)}</tr>`).join(''),'No se detectaron cargos bancarios sin registrar.')+'<p class="note">Comisiones, impuestos (p. ej. 0.15 % Ley 288-04) e intereses del banco que normalmente se contabilizan con una nota de débito.</p>';
+    else h=table('<th>Origen</th><th>Veces</th>'+H4,dups.map(d=>`<tr><td>${d.side}</td><td>${d.g.length}</td>${rowsOf(d.g[0])}</tr>`).join(''),'No se detectaron registros repetidos.');
+    t.innerHTML=h;
+    t.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{ const p=res.pairs.find(x=>x.bank.id===b.dataset.ok); p.status='confirmed'; show(); });
+    t.querySelectorAll('[data-no]').forEach(b=>b.onclick=()=>{ const i=res.pairs.findIndex(x=>x.bank.id===b.dataset.no), p=res.pairs[i]; res.pairs.splice(i,1); res.onlyBank.push(p.bank); res.onlyBook.push(p.book); show(); });
+    const all=$('#ok-all'); if(all) all.onclick=()=>{ if(confirm('¿Confirmar los '+rev.length+' movimientos por revisar como conciliados?')){ rev.forEach(p=>p.status='confirmed'); tab='conciliados'; show(); } };
+  }
+  function exportXlsx(){
+    const {res}=R, s=E.summarize(res), n=c=>c/100, d=x=>x?x.split('-').reverse().join('/'):'';
+    const flat=r=>({Fecha:d(r.date),Descripción:r.desc,Referencia:r.ref,Monto:n(r.amount)});
+    const pairRow=p=>({'Fecha banco':d(p.bank.date),'Fecha libros':d(p.book.date),'Descripción banco':p.bank.desc,'Descripción libros':p.book.desc,Referencia:p.bank.ref||p.book.ref,Monto:n(p.bank.amount),Estado:p.status==='review'?'Por revisar':p.status==='confirmed'?'Confirmado':'Automático',Criterio:p.why});
+    const wb=XLSX.utils.book_new(), add=(name,rows,empty)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[empty||{Info:'Sin registros'}]),name);
+    add('Resumen',[{Concepto:'Movimientos conciliados',Cantidad:s.conciliados,Monto:n(s.montoConciliado)},{Concepto:'Por revisar',Cantidad:s.revisar,Monto:n(s.montoRevisar)},{Concepto:'Solo en el banco',Cantidad:s.soloBanco,Monto:n(s.montoSoloBanco)},{Concepto:'Solo en libros',Cantidad:s.soloLibro,Monto:n(s.montoSoloLibro)},{Concepto:'Cargos bancarios sin registrar',Cantidad:s.cargos,Monto:n(s.montoCargos)},{Concepto:'Diferencia pendiente (banco − libros)',Cantidad:'',Monto:n(s.diferenciaPendiente)}]);
+    add('Conciliados',res.pairs.filter(p=>p.status!=='review').map(pairRow));
+    add('Por revisar',res.pairs.filter(p=>p.status==='review').map(pairRow));
+    add('Solo en banco',res.onlyBank.map(flat)); add('Solo en libros',res.onlyBook.map(flat)); add('Cargos bancarios',res.fees.map(flat));
+    add('Duplicados',[...res.duplicates.bank.map(g=>({Origen:'Banco',Veces:g.length,...flat(g[0])})),...res.duplicates.book.map(g=>({Origen:'Libros',Veces:g.length,...flat(g[0])}))]);
+    XLSX.writeFile(wb,'Conciliacion bancaria.xlsx');
+  }
+})();
+</script>
+</body>
+</html>

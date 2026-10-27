@@ -105,7 +105,7 @@ async function usageStats(session) {
   const recientes = events.slice(0, 20).map(e => ({ at: e.created_at, usuario: e.username || '(sin nombre)', portal: e.institution, event: e.event }));
 
   // ── Inteligencia a partir de la navegación DENTRO de SERP ──
-  const TOOLS = ['nala', 'cami', 'ir2', 'dgii-modulos', 'clients'];
+  const TOOLS = ['nala', 'cami', 'ir2', 'dgii-modulos', 'conciliacion', 'clients'];
   resumen.sesiones = usage.filter(u => u.kind === 'session').length;
   resumen.modulos_abiertos = usage.filter(u => u.kind === 'module_open').length;
   resumen.busquedas = usage.filter(u => u.kind === 'search').length;

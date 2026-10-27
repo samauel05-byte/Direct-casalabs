@@ -292,6 +292,7 @@ lanzamiento en Play Store como app), manteniendo el estilo actual:
 
 ## NALA — 606 y 607
 
+- **Barra de filtros por pantalla**: `SCOPE_BY_VIEW` en `public/nala/js/app.js` define qué controles (empresa, período, formato) y la etiqueta de vista se muestran en cada vista; las que no filtran por ellos (Consulta RNC, Empresas clientes, Equipo, Configuración) no los muestran.
 - **«Le toca a» en lotes**: con el permiso `team_manage`, la lista de lotes agrega la columna de oficiales asignados a la empresa (`GET team` → `nala_member_clients`); no lista a admins ni a miembros con `all_clients`.
 NALA genera el TXT de la DGII y, además, deja las declaraciones listas en la **Herramienta de Envío oficial** de la DGII, con el mismo flujo para el **606** y el **607**:
 

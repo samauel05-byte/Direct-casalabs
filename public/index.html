@@ -1079,6 +1079,7 @@ function refreshSession(){
       if(d.refresh_token) refreshToken=d.refresh_token;
       tokenExpiresAt=d.expires_at?d.expires_at*1000:(Date.now()+55*60*1000);
       sessionStorage.setItem('dtoken',sessionToken);
+      broadcastSession();
       sessionStorage.setItem('drefresh',refreshToken||'');
       sessionStorage.setItem('dexp',String(tokenExpiresAt));
       // El iframe de Estimación lee el token de sessionStorage; avisar por si
@@ -1091,6 +1092,19 @@ function refreshSession(){
   })();
   return _refreshing;
 }
+
+// Las pestañas de los módulos (CAMI, NALA, Nómina…) copian el token al abrirse y dejan de
+// verlo si Direct renueva la sesión o se vuelve a iniciar. Por eso Direct lo publica en un
+// canal del navegador (solo mismo origen) cada vez que cambia y responde cuando una pestaña
+// lo pide (sesión vencida mientras trabajaba).
+let _serpCh=null;
+try { _serpCh=new BroadcastChannel('serp-session'); } catch(_) { /* sin BroadcastChannel */ }
+function broadcastSession(){ try { if(_serpCh&&sessionToken) _serpCh.postMessage({type:'token', token:sessionToken, sid:activeSessionId||''}); } catch(_) { /* canal cerrado */ } }
+if(_serpCh) _serpCh.onmessage=async e=>{
+  if(!e.data||e.data.type!=='need'||!sessionToken) return;
+  try { if(refreshToken && (tokenExpiresAt||0)-Date.now()<90000) await refreshSession(); } catch(_) { /* se responde con lo que haya */ }
+  broadcastSession();
+};
 
 // Hook para los iframes de módulos de la misma sesión (p. ej. NALA): refresca el
 // token y devuelve el nuevo, para que puedan reintentar un 401 sin mandar al
@@ -1225,6 +1239,7 @@ async function handleSetup() {
     activeSessionId = signIn.session_id || null;
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     sessionStorage.setItem('dtoken', sessionToken);
+    broadcastSession();
     storeSession(signIn);
 
     currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_nomina:true, access_ir2:true, access_estimacion:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
@@ -1303,6 +1318,7 @@ async function handleLogin() {
       masterKey=null; sessionToken=null; vaultSecret=null; return;
     }
     sessionStorage.setItem('dtoken', sessionToken);
+    broadcastSession();
     sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
     if (C.isLegacySalt(res.userSalt)) migrateKdf(pw, res.userSalt, vaultSecret); // en segundo plano

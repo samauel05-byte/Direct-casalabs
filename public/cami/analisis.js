@@ -15,7 +15,7 @@
   function host() { try { const o = window.opener; if (o && !o.closed && o.location.origin === location.origin) return o; } catch (_) { /* aislado */ } return null; }
   function authHeaders() {
     const h = {}; let token = '', sid = '';
-    try { token = (host() || window).sessionStorage.getItem('dtoken') || sessionStorage.getItem('dtoken') || ''; } catch (_) { /* sin storage */ }
+    try { token = window.__serpToken || sessionStorage.getItem('dtoken') || (host() || window).sessionStorage.getItem('dtoken') || ''; } catch (_) { /* sin storage */ }
     try { sid = localStorage.getItem('direct_session_id') || ''; } catch (_) { /* sin storage */ }
     if (token) h.Authorization = 'Bearer ' + token;
     if (sid) h['X-Direct-Session'] = sid;
@@ -29,6 +29,8 @@
       if (res.status === 401 && !retried) { // token vencido mientras se trabajaba: pedirle a Direct que lo renueve y reintentar una vez
         let r = null; try { const h = host(); r = h && h.directRefresh ? await h.directRefresh() : null; } catch (_) { /* aislado */ }
         if (r) return api(method, query, body, true);
+        // Sin la pestaña que abrió CAMI (cerrada o con otra sesión): se le pide el token a cualquier pestaña de Direct abierta.
+        try { const tok = window.serpRequestToken ? await window.serpRequestToken() : null; if (tok) return api(method, query, body, true); } catch (_) { /* sin respuesta */ }
       }
       const e = new Error(j.error || ('Error ' + res.status)); e.status = res.status; throw e;
     }
@@ -136,9 +138,12 @@
       dirty: 'Guardando en unos segundos…', saving: 'Guardando…',
       ok: '✓ Borrador guardado ' + hora(AN.last),
       err: AN.err && (AN.err.status === 401 || AN.err.status === 403)
-        ? '⚠ Sin sesión de Direct: abre CAMI desde Direct para que se guarde.' : '⚠ No se pudo guardar' + (AN.err && AN.err.message ? ' (' + AN.err.message + ')' : '') + '. Se reintenta con el próximo cambio.',
+        ? '⚠ Sesión de Direct vencida o cerrada. Toca aquí para reintentar; si sigue igual, abre CAMI desde Direct.' : '⚠ No se pudo guardar' + (AN.err && AN.err.message ? ' (' + AN.err.message + ')' : '') + '. Se reintenta con el próximo cambio.',
     }[AN.state] || '';
     st.textContent = msg; st.className = 'an-status' + (AN.state === 'err' ? ' err' : AN.state === 'ok' ? ' ok' : '');
+    // Con error de sesión se puede reintentar con un clic (pide el token a Direct y vuelve a guardar).
+    st.style.cursor = AN.state === 'err' ? 'pointer' : '';
+    st.onclick = AN.state === 'err' ? async () => { st.textContent = 'Reconectando con Direct…'; try { if (window.serpRequestToken) await window.serpRequestToken(); } catch (_) { /* sin respuesta */ } saveDraft(); } : null;
   }
   function css() {
     const s = document.createElement('style');

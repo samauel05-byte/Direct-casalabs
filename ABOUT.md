@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **CAMI: ya no se pierde la sesión al guardar el análisis**: si pasaba un rato (o se volvía a iniciar sesión en Direct) y CAMI mostraba «Sin sesión de Direct», ahora CAMI le pide un token nuevo a cualquier pestaña de Direct abierta y reintenta solo. Direct publica la sesión renovada en un canal interno del navegador (solo entre pestañas del mismo sitio). El aviso también se puede tocar para reintentar.
+
 - **CAMI: el IT-1 ya no exige 606 y 607 a la vez**: si un cliente solo tiene compras (o solo ventas), basta cargar el archivo que tenga y el cuadre del IT-1 se genera igual (lo que falta cuenta como cero). También se puede descargar el formato oficial de la DGII. Los avisos del módulo ahora dicen «opcional» en el 606 y en el 607.
 
 - **Token Digital de la DGII dentro de Direct**: en la ficha de una empresa de la DGII hay un campo nuevo, «Token Digital DGII — clave del QR». Se pega la **clave en texto** (o el enlace del QR) que la DGII entrega al registrar el token, y Direct muestra el **código de 6 dígitos con cuenta regresiva de 30 s** y botón **Copiar**, igual que la app del celular. Al entrar a la Oficina Virtual el código queda visible en el panel mientras se inicia sesión. La clave se guarda **cifrada en la bóveda** como el resto de los accesos. Al guardarla se muestra una vista previa para comprobar que coincide con el celular.

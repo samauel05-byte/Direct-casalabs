@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA: los filtros solo aparecen donde se usan**: «Empresa activa», «Período», «Formato» y la etiqueta «Vista consolidada» ya no se muestran en pantallas donde no sirven (Consulta RNC, Empresas clientes, Equipo, Configuración). Siguen en Panel, Dashboard por empresa, Carga masiva, Auditoría y Exportar.
+
 - **Nueva herramienta: Conciliación bancaria (versión 1)**: sube el **extracto del banco** y tu **libro auxiliar o Excel contable** del mismo período y el sistema los compara por monto, fecha y referencia. Te muestra lo **conciliado**, lo **dudoso para que tú decidas** (✓ es la misma / ✕ no coincide), lo que **solo está en el banco**, lo que **solo está en tus libros**, los **cargos bancarios sin registrar** (comisiones, 0.15 % Ley 288-04, intereses) y los **registros duplicados**. Descargas un Excel con el resumen y las diferencias pendientes. Todo se procesa en tu navegador (los archivos no se suben). Aparece en Accesos, en «Herramientas contables», para administradores y usuarios con NALA, IR-2 o Estimación. Próximas fases: pagos que agrupan varias facturas, reglas por banco y guardar conciliaciones.
 
 - **Bóveda con llave más fuerte (sin bloquear a nadie)**: la llave que protege la bóveda a partir de la contraseña ahora usa **600.000 iteraciones** (antes 200.000). Las cuentas existentes siguen entrando igual; al iniciar sesión, el sistema migra solo su bóveda a la llave nueva (sin cambiar la contraseña ni los accesos guardados). Las cuentas y contraseñas nuevas ya nacen con la llave fuerte. El secreto de la bóveda se mantiene en `sessionStorage` por decisión del equipo (comodidad al recargar).

@@ -202,6 +202,20 @@
     return { view: parts[0] || 'panel', id: parts[1] || null, params: Object.fromEntries(new URLSearchParams(query)) };
   };
   let routeToken = 0;
+  // Qué filtros de la barra superior aplican a cada pantalla: sólo se muestran donde se usan
+  // (p. ej. «Consulta RNC», Empresas clientes, Equipo y Configuración no usan ninguno).
+  const SCOPE_BY_VIEW = {
+    panel: ['client', 'period', 'format'], empresa: ['client', 'period', 'format'], lotes: ['client', 'period', 'format'],
+    auditoria: ['client', 'period', 'format'], exportar: ['client', 'period', 'format'],
+  };
+  function applyScopeVisibility(view) {
+    const use = SCOPE_BY_VIEW[view] || [];
+    for (const k of ['client', 'period', 'format']) {
+      const lab = document.getElementById('scope-' + k)?.closest('label');
+      if (lab) lab.hidden = !use.includes(k);
+    }
+    const chip = document.getElementById('scope-chip'); if (chip) chip.hidden = !use.includes('client');
+  }
   async function route() {
     const { view, id, params } = NALA.parseHash();
     // Vistas de administración: si el usuario no tiene el permiso, lo mandamos al panel.
@@ -214,6 +228,7 @@
     NALA.beforeLeave = null;
     if (NALA.cleanup) { try { NALA.cleanup(); } catch (_) { /* ignorar */ } NALA.cleanup = null; }
     renderNav(view);
+    applyScopeVisibility(view);
     document.body.classList.remove('nav-open');
     document.getElementById('title').textContent = def.title;
     const content = document.getElementById('content');

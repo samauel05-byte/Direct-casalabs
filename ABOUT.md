@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA: se ve a quién le toca cada empresa**: en «Carga masiva y lotes», el administrador (con permiso de gestionar equipo) ve una columna **«Le toca a»** con los oficiales asignados a la empresa de cada lote, o «Sin asignar».
+
 - **Cada módulo de Direct abre en su propia pestaña**: Nómina, IR-2, Estimación Fiscal y Monitor DGII ahora se abren en otra pestaña (igual que NALA y CAMI) en vez de reemplazar la pantalla de Accesos. Si ya hay una abierta, se le da el foco sin perder lo que tengas digitado; «Volver» cierra la pestaña y regresa a Accesos. Además se completó el **RNC** de ALMA 6 Inversiones, Annibel, Asociación de Artesanos e Inversiones Rodqui en Nómina.
 
 - **Nómina más completa y legible**: el módulo abre ahora en un **Panel** con todas tus empresas de un vistazo: el **calendario de la quincena** (corte de novedades, generación y pago, con los días que faltan), cuántas empresas y empleados hay, el **neto** y los **aportes del empleador** de la quincena, y la lista de lo que **requiere atención** (empresas sin empleados, sin nómina o atrasadas). La tabla de empresas muestra empleados, estado de la quincena (Abierta / Cerrada a novedades / Cerrada…), bruto y neto; se filtra, se busca por nombre o RNC, se abre una empresa con un clic y se baja un **CSV resumen**. La pestaña Empresas también muestra esos datos. Además: la **columna del empleado queda fija** al desplazar la tabla de la quincena, las **iniciales tienen color** (antes se perdían sobre fondo blanco) y se corrigió el contraste del **tema claro** (etiquetas «Activa/Borrador», botones «Borrar» y totales).

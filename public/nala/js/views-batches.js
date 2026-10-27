@@ -143,11 +143,21 @@
     }
     const qs = new URLSearchParams(Object.entries({ client_id: s.client, period: params.all ? '' : s.period, format: s.format }).filter(([, v]) => v));
     const { batches } = await NALA.api('GET', `batches?${qs}`);
+    // Admin: a quién le toca cada empresa (oficiales con la empresa asignada).
+    let owners = null;
+    if (NALA.can('team_manage')) {
+      try {
+        const t = await NALA.api('GET', 'team'); owners = {};
+        for (const m of t.members) if (!m.all_clients) for (const cid of m.client_ids) (owners[cid] = owners[cid] || []).push(m.username);
+      } catch (_) { /* columna opcional */ }
+    }
+    const ownerCell = cid => owners ? `<td>${owners[cid] ? owners[cid].map(u => `<span class="badge accent">${esc(u)}</span>`).join(' ') : '<span class="muted">Sin asignar</span>'}</td>` : '';
     root.innerHTML = `<div class="stack"><div class="row">${NALA.can('upload') ? '<button class="btn primary" id="new">+ Nuevo lote</button>' : ''}
       <button class="btn" id="all">${params.all ? `Sólo ${period(s.period)}` : 'Todos los períodos'}</button><span class="muted" id="pumpinfo"></span></div>
+      ${owners ? '<div class="muted" style="font-size:12px">«Le toca a» = oficiales con esa empresa asignada (Equipo). Los administradores y quienes tienen «todas las empresas» no se listan.</div>' : ''}
       ${NALA.can('upload') && !s.client ? '<div class="issue warning"><span class="ico">ℹ️</span><span><b>Vista consolidada (todas las empresas).</b> Para subir facturas, elija una <b>empresa activa</b> en el selector de arriba.</span></div>' : ''}
-      ${batches.length ? `<div class="table-wrap"><table><tr><th>Lote</th><th>Empresa</th><th>Período</th><th>Formato</th><th>Estado</th><th class="num">Docs</th><th class="num">Comprob.</th><th class="num">Pend.</th><th class="num">Errores</th><th class="num">Aprob.</th><th>Creado</th>${(NALA.can('reprocess') || NALA.can('upload')) ? '<th></th>' : ''}</tr>
-        ${batches.map(b => `<tr class="clickable" data-id="${b.id}"><td><b>${esc(b.name)}</b></td><td>${esc(NALA.clientName(b.client_id))}</td><td>${period(b.period)}</td><td>${b.format}</td><td>${NALA.badge(b.status)}${b.summary?.jobs_pending ? ` <span class="muted">${int(b.summary.jobs_pending)} trabajos</span>` : ''}</td>
+      ${batches.length ? `<div class="table-wrap"><table><tr><th>Lote</th><th>Empresa</th>${owners ? '<th>Le toca a</th>' : ''}<th>Período</th><th>Formato</th><th>Estado</th><th class="num">Docs</th><th class="num">Comprob.</th><th class="num">Pend.</th><th class="num">Errores</th><th class="num">Aprob.</th><th>Creado</th>${(NALA.can('reprocess') || NALA.can('upload')) ? '<th></th>' : ''}</tr>
+        ${batches.map(b => `<tr class="clickable" data-id="${b.id}"><td><b>${esc(b.name)}</b></td><td>${esc(NALA.clientName(b.client_id))}</td>${ownerCell(b.client_id)}<td>${period(b.period)}</td><td>${b.format}</td><td>${NALA.badge(b.status)}${b.summary?.jobs_pending ? ` <span class="muted">${int(b.summary.jobs_pending)} trabajos</span>` : ''}</td>
           <td class="num">${int(b.summary?.documents)}</td><td class="num">${int(b.summary?.invoices)}</td><td class="num">${int(b.summary?.pending)}</td><td class="num">${b.summary?.with_errors ? `<span class="badge crit">${int(b.summary.with_errors)}</span>` : '0'}</td><td class="num">${int(b.summary?.approved)}</td><td>${NALA.dateTime(b.created_at)}</td>${(NALA.can('reprocess') || NALA.can('upload')) ? `<td class="chk">${NALA.can('upload') ? `<button class="btn sm" data-edit="${b.id}" data-name="${esc(b.name)}" title="Editar nombre">✏️</button> ` : ''}${NALA.can('reprocess') ? `<button class="btn sm danger" data-del="${b.id}" data-name="${esc(b.name)}" title="Eliminar lote">🗑</button>` : ''}</td>` : ''}</tr>`).join('')}</table></div>`
         : '<div class="card empty">No hay lotes con estos filtros.</div>'}</div>`;
     root.querySelector('#new')?.addEventListener('click', () => {

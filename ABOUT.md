@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **CAMI se llena solo con lo escaneado y auditado en NALA**: al escribir el **RNC** y el **período** en CAMI, el sistema trae el **606 y el 607 aprobados en NALA** de esa empresa (con los mismos datos que NALA exportaría a la DGII) y los carga sin subir archivos. También llena el **resumen de consumo B02/E32** con las facturas de consumo menores de RD$ 250,000 y avisa cuántos comprobantes siguen **sin aprobar** en NALA, cuántos e-CF no entran al 607 y si la empresa no está en NALA. Hay un botón **«Traer de NALA»** para actualizar. Si ya subiste un archivo a mano, no se reemplaza (el botón sí lo reemplaza). Respeta las empresas asignadas a cada usuario en NALA.
+
 - **CAMI: cuadros de compras en el IT-1**: igual que ya había para ventas, el cuadre del IT-1 ahora muestra las **compras (606)** por **tipo de comprobante** (B01, B02, B03, B04, B11, B13, B14, B15, B16, B17…), por **forma de pago** (efectivo, cheque/transferencia, tarjeta, crédito, permuta, notas de crédito, mixto) y por **tipo de bienes y servicios** (01 gastos de personal … 11 seguros), con la cantidad de comprobantes y el monto de cada uno, neto de notas de crédito. Solo se muestran los cuadros del archivo que se cargó (si no hay 607 no aparecen ceros de ventas).
 
 - **CAMI: ya no se pierde la sesión al guardar el análisis**: si pasaba un rato (o se volvía a iniciar sesión en Direct) y CAMI mostraba «Sin sesión de Direct», ahora CAMI le pide un token nuevo a cualquier pestaña de Direct abierta y reintenta solo. Direct publica la sesión renovada en un canal interno del navegador (solo entre pestañas del mismo sitio). El aviso también se puede tocar para reintentar.

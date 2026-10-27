@@ -972,9 +972,16 @@ const C = {
   _b64(u8) { return btoa(String.fromCharCode(...u8)); },
   _u8(b64) { return Uint8Array.from(atob(b64), c=>c.charCodeAt(0)); },
   _salt(b64) { return C._u8(b64); },
-  async deriveKey(pw, saltB64) {
+  // Llave de usuario (contraseña → AES). La «sal» lleva su versión: las nuevas
+  // son «v2$<base64>» (600.000 iteraciones); las antiguas, sólo base64 (200.000).
+  // Así las bóvedas existentes siguen abriendo y se migran al iniciar sesión.
+  KDF_V2: 'v2$',
+  newUserSalt() { return C.KDF_V2 + C.randB64(16); },
+  isLegacySalt(salt) { return !String(salt || '').startsWith(C.KDF_V2); },
+  async deriveKey(pw, saltField) {
+    const v2 = !C.isLegacySalt(saltField), saltB64 = v2 ? String(saltField).slice(C.KDF_V2.length) : saltField;
     const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
-    return crypto.subtle.deriveKey({ name:'PBKDF2', salt:C._salt(saltB64), iterations:200000, hash:'SHA-256' }, km, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+    return crypto.subtle.deriveKey({ name:'PBKDF2', salt:C._salt(saltB64), iterations: v2 ? 600000 : 200000, hash:'SHA-256' }, km, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
   },
   async deriveKeyFromBytes(rawBytes, saltB64) {
     const km = await crypto.subtle.importKey('raw', rawBytes, 'PBKDF2', false, ['deriveKey']);
@@ -1102,6 +1109,7 @@ const A = {
   get:  p     => apiRequest(p, {signal:AbortSignal.timeout(12000), headers:authH()}),
   post: (p,b) => apiRequest(p, {method:'POST',  signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
   put:  (p,b) => apiRequest(p, {method:'PUT',   signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
+  patch: (p,b) => apiRequest(p, {method:'PATCH', signal:AbortSignal.timeout(12000), headers:authH(true), body:JSON.stringify(b)}),
   del:  p     => apiRequest(p, {method:'DELETE', signal:AbortSignal.timeout(12000), headers:authH()}),
 };
 
@@ -1181,7 +1189,7 @@ async function handleSetup() {
   try {
     const vaultSecretBytes = crypto.getRandomValues(new Uint8Array(32));
     const vaultSalt = C.randB64(16);
-    const userSalt  = C.randB64(16);
+    const userSalt  = C.newUserSalt();
     const userKey   = await C.deriveKey(pw, userSalt);
     const { iv:vkIv, ct:vkCt } = await C.encBytes(userKey, vaultSecretBytes);
     masterKey = await C.deriveKeyFromBytes(vaultSecretBytes, vaultSalt);
@@ -1283,9 +1291,25 @@ async function handleLogin() {
     sessionStorage.setItem('dtoken', sessionToken);
     sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
+    if (C.isLegacySalt(res.userSalt)) migrateKdf(pw, res.userSalt, vaultSecret); // en segundo plano
     await loadHome(homeData);
   } catch(e){ err.textContent=e.message; err.hidden=false; }
   finally { setLoginBusy(false); }
+}
+
+// Sube la llave de usuario a 600.000 iteraciones sin cambiar la contraseña ni el
+// secreto de la bóveda: se vuelve a envolver el mismo secreto con una sal «v2$».
+// Se verifica que la nueva envoltura abre antes de enviarla; el servidor sólo la
+// acepta si la sal anterior sigue siendo la guardada (no pisa otro cambio).
+async function migrateKdf(pw, prevSalt, secret) {
+  try {
+    const salt = C.newUserSalt();
+    const key = await C.deriveKey(pw, salt);
+    const { iv, ct } = await C.encBytes(key, secret);
+    const back = await C.decBytes(await C.deriveKey(pw, salt), iv, ct);
+    if (back.length !== secret.length || back.some((b, i) => b !== secret[i])) return;
+    await A.patch('/api/auth/login', { prevSalt, userSalt: salt, vaultKeyIv: iv, vaultKeyCt: ct });
+  } catch (_) { /* se reintenta en el próximo inicio de sesión */ }
 }
 
 // Credentials and clients are independent; request both at once.
@@ -1520,7 +1544,7 @@ async function saveUser() {
   try {
     let vaultKeyIv=null, vaultKeyCt=null, userSalt=null;
     if (password && vaultSecret) {
-      userSalt=C.randB64(16);
+      userSalt=C.newUserSalt();
       const newUserKey=await C.deriveKey(password, userSalt);
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
@@ -1559,7 +1583,7 @@ async function saveResetPw() {
   try {
     let userSalt = null, vaultKeyIv = null, vaultKeyCt = null;
     if (vaultSecret) {
-      userSalt = C.randB64(16);
+      userSalt = C.newUserSalt();
       const newUserKey = await C.deriveKey(password, userSalt);
       const enc = await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv = enc.iv; vaultKeyCt = enc.ct;

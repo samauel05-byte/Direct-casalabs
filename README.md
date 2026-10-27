@@ -97,6 +97,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 ## Módulos
 
+**CAMI — IT-1 con un solo archivo**: `updateIT1`/`exportIT1DGII` usan `it1S6()`/`it1S7()`, que devuelven el resumen cargado o uno vacío (`empty606Summary`/`empty607Summary`); el IT-1 se habilita con 606, 607 o ambos.
+
 **Conciliación bancaria** (`/conciliacion/`): herramienta 100 % del lado del navegador (sin API ni datos en el servidor). `engine.js` (UMD, también corre en Node) normaliza montos (`1,234.56`, `1.234,56`, `(500)`, `DB/CR`) y fechas (dd/mm/yyyy, ISO, serial Excel) a centavos/ISO, adivina columnas por encabezado y concilia 1 a 1: puntaje por referencia (exacta/parcial), diferencia de fecha (tolerancia configurable) y descripción; estados `auto` / `review` (monto repetido, fecha distinta, posible duplicado) / `confirmed`; separa cargos bancarios (comisión, impuesto 0.15 %, ITBIS, intereses…) y detecta duplicados por lado. La salida a Excel (SheetJS vendorizado) trae Resumen, Conciliados, Por revisar, Solo en banco/libros, Cargos y Duplicados. Visible en Accesos para admin y quienes tengan NALA, IR-2 o Estimación. Pruebas: `npm run test:conciliacion`.
 
 **Apertura de módulos**: NALA, CAMI, Nómina, IR-2, Estimación Fiscal y Monitor DGII se abren cada uno en su propia pestaña (`window.open` sin `noopener`, nombre `serp-<módulo>`; si ya existe se le da el foco). La pestaña hereda una copia de `sessionStorage` (token) y habla con el shell de Direct por `window.opener` mediante `public/serp-host.js` (`serpHost()`, `serpBack()` y tema `direct_theme`). El shell valida el origen de cada mensaje contra la ventana registrada (`_modWin`).

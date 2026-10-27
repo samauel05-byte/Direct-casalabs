@@ -934,14 +934,14 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         <div class="prereq-dot pending" id="pi-606">606</div>
         <div class="prereq-text">
           <div class="prereq-name" id="pn-606">606 — Compras: pendiente</div>
-          <div class="prereq-hint">Carga el archivo de compras en el módulo 606</div>
+          <div class="prereq-hint">Carga el archivo de compras en el módulo 606 (opcional si el cliente no tiene compras)</div>
         </div>
       </div>
       <div class="prereq-item">
         <div class="prereq-dot pending" id="pi-607">607</div>
         <div class="prereq-text">
           <div class="prereq-name" id="pn-607">607 — Ventas: pendiente</div>
-          <div class="prereq-hint">Carga el archivo de ventas en el módulo 607</div>
+          <div class="prereq-hint">Carga el archivo de ventas en el módulo 607 (opcional si el cliente no tiene ventas)</div>
         </div>
       </div>
       <div class="prereq-item">
@@ -1926,25 +1926,38 @@ function cuadreRows(rows){
   return rows.map(r=>`<div class="cuadre-row${r.muted?' muted':''}"><span class="cuadre-lbl">${r.lbl}${r.source?`<span class="cuadre-source">${r.source}</span>`:''}</span><span><span class="cuadre-sign">${r.sign||''}</span><span class="cuadre-amt">${fmtM(r.amt)}</span></span></div>`).join('');
 }
 
+// El IT-1 se arma con lo que haya: si un cliente sólo tiene compras (606) o sólo ventas (607),
+// la parte que falta cuenta como cero en vez de bloquear el cuadre.
+function empty606Summary(){return {registros:0,totServ:0,totBien:0,totTotal:0,totItbis:0,totAdel:0,totCosto:0,totRet:0,credServ:0,credBien:0,ret30:{monto:0,count:0},ret100:{monto:0,count:0}};}
+function empty607Summary(){
+  const g=()=>({count:0,monto:0}),t=()=>({monto:0,itbis:0,count:0});
+  return {registros:0,totTotal:0,totGrav:0,totExento:0,totItbis:0,totRet:0,byTasa:{t18:t(),t16:t(),t10:t(),t9:t(),t8:t(),t0:t()},
+    ncfGroups:{credito:g(),consumo:{count:0,monto:0,cardMonto:0},debito:g(),notaCredito:g(),unico:g(),especial:g(),gobierno:g(),exportacion:g(),otros:g(),sinClasificar:g()},
+    paymentSummary:{cash:0,transfer:0,card:0,credit:0,bonds:0,swap:0,other:0,columns:{}},ret30:{monto:0,count:0},ret100:{monto:0,count:0},audit:{invalidNCF:0,duplicateNCF:0}};
+}
+const it1S6=()=>STATE['606']?STATE['606'].summary:empty606Summary();
+const it1S7=()=>STATE['607']?STATE['607'].summary:empty607Summary();
+const it1Ready=()=>!!(STATE['606']||STATE['607']);
+
 function updateIT1() {
   const has606=!!STATE['606'],has607=!!STATE['607'];
   const cardCount=Object.values(CARD_STATE).filter(Boolean).length;
-  $('btn-it1-dgii').hidden=!(has606&&has607);
+  $('btn-it1-dgii').hidden=!it1Ready();
   $('pi-606').className=`prereq-dot ${has606?'ok':'pending'}`;
   $('pn-606').textContent=has606?'606 — Compras: cargado ✓':'606 — Compras: pendiente';
   $('pi-607').className=`prereq-dot ${has607?'ok':'pending'}`;
   $('pn-607').textContent=has607?'607 — Ventas: cargado ✓':'607 — Ventas: pendiente';
   $('pi-cards').className=`prereq-dot ${cardCount?'ok':'pending'}`;
   $('pn-cards').textContent=cardCount?`Tarjetas — ${cardCount===2?'CardNET y Azul':'1 reporte'} cargado ✓`:'Tarjetas — CardNET/Azul: pendiente';
-  if (has606&&has607){$('badge-it1').textContent='✓';$('badge-it1').className='nav-badge ok';}
+  if (it1Ready()){$('badge-it1').textContent='✓';$('badge-it1').className='nav-badge ok';}
   else{$('badge-it1').textContent='○';$('badge-it1').className='nav-badge';}
   const alertEl=$('it1-alert'),cuadreEl=$('it1-cuadre');
-  if (!has606||!has607){
+  if (!it1Ready()){
     alertEl.hidden=false;
-    alertEl.innerHTML=`<div class="alert warn"><strong>Datos requeridos:</strong> carga el archivo 606 (Compras) y el 607 (Ventas) para generar el cuadre IT-1.</div>`;
+    alertEl.innerHTML=`<div class="alert warn"><strong>Datos requeridos:</strong> carga el archivo 606 (Compras), el 607 (Ventas) o ambos para generar el cuadre IT-1. Si el cliente no tiene uno de los dos, no hace falta cargarlo.</div>`;
     cuadreEl.hidden=true;return;
   }
-  const s6=STATE['606'].summary,s7=STATE['607'].summary,sales=getIT1SalesBreakdown(s7),card=getCardConsolidation(s7),consumer=getConsumerSummary();
+  const s6=it1S6(),s7=it1S7(),sales=getIT1SalesBreakdown(s7),card=getCardConsolidation(s7),consumer=getConsumerSummary();
   const saldo=parseFloat($('in-saldo').value)||0;
   const importaciones=parseFloat($('in-importaciones').value)||0;
   const abonos=parseFloat($('in-abonos').value)||0;
@@ -2160,7 +2173,7 @@ function contributorValues() {
 }
 
 async function exportIT1DGII() {
-  if (!STATE['606']||!STATE['607']) { showToast('Carga primero los reportes 606 y 607.','err');return; }
+  if (!it1Ready()) { showToast('Carga primero el 606 o el 607.','err');return; }
   $('loader').hidden=false;
   try {
     const response=await fetch('templates/IT-1-DGII-2020.xlsx');
@@ -2168,7 +2181,7 @@ async function exportIT1DGII() {
     const zip=await JSZip.loadAsync(await response.arrayBuffer());
     let anexo=await zip.file('xl/worksheets/sheet1.xml').async('string');
     let it1=await zip.file('xl/worksheets/sheet2.xml').async('string');
-    const s6=STATE['606'].summary,s7=STATE['607'].summary,bt=s7.byTasa,ncfData=getIT1NCFBreakdown(s7),ncf=ncfData.groups,consumer=ncfData.consumer,auditCard=ncfData.card;
+    const s6=it1S6(),s7=it1S7(),bt=s7.byTasa,ncfData=getIT1NCFBreakdown(s7),ncf=ncfData.groups,consumer=ncfData.consumer,auditCard=ncfData.card;
     const imports=parseFloat($('in-importaciones').value)||0;
     const saldo=parseFloat($('in-saldo').value)||0;
     const abonos=parseFloat($('in-abonos').value)||0;

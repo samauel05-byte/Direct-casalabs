@@ -1099,6 +1099,9 @@ const AL606 = {
   itbis_adelantado: ['itbis_por_adelantar','itbis_adelantado','itbisporadelantar','credito_itbis','itbiscreditofiscal','itbis_credito','por_adelantar'],
   itbis_costo:      ['itbis_llevado_al_costo','itbis_costo','itbisllevadoalcosto','itbis_al_costo','costo_itbis'],
   pct_retencion:    ['porcentaje_retencion','pct_retencion','porc_retencion','retencion_pct','porcentajeretencion'],
+  isc:              ['impuesto_selectivo_al_consumo','impuesto_selectivo','isc','selectivo_al_consumo'],
+  otros_impuestos:  ['otros_impuesto_tasas','otros_impuestos_tasas','otros_impuestos','otros_impuesto','otras_tasas'],
+  propina_legal:    ['monto_propina_legal','propina_legal','propina'],
   forma_pago:       ['forma_de_pago','forma_pago','formadepago','formapago','forma_de_pago_','tipo_de_pago','metodo_de_pago'],
 };
 
@@ -1523,6 +1526,9 @@ function process606(rows) {
       const ratio = p._ret / p._itbis;
       p._pct = Math.abs(ratio - 1.0) < 0.08 ? 100 : Math.abs(ratio - 0.30) < 0.08 ? 30 : r2(ratio*100);
     } else { p._pct = 0; }
+    p._isc=cm.isc?Math.abs(cleanNum(r[cm.isc]))*fiscalSign:0;
+    p._otrosImp=cm.otros_impuestos?Math.abs(cleanNum(r[cm.otros_impuestos]))*fiscalSign:0;
+    p._propina=cm.propina_legal?Math.abs(cleanNum(r[cm.propina_legal]))*fiscalSign:0;
     p._ncfKey=compraNcfCode(cm.ncf?r[cm.ncf]:'');
     p._pagoKey=compraPagoKey(cm.forma_pago?r[cm.forma_pago]:'');
     p._tipoKey=compraTipoKey(cm.tipo_comprobante?r[cm.tipo_comprobante]:'');
@@ -1533,12 +1539,13 @@ function process606(rows) {
   compras.hasPago=!!cm.forma_pago;compras.hasTipo=data.some(r=>r._tipoKey);
   const totServ=r2(sum(data,'_serv')),totBien=r2(sum(data,'_bien')),totTotal=r2(sum(data,'_total'));
   const totItbis=r2(sum(data,'_itbis')),totAdel=r2(sum(data,'_adel')),totCosto=r2(sum(data,'_costo')),totRet=r2(sum(data,'_ret'));
+  const totIsc=r2(sum(data,'_isc')),totOtrosImp=r2(sum(data,'_otrosImp')),totPropina=r2(sum(data,'_propina'));
   const credServ=r2(data.reduce((n,r)=>n+(r._serv+r._bien>0?r._adel*r._serv/(r._serv+r._bien):0),0));
   const credBien=r2(totAdel-credServ);
   const ret30rows=data.filter(r=>Math.abs(r._pct-30)<8),ret100rows=data.filter(r=>Math.abs(r._pct-100)<8);
   const ret30={monto:r2(sum(ret30rows,'_ret')),count:ret30rows.length},ret100={monto:r2(sum(ret100rows,'_ret')),count:ret100rows.length};
   const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
-  return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
+  return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras,totIsc,totOtrosImp,totPropina}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
 }
 
 function process607(rows) {
@@ -1963,7 +1970,7 @@ function cuadreRows(rows){
 
 // El IT-1 se arma con lo que haya: si un cliente sólo tiene compras (606) o sólo ventas (607),
 // la parte que falta cuenta como cero en vez de bloquear el cuadre.
-function empty606Summary(){return {registros:0,totServ:0,totBien:0,totTotal:0,totItbis:0,totAdel:0,totCosto:0,totRet:0,credServ:0,credBien:0,ret30:{monto:0,count:0},ret100:{monto:0,count:0},compras:emptyCompras()};}
+function empty606Summary(){return {registros:0,totServ:0,totBien:0,totTotal:0,totItbis:0,totAdel:0,totCosto:0,totRet:0,credServ:0,credBien:0,ret30:{monto:0,count:0},ret100:{monto:0,count:0},compras:emptyCompras(),totIsc:0,totOtrosImp:0,totPropina:0};}
 function empty607Summary(){
   const g=()=>({count:0,monto:0}),t=()=>({monto:0,itbis:0,count:0});
   return {registros:0,totTotal:0,totGrav:0,totExento:0,totItbis:0,totRet:0,byTasa:{t18:t(),t16:t(),t10:t(),t9:t(),t8:t(),t0:t()},
@@ -2049,7 +2056,7 @@ function updateIT1() {
   const comprasPagoRows=compraRows(cp.byPago,COMPRA_PAGO_LABEL,pagoKeys,pagoKeys.filter(k=>k!=='none'));
   const comprasTipoRows=compraRows(cp.byTipo,COMPRA_TIPO_LABEL,['01','02','03','04','05','06','07','08','09','10','11']);
   const compraTotal=r2(Object.values(cp.byNcf).reduce((n,v)=>n+v.monto,0));
-  const comprasHtml=has606?`<div class="cuadre-group-title">Compras por tipo de comprobante</div>${cuadreRows([...comprasNcfRows,{lbl:'Total compras facturadas (neto de notas de crédito)',amt:compraTotal},{lbl:'ITBIS facturado en compras',amt:s6.totItbis},{lbl:'ITBIS por adelantar (crédito fiscal)',amt:s6.totAdel},...(s6.totCosto?[{lbl:'ITBIS llevado al costo',amt:s6.totCosto}]:[]),...(s6.totRet?[{lbl:'ITBIS retenido',amt:s6.totRet}]:[])])}`
+  const comprasHtml=has606?`<div class="cuadre-group-title">Compras por tipo de comprobante</div>${cuadreRows([...comprasNcfRows,{lbl:'Total compras facturadas (neto de notas de crédito)',amt:compraTotal},{lbl:'ITBIS facturado en compras',amt:s6.totItbis},{lbl:'ITBIS por adelantar (crédito fiscal)',amt:s6.totAdel},...(s6.totCosto?[{lbl:'ITBIS llevado al costo',amt:s6.totCosto}]:[]),...(s6.totRet?[{lbl:'ITBIS retenido',amt:s6.totRet}]:[]),{lbl:'Impuesto Selectivo al Consumo',source:'informativo · no suma al ITBIS',amt:s6.totIsc||0,muted:true},{lbl:'Otros impuestos / tasas',source:'informativo · no suma al ITBIS',amt:s6.totOtrosImp||0,muted:true},...(s6.totPropina?[{lbl:'Propina legal',source:'informativo · no suma al ITBIS',amt:s6.totPropina,muted:true}]:[])])}`
     +`<div class="cuadre-group-title">Compras por forma de pago</div>${cuadreRows(comprasPagoRows)}${cp.hasPago?'':'<div class="field-help" style="margin:6px 0">El archivo del 606 no trae la columna «Forma de Pago»; por eso no se puede repartir.</div>'}`
     +(cp.hasTipo?`<div class="cuadre-group-title">Compras por tipo de bienes y servicios</div>${cuadreRows(comprasTipoRows)}`:''):'';
   const ventasHtml=has607?`<div class="cuadre-group-title">Ventas por tipo de comprobante</div>${cuadreRows(ncfRows)}<div class="cuadre-group-title">Ventas por forma de pago</div>${cuadreRows(paymentRows)}`:'';

@@ -507,6 +507,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
       <div class="field" id="co-totp-row" hidden>
         <label>Token Digital DGII — clave del QR <span style="color:var(--text3);font-weight:400;font-size:11px">(opcional)</span></label>
         <input id="co-totp" type="text" placeholder="Clave en texto (ej. JBSW Y3DP EHPK 3PXP) o enlace otpauth://…" autocomplete="off" oninput="totpPreview()">
+        <div id="co-totp-cal" hidden style="margin-top:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input id="co-totp-code" type="text" inputmode="numeric" maxlength="8" placeholder="Código del celular" autocomplete="off" style="width:150px"><button type="button" class="btn btn-ghost" onclick="totpCalibrate()">Detectar clave</button><small style="color:var(--text3);font-size:11px;flex:1;min-width:180px">Agregue este token en la app DGII Móvil y escriba aquí el código de 6 dígitos que muestra en ese momento.</small></div>
         <small id="co-totp-prev" style="color:var(--text3);font-size:11px;margin-top:4px;display:block">Pegue la clave que dio la DGII al registrar el token. Se guarda cifrada y Direct mostrará el código de 6 dígitos que cambia cada 30 s.</small>
       </div>
     </div>
@@ -2475,6 +2476,14 @@ function startTotpRow() {
   };
   tick(); _chTotpTimer=setInterval(tick,1000);
 }
+async function totpCalibrate() {
+  const v=document.getElementById('co-totp').value.trim(), code=document.getElementById('co-totp-code').value, el=document.getElementById('co-totp-prev');
+  if (!TOTP.isUuid(v)) return;
+  el.style.color='var(--text3)'; el.textContent='Probando combinaciones…';
+  const spec=await TOTP.calibrate(v, code);
+  if (!spec) { el.style.color='var(--red,#dc2626)'; el.textContent='Ninguna combinación produjo ese código. Compruebe que el token está agregado en la app y que escribió el código vigente. Si sigue igual, este token no se puede replicar en Direct.'; return; }
+  document.getElementById('co-totp').value=spec; totpPreview(); toast('Clave detectada: Direct ya genera los mismos códigos que el celular','ok');
+}
 // Vista previa en el formulario de la empresa (para comprobar que coincide con la app del celular).
 let _totpPrevTimer=null;
 function totpPreview() {
@@ -2482,7 +2491,8 @@ function totpPreview() {
   if (_totpPrevTimer) { clearInterval(_totpPrevTimer); _totpPrevTimer=null; }
   const idle='Pegue la clave que dio la DGII al registrar el token. Se guarda cifrada y Direct mostrará el código de 6 dígitos que cambia cada 30 s.';
   if (!v) { el.style.color='var(--text3)'; el.textContent=idle; return; }
-  if (!TOTP.isValid(v)) { el.style.color='var(--red,#dc2626)'; el.textContent=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)?'Esto parece un identificador (UUID) del token, no la clave secreta. Con él no se pueden generar códigos. Escanee el QR con un lector de QR y pegue aquí el enlace que empieza con otpauth:// (si el QR solo trae este identificador, el token no se puede replicar en Direct).':'La clave no parece válida (solo letras A–Z y números 2–7, o un enlace otpauth://).'; return; }
+  const cal=document.getElementById('co-totp-cal'); if (cal) cal.hidden=!TOTP.isUuid(v);
+  if (!TOTP.isValid(v)) { el.style.color=TOTP.isUuid(v)?'var(--warn,#c2710c)':'var(--red,#dc2626)'; el.textContent=TOTP.isUuid(v)?'Esto es el identificador (UUID) del token, no una clave estándar. Pruebe «Detectar clave»: escriba el código que muestra la app del celular para este token y Direct intentará reproducirlo. Si no coincide, este token no se puede replicar en Direct.':'La clave no parece válida (solo letras A–Z y números 2–7, o un enlace otpauth://).'; return; }
   const tick=async()=>{ try { const r=await TOTP.generate(v); el.style.color='var(--green,#15924a)'; el.textContent='Código ahora: '+r.code.slice(0,3)+' '+r.code.slice(3)+' ('+r.remaining+' s). Compruebe que es el mismo que muestra la app del celular.'; } catch(_){} };
   tick(); _totpPrevTimer=setInterval(tick,1000);
 }

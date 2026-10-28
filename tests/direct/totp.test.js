@@ -33,3 +33,20 @@ test('claves inválidas fallan con mensaje claro', () => {
   assert.throws(() => T.parse('ABCD'), /corta/);
   assert.strictEqual(T.isValid(S1), true); assert.strictEqual(T.isValid('xx'), false);
 });
+
+test('UUID del token: calibra con el código del celular y luego genera el mismo código', async () => {
+  const uuid = '123e4567-e89b-42d3-a456-426614174000';
+  const spec = `serp:textnd:sha1:30:6:${uuid}`;
+  const now = Date.UTC(2026, 9, 28, 15, 20, 10);
+  const code = (await T.generate(spec, now)).code;
+  assert.ok(T.isUuid(uuid));
+  assert.strictEqual(await T.calibrate(uuid, code, now + 20000), spec); // la app mostró el código hace 20 s
+  const hexSpec = `serp:hexbytes:sha1:30:6:${uuid}`;
+  const hexCode = (await T.generate(hexSpec, now)).code;
+  const found = await T.calibrate(uuid, hexCode, now);
+  assert.strictEqual(found, hexSpec);
+  assert.strictEqual((await T.generate(found, now)).code, hexCode);
+  assert.strictEqual(await T.calibrate(uuid, '000001', now), null);
+  assert.strictEqual(await T.calibrate('no-es-uuid', code, now), null);
+  assert.strictEqual(T.isValid(spec), true);
+});

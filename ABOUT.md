@@ -34,7 +34,7 @@
 
 ## Estado y novedades recientes
 
-- **Token Digital: aviso cuando se pega un identificador en vez de la clave**: si en el campo del token se pega un código tipo `a9f8a89c-c906-…` (un UUID), Direct explica que no es la clave secreta y qué hacer (escanear el QR y pegar el enlace `otpauth://`).
+- **Token Digital: aviso cuando se pega un identificador en vez de la clave**: si en el campo del token se pega un código tipo `123e4567-e89b-…` (un UUID), Direct explica que no es la clave secreta y qué hacer (escanear el QR y pegar el enlace `otpauth://`).
 
 - **CAMI: Impuesto Selectivo y Otros impuestos también en la pestaña «606 — Compras»**: además del cuadre del IT-1, ahora aparecen como tarjetas junto a «ITBIS Facturado / Crédito Fiscal / al Costo / Retenido», con la nota «Informativo · no suma al ITBIS».
 

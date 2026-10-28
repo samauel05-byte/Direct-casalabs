@@ -16,10 +16,32 @@
     return new Uint8Array(out);
   }
 
+  // ── Token con identificador (UUID) ──
+  // La DGII muestra al activar el token un identificador tipo 123e4567-e89b-… (no una clave base32).
+  // No se sabe cómo lo convierte la app en clave, así que se prueban interpretaciones habituales
+  // contra un código real del celular («calibrar») y se guarda la que coincide:
+  //   serp:<modo>:<algoritmo>:<periodo>:<dígitos>:<uuid>
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isUuid = v => UUID_RE.test(String(v || '').trim());
+  const enc = t => new TextEncoder().encode(t);
+  const hexBytes = h => Uint8Array.from(h.match(/../g).map(x => parseInt(x, 16)));
+  const KEY_MODES = {
+    hexbytes: u => hexBytes(u.replace(/-/g, '')),
+    text: u => enc(u.toLowerCase()), textup: u => enc(u.toUpperCase()),
+    textnd: u => enc(u.replace(/-/g, '').toLowerCase()), textndup: u => enc(u.replace(/-/g, '').toUpperCase()),
+  };
+  const ALGS = { sha1: 'SHA-1', sha256: 'SHA-256', sha512: 'SHA-512' };
+  function parseSpec(raw) {
+    const m = /^serp:([a-z]+):(sha1|sha256|sha512):(\d{2,3}):(\d):([0-9a-f-]{36})$/i.exec(raw);
+    if (!m || !KEY_MODES[m[1]] || !isUuid(m[5])) throw new Error('La clave del token no es válida.');
+    return { key: KEY_MODES[m[1]](m[5]), period: +m[3], digits: +m[4], algorithm: ALGS[m[2]] };
+  }
+
   // Acepta la clave en texto (JBSW Y3DP …) o el enlace del QR (otpauth://totp/…?secret=…&period=30&digits=6).
   function parse(input) {
     const raw = String(input || '').trim();
     if (!raw) throw new Error('Falta la clave del token.');
+    if (/^serp:/i.test(raw)) return parseSpec(raw);
     let secret = raw, period = 30, digits = 6, algorithm = 'SHA-1';
     if (/^otpauth:\/\//i.test(raw)) {
       let u; try { u = new URL(raw); } catch (_) { throw new Error('El enlace otpauth no es válido.'); }
@@ -50,5 +72,19 @@
     return { code: await hotp(cfg, Math.floor(t / cfg.period)), remaining: cfg.period - (t % cfg.period), period: cfg.period };
   }
   const isValid = input => { try { parse(input); return true; } catch (_) { return false; } };
-  return { base32Decode, parse, generate, isValid };
+  // Busca qué interpretación del UUID produce el código que muestra la app ahora (±2 pasos).
+  // → cadena «serp:…» lista para guardar, o null si ninguna coincide.
+  async function calibrate(uuid, code, nowMs) {
+    const u = String(uuid || '').trim().toLowerCase(); const c = String(code || '').replace(/\D/g, '');
+    if (!isUuid(u) || c.length < 6 || c.length > 8) return null;
+    const t = Math.floor((nowMs == null ? Date.now() : nowMs) / 1000);
+    for (const mode of Object.keys(KEY_MODES)) for (const alg of Object.keys(ALGS)) for (const period of [30, 60]) {
+      const cfg = { key: KEY_MODES[mode](u), period, digits: c.length, algorithm: ALGS[alg] };
+      for (let d = -2; d <= 2; d++) {
+        if (await hotp(cfg, Math.floor(t / period) + d) === c) return `serp:${mode}:${alg}:${period}:${c.length}:${u}`;
+      }
+    }
+    return null;
+  }
+  return { base32Decode, parse, generate, isValid, isUuid, calibrate };
 });

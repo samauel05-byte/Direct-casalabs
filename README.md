@@ -53,6 +53,7 @@ Direct abre cada portal en una pestaña nueva. Según el portal, el acceso es de
 Los portales se abren a través de `portal-rd-relay.samauel05.workers.dev`, que:
 
 - Sirve la página del portal y le inyecta el script de auto-login (credenciales solo en el hash de la URL, nunca al servidor del relay).
+- El origen permitido por CORS del relay es `https://app.casalabs.com.do` (el dominio antiguo `direct-save.vercel.app` ya no se usa).
 - Reescribe recursos y navegación para que el portal siga funcionando dentro del relay «como un sistema normal», sin extensiones de navegador.
 - **Aísla la sesión de cada empresa por `flow`**: al abrir una segunda empresa del mismo portal, su sesión no hereda la de la primera (cookies con prefijo `serp_<flow>_`). Aplica tanto a los portales clásicos (DGII, etc.) como a los SPA (Ministerio de Trabajo, SISALRIL).
 - Avisa a Direct el resultado del inicio de sesión por `postMessage`.

@@ -1,4 +1,4 @@
-// Runs on direct-save.vercel.app — reads the encrypted vault and passes it to the extension
+// Runs on app.casalabs.com.do — reads the encrypted vault and passes it to the extension
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type !== 'GET_VAULT') return;
   try {

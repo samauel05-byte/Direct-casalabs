@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **CAMI: Impuesto Selectivo y Otros impuestos también en la pestaña «606 — Compras»**: además del cuadre del IT-1, ahora aparecen como tarjetas junto a «ITBIS Facturado / Crédito Fiscal / al Costo / Retenido», con la nota «Informativo · no suma al ITBIS».
+
 - **CAMI: el IT-1 muestra el Impuesto Selectivo al Consumo y Otros impuestos/tasas de las compras**: en el cuadre de compras (606) ahora hay una línea de **Impuesto Selectivo al Consumo** y otra de **Otros impuestos / tasas** (y **Propina legal** si hay), tomadas de las columnas 20 y 21 del 606. Son **solo informativas**: se ven ahí para comprobar que están, pero **no se suman al ITBIS** ni cambian el resultado del IT-1.
 
 - **CAMI: el 606 ya no cuenta notas de crédito que no existen, y los cuadros de compras quedaron como los de ventas**: el IT-1 trataba como nota de crédito las compras cuyo «tipo de bienes y servicios» era 04 (activos fijos) cuando el NCF no era B01–B04; ahora la nota de crédito se reconoce **solo por el NCF (B04/E34)**. Lo mismo para el 607 con el «tipo de ingreso». En el cuadre del IT-1, las compras muestran **cada tipo de comprobante** (B01, B02, B03, B04, B11, B13…) con su **cantidad, monto e ITBIS**, el **total de compras**, el **ITBIS facturado, por adelantar (crédito fiscal), llevado al costo y retenido**, y el reparto por **forma de pago** (efectivo, cheque/transferencia, tarjeta, crédito, permuta, notas de crédito, mixto), igual que ya se veía en ventas.

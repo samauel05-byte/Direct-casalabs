@@ -1746,7 +1746,10 @@ function render606(data, filename) {
     kpiCard('ITBIS Facturado',fmtM(s.totItbis),'')+
     kpiCard('ITBIS Crédito Fiscal',fmtM(s.totAdel),'g','Disponible para deducir')+
     kpiCard('ITBIS al Costo',fmtM(s.totCosto),'a','No recuperable')+
-    kpiCard('ITBIS Retenido',fmtM(s.totRet),'r');
+    kpiCard('ITBIS Retenido',fmtM(s.totRet),'r')+
+    kpiCard('Impuesto Selectivo al Consumo',fmtM(s.totIsc||0),'','Informativo · no suma al ITBIS')+
+    kpiCard('Otros impuestos / tasas',fmtM(s.totOtrosImp||0),'','Informativo · no suma al ITBIS')+
+    (s.totPropina?kpiCard('Propina legal',fmtM(s.totPropina),'','Informativo · no suma al ITBIS'):'');
   $('ret-606').innerHTML=`
     <div class="ret-card">
       <div class="ret-badge blue"><div class="ret-pct">30%</div></div>

@@ -36,13 +36,13 @@
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://direct-save.vercel.app/*"],
+      "matches": ["https://app.casalabs.com.do/*"],
       "js": ["bridge.js"],
       "run_at": "document_idle"
     }
   ],
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
-    "https://direct-save.vercel.app/*"
+    "https://app.casalabs.com.do/*"
   ]
 }

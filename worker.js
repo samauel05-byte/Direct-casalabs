@@ -56,7 +56,7 @@ const ALLOWED_HOSTS = [
   'sisalril.gov.do',
   'www.sisalril.gov.do',
 ];
-const CORS_ORIGIN = 'https://direct-save.vercel.app';
+const CORS_ORIGIN = 'https://app.casalabs.com.do';
 const WORKER_ORIGIN = 'https://portal-rd-relay.samauel05.workers.dev';
 const SPA_PROXY_HOSTS = new Set(['ovi.mt.gob.do', 'virtual.sisalril.gob.do', 'idp.sisalril.gob.do']);
 // Portales SPA cuya familia de hosts (API, IDP, gateway) se enruta toda por el

@@ -30,7 +30,7 @@ const C = {
   },
 };
 
-const API = 'https://direct-save.vercel.app';
+const API = 'https://app.casalabs.com.do';
 let masterKey = null;
 let credentials = [];
 

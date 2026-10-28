@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Arreglo: el Token Digital ahora sí se autorrellena en la segunda pantalla de la DGII**: la DGII pide el token en una pantalla aparte después de usuario y clave; Direct no la atendía y por eso había que copiar el código a mano. Ahora llena el token y pulsa Continuar una sola vez (sin reintentos, para no bloquear la cuenta). Recarga Direct con Ctrl+F5 y prueba una vez.
 - **Direct ahora escribe solo el Token Digital de la DGII**: cuando una empresa tiene guardada la clave del token (campo «Token Digital DGII» de la ficha), al entrar a la Oficina Virtual Direct llena **Usuario, Clave y el número actual del Token Digital** y pulsa Continuar, con el mismo código que muestra el celular (si el código está por vencer, espera al siguiente para que no caduque). Si la empresa **no** tiene la clave guardada, Direct llena usuario y clave, deja el cursor en la casilla del token y **no envía** hasta que se escriba el número. Antes se enviaba la pantalla sin token y la DGII la rechazaba. El código se calcula en el navegador; la clave solo viaja en la parte `#` de la dirección (no llega al servidor del relay).
 
 - **Token Digital: aviso cuando se pega un identificador en vez de la clave**: si en el campo del token se pega un código tipo `123e4567-e89b-…` (un UUID), Direct explica que no es la clave secreta y qué hacer (escanear el QR y pegar el enlace `otpauth://`).

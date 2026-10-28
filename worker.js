@@ -810,6 +810,13 @@ export default {
   function markDgiiFirstPageSubmitted(){
     try { sessionStorage.setItem(dgiiFlowKey, '1'); } catch(e) {}
   }
+  var dgiiTokenSubmitKey = 'serp-dgii-token-submit-' + (p.flow || hash);
+  function hasSubmittedDgiiToken(){
+    try { return sessionStorage.getItem(dgiiTokenSubmitKey) === '1'; } catch(e) { return false; }
+  }
+  function markDgiiTokenSubmitted(){
+    try { sessionStorage.setItem(dgiiTokenSubmitKey, '1'); } catch(e) {}
+  }
   function hasSubmittedDgiiCard(position){
     try { return sessionStorage.getItem(dgiiCardSubmitKey) === String(position); } catch(e) { return false; }
   }
@@ -1021,6 +1028,8 @@ export default {
     // Pantalla con «Token Digital»: no se envía sin el número actual.
     if(tokEl && !cardPosition){
       if(!p.totp){ try { tokEl.focus(); } catch(e) {} return; }
+      if(hasSubmittedDgiiToken()) return; // un solo intento: si la DGII lo rechaza se deja la pantalla como está
+      markDgiiTokenSubmitted();
       totpCode(p.totp).then(function(code){ fill(tokEl, code); finish(); }, function(){ try { tokEl.focus(); } catch(e) {} });
       return;
     }
@@ -1065,6 +1074,24 @@ export default {
       var cfg = PORTALS['${hostname}'];
       var position = requestedCardPosition();
       var code = p.dgiiCodes ? cardCodeForPosition(p.dgiiCodes, position) : (p.tarjeta || '');
+      // Segunda pantalla con «Token Digital»: Usuario y Clave ya los retiene la DGII; solo falta el
+      // número actual. Se envía UNA sola vez (si lo rechaza, no se reintenta: evita bloquear la cuenta).
+      var tokenEl2 = !position ? tokenInput() : null;
+      if (tokenEl2 && hasSubmittedDgiiFirstPage()) {
+        if (hasSubmittedDgiiToken()) return;
+        if (!p.totp) { try { tokenEl2.focus(); } catch(e) {} return; }
+        markDgiiTokenSubmitted();
+        totpCode(p.totp).then(function(tcode){
+          fill(tokenEl2, tcode);
+          var tbtn = (cfg && cfg.submit) ? q(cfg.submit) : null;
+          if(!tbtn) tbtn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]') || document.querySelector('button:not([type="button"])');
+          setTimeout(function(){
+            try { sessionStorage.setItem('serp-login-submit-page', String(performance.timeOrigin)); } catch(e) {}
+            if(tbtn) tbtn.click();
+          }, 180);
+        }, function(){ try { tokenEl2.focus(); } catch(e) {} });
+        return;
+      }
       var cardField = cardInput(cfg);
       // DGII has two consecutive screens. The first only has Usuario/Clave;
       // submit it immediately. On the second screen it requests a position

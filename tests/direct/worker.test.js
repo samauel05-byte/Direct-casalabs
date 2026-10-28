@@ -183,6 +183,8 @@ test('el relay avisa a Direct el resultado del inicio de sesión (postMessage)',
 test('DGII con Token Digital: el robot calcula el código y no envía la pantalla sin él', async () => {
   const html = await (await proxied('https://www.dgii.gov.do/ofv/login.aspx')).text();
   assert.match(html, /function tokenInput\(\)/);
+  assert.match(html, /serp-dgii-token-submit-/);
+  assert.match(html, /hasSubmittedDgiiFirstPage\(\)\) \{\s*if \(hasSubmittedDgiiToken\(\)\) return;/);
   assert.match(html, /async function totpCode\(raw\)/);
   // sin clave del token se deja el cursor en la casilla y no se envía
   assert.match(html, /if\(!p\.totp\)\{ try \{ tokEl\.focus\(\); \}/);

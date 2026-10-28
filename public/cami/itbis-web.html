@@ -1505,8 +1505,10 @@ function process606(rows) {
     : rows;
   const data = validRows.map(r => {
     const p = {...r};
-    const ncfCode=detectNCFCode(cm.ncf?r[cm.ncf]:'',cm.tipo_comprobante?r[cm.tipo_comprobante]:'');
-    const fiscalSign=ncfCode==='04'||ncfCode==='34'?-1:1;
+    // En el 606 la columna «Tipo Bienes y Servicios» (01–11) es el tipo de GASTO, no el tipo de comprobante:
+    // la nota de crédito se reconoce SOLO por el NCF (B04 / E34).
+    const ncfCode=compraNcfCode(cm.ncf?r[cm.ncf]:'');
+    const fiscalSign=ncfCode==='04'?-1:1;
     p._serv  = cm.monto_servicios  ? cleanNum(r[cm.monto_servicios])  : 0;
     p._bien  = cm.monto_bienes     ? cleanNum(r[cm.monto_bienes])     : 0;
     p._total = cm.monto_total      ? cleanNum(r[cm.monto_total])      : p._serv + p._bien;
@@ -1550,7 +1552,8 @@ function process607(rows) {
   const data = validRows.map(r => {
     const p = {...r};
     p._ncfRaw=cm.ncf?String(r[cm.ncf]||'').toUpperCase().replace(/[^A-Z0-9]/g,''):'';
-    p._ncfCode=detectNCFCode(cm.ncf?r[cm.ncf]:'',cm.tipo_comprobante?r[cm.tipo_comprobante]:'');
+    // «Tipo de Ingreso» (01–06) no es un tipo de comprobante: no se usa para reconocer notas de crédito.
+    p._ncfCode=detectNCFCode(cm.ncf?r[cm.ncf]:'',cm.tipo_comprobante&&!/ingreso/.test(normKey(cm.tipo_comprobante))?r[cm.tipo_comprobante]:'');
     p._fiscalSign=p._ncfCode==='04'||p._ncfCode==='34'?-1:1;
     p._serv  = cm.monto_servicios ? cleanNum(r[cm.monto_servicios]) : 0;
     p._bien  = cm.monto_bienes    ? cleanNum(r[cm.monto_bienes])    : 0;
@@ -2039,14 +2042,15 @@ function updateIT1() {
   ];
   if(Math.abs(sales.discrepancy)>.01) paymentRows.push({lbl:'Diferencia entre ventas brutas y formas de pago',amt:sales.discrepancy,muted:true});
   const cp=s6.compras||emptyCompras();
-  const compraRows=(map,labels,order)=>order.filter(k=>map[k]).map(k=>({lbl:`${labels[k]||'Sin NCF o tipo reconocible'}`,source:`${fmtI(map[k].count)} comp.`,sign:map[k].monto<0?'−':undefined,amt:Math.abs(map[k].monto)}));
+  const compraRows=(map,labels,order,always=[])=>order.filter(k=>map[k]||always.includes(k)).map(k=>{const v=map[k]||{count:0,monto:0,itbis:0};return {lbl:`${labels[k]||'Sin NCF o tipo reconocible'}`,source:v.count?`${fmtI(v.count)} comp.${v.itbis?` · ITBIS ${fmtM(Math.abs(v.itbis))}${v.itbis<0?' (−)':''}`:''}`:'',sign:v.monto<0?'−':undefined,amt:Math.abs(v.monto)};});
   const ncfOrder=['01','02','03','04','11','12','13','14','15','16','17','sin'];
-  const comprasNcfRows=compraRows(cp.byNcf,{...COMPRA_NCF_LABEL},ncfOrder);
-  const comprasPagoRows=compraRows(cp.byPago,COMPRA_PAGO_LABEL,Object.keys(COMPRA_PAGO_LABEL));
+  const comprasNcfRows=compraRows(cp.byNcf,{...COMPRA_NCF_LABEL},ncfOrder,['01','02','03','04']);
+  const pagoKeys=Object.keys(COMPRA_PAGO_LABEL);
+  const comprasPagoRows=compraRows(cp.byPago,COMPRA_PAGO_LABEL,pagoKeys,pagoKeys.filter(k=>k!=='none'));
   const comprasTipoRows=compraRows(cp.byTipo,COMPRA_TIPO_LABEL,['01','02','03','04','05','06','07','08','09','10','11']);
   const compraTotal=r2(Object.values(cp.byNcf).reduce((n,v)=>n+v.monto,0));
-  const comprasHtml=has606?`<div class="cuadre-group-title">Compras por tipo de comprobante</div>${cuadreRows([...comprasNcfRows,{lbl:'Total compras facturadas (neto de notas de crédito)',amt:compraTotal}])}`
-    +(cp.hasPago?`<div class="cuadre-group-title">Compras por forma de pago</div>${cuadreRows(comprasPagoRows)}`:'')
+  const comprasHtml=has606?`<div class="cuadre-group-title">Compras por tipo de comprobante</div>${cuadreRows([...comprasNcfRows,{lbl:'Total compras facturadas (neto de notas de crédito)',amt:compraTotal},{lbl:'ITBIS facturado en compras',amt:s6.totItbis},{lbl:'ITBIS por adelantar (crédito fiscal)',amt:s6.totAdel},...(s6.totCosto?[{lbl:'ITBIS llevado al costo',amt:s6.totCosto}]:[]),...(s6.totRet?[{lbl:'ITBIS retenido',amt:s6.totRet}]:[])])}`
+    +`<div class="cuadre-group-title">Compras por forma de pago</div>${cuadreRows(comprasPagoRows)}${cp.hasPago?'':'<div class="field-help" style="margin:6px 0">El archivo del 606 no trae la columna «Forma de Pago»; por eso no se puede repartir.</div>'}`
     +(cp.hasTipo?`<div class="cuadre-group-title">Compras por tipo de bienes y servicios</div>${cuadreRows(comprasTipoRows)}`:''):'';
   const ventasHtml=has607?`<div class="cuadre-group-title">Ventas por tipo de comprobante</div>${cuadreRows(ncfRows)}<div class="cuadre-group-title">Ventas por forma de pago</div>${cuadreRows(paymentRows)}`:'';
   $('cuadre-body').innerHTML=`${ventasHtml}${comprasHtml}<div class="cuadre-group-title">Liquidación del ITBIS</div>${cuadreRows(taxRows)}`;

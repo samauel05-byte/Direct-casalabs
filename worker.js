@@ -923,6 +923,64 @@ export default {
     return null;
   }
 
+  // ── Token Digital de la DGII ──
+  // Con «Token Digital» la Oficina Virtual pide el número actual en la misma pantalla
+  // (Usuario / Clave / Token Digital). Si Direct trae la clave del token (p.totp) se calcula
+  // el código aquí mismo, en el navegador (RFC 6238, igual que public/js/totp.js), y se escribe;
+  // si no, se deja el cursor en esa casilla para teclear el del celular. Nunca se envía sin código.
+  function tokenInput(){
+    var inputs = Array.from(document.querySelectorAll('input')).filter(function(i){
+      return !/^(hidden|submit|button|image|checkbox|radio|file)$/i.test(i.type || 'text');
+    });
+    var byRow = inputs.find(function(i){
+      var row = i.closest && i.closest('tr');
+      var t = row ? (row.textContent || '') : '';
+      return /token\\s*digital/i.test(t) && !/usuario|clave|contrase/i.test(t.replace(/token\\s*digital/ig, ''));
+    });
+    if(byRow) return byRow;
+    return inputs.find(function(i){
+      var label = i.labels && i.labels.length ? Array.from(i.labels).map(function(l){ return l.textContent; }).join(' ') : '';
+      return /token/i.test([i.name, i.id, i.placeholder, label].filter(Boolean).join(' ')) && !/tarjeta/i.test([i.name, i.id, i.placeholder].join(' '));
+    }) || null;
+  }
+  function b32dec(s){
+    var B='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567', c=String(s||'').toUpperCase().replace(/[\\s-]+/g,'').replace(/=+$/,'');
+    if(!c || /[^A-Z2-7]/.test(c)) throw new Error('clave');
+    var bits=0, val=0, out=[];
+    for(var k=0;k<c.length;k++){ val=(val<<5)|B.indexOf(c.charAt(k)); bits+=5; if(bits>=8){ out.push((val>>>(bits-8))&255); bits-=8; } }
+    return new Uint8Array(out);
+  }
+  function totpCfg(raw){
+    raw=String(raw||'').trim();
+    var enc=function(t){ return new TextEncoder().encode(t); };
+    var m=/^serp:([a-z]+):(sha1|sha256|sha512):(\\d{2,3}):(\\d):([0-9a-f-]{36})$/i.exec(raw);
+    if(m){
+      var u=m[5].toLowerCase(), nd=u.replace(/-/g,''), key;
+      if(m[1]==='hexbytes') key=Uint8Array.from(nd.match(/../g).map(function(x){ return parseInt(x,16); }));
+      else if(m[1]==='text') key=enc(u); else if(m[1]==='textup') key=enc(u.toUpperCase());
+      else if(m[1]==='textnd') key=enc(nd); else if(m[1]==='textndup') key=enc(nd.toUpperCase()); else throw new Error('modo');
+      return { key:key, period:+m[3], digits:+m[4], algorithm:{sha1:'SHA-1',sha256:'SHA-256',sha512:'SHA-512'}[m[2].toLowerCase()] };
+    }
+    var secret=raw, period=30, digits=6, algorithm='SHA-1';
+    if(/^otpauth:\\/\\//i.test(raw)){
+      var url=new URL(raw); secret=url.searchParams.get('secret')||'';
+      var pp=+url.searchParams.get('period'), dd=+url.searchParams.get('digits'), aa=(url.searchParams.get('algorithm')||'').toUpperCase();
+      if(pp>=10&&pp<=120) period=pp; if(dd>=6&&dd<=8) digits=dd; if(aa==='SHA256') algorithm='SHA-256'; else if(aa==='SHA512') algorithm='SHA-512';
+    }
+    return { key:b32dec(secret), period:period, digits:digits, algorithm:algorithm };
+  }
+  async function totpCode(raw){
+    var cfg=totpCfg(raw), t=Math.floor(Date.now()/1000), left=cfg.period-(t%cfg.period);
+    // Si el código está por vencer, se espera al siguiente para que no caduque al enviarlo.
+    if(left<4){ await new Promise(function(r){ setTimeout(r,(left+1)*1000); }); t=Math.floor(Date.now()/1000); }
+    var counter=Math.floor(t/cfg.period), msg=new Uint8Array(8), c=counter;
+    for(var i=7;i>=0;i--){ msg[i]=c&255; c=Math.floor(c/256); }
+    var key=await crypto.subtle.importKey('raw',cfg.key,{name:'HMAC',hash:cfg.algorithm},false,['sign']);
+    var h=new Uint8Array(await crypto.subtle.sign('HMAC',key,msg)), o=h[h.length-1]&15;
+    var bin=((h[o]&127)<<24)|(h[o+1]<<16)|(h[o+2]<<8)|h[o+3];
+    return String(bin%Math.pow(10,cfg.digits)).padStart(cfg.digits,'0');
+  }
+
   function run(){
     var cfg = PORTALS['${hostname}'];
     var isDgii = '${hostname}'.indexOf('dgii.gov.do') !== -1;
@@ -947,7 +1005,8 @@ export default {
       }
       fill(extraEl, p.cedula);
     }
-    if(cfg && cfg.tarjeta){
+    var tokEl = isDgii ? tokenInput() : null;
+    if(cfg && cfg.tarjeta && !tokEl){
       // dgiiCodes is a positional card: item 1 is the code for position 1, etc.
       // A single tarjeta value remains supported for portals that do not use a code card.
       var cardCode = p.tarjeta || '';
@@ -959,6 +1018,14 @@ export default {
         if(cardEl) { cardEl.value=''; fill(cardEl, cardCode); }
       }
     }
+    // Pantalla con «Token Digital»: no se envía sin el número actual.
+    if(tokEl && !cardPosition){
+      if(!p.totp){ try { tokEl.focus(); } catch(e) {} return; }
+      totpCode(p.totp).then(function(code){ fill(tokEl, code); finish(); }, function(){ try { tokEl.focus(); } catch(e) {} });
+      return;
+    }
+    finish();
+    function finish(){
     var btn = (cfg && cfg.submit) ? q(cfg.submit) : null;
     if(!btn) btn = document.querySelector('input[type="submit"]') || document.querySelector('button[type="submit"]') || document.querySelector('button:not([type="button"])');
     setTimeout(function(){
@@ -976,6 +1043,7 @@ export default {
         pEl.dispatchEvent(new KeyboardEvent('keypress',{key:'Enter',keyCode:13,bubbles:true}));
       }
     }, 180);
+    }
   }
 
   // DGII may render its card prompt after the password field. Do not submit

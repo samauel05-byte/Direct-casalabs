@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **Direct ahora escribe solo el Token Digital de la DGII**: cuando una empresa tiene guardada la clave del token (campo «Token Digital DGII» de la ficha), al entrar a la Oficina Virtual Direct llena **Usuario, Clave y el número actual del Token Digital** y pulsa Continuar, con el mismo código que muestra el celular (si el código está por vencer, espera al siguiente para que no caduque). Si la empresa **no** tiene la clave guardada, Direct llena usuario y clave, deja el cursor en la casilla del token y **no envía** hasta que se escriba el número. Antes se enviaba la pantalla sin token y la DGII la rechazaba. El código se calcula en el navegador; la clave solo viaja en la parte `#` de la dirección (no llega al servidor del relay).
+
 - **Token Digital: aviso cuando se pega un identificador en vez de la clave**: si en el campo del token se pega un código tipo `123e4567-e89b-…` (un UUID), Direct explica que no es la clave secreta y qué hacer (escanear el QR y pegar el enlace `otpauth://`).
 
 - **CAMI: Impuesto Selectivo y Otros impuestos también en la pestaña «606 — Compras»**: además del cuadre del IT-1, ahora aparecen como tarjetas junto a «ITBIS Facturado / Crédito Fiscal / al Costo / Retenido», con la nota «Informativo · no suma al ITBIS».

@@ -2482,7 +2482,7 @@ function totpPreview() {
   if (_totpPrevTimer) { clearInterval(_totpPrevTimer); _totpPrevTimer=null; }
   const idle='Pegue la clave que dio la DGII al registrar el token. Se guarda cifrada y Direct mostrará el código de 6 dígitos que cambia cada 30 s.';
   if (!v) { el.style.color='var(--text3)'; el.textContent=idle; return; }
-  if (!TOTP.isValid(v)) { el.style.color='var(--red,#dc2626)'; el.textContent='La clave no parece válida (solo letras A–Z y números 2–7, o un enlace otpauth://).'; return; }
+  if (!TOTP.isValid(v)) { el.style.color='var(--red,#dc2626)'; el.textContent=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)?'Esto parece un identificador (UUID) del token, no la clave secreta. Con él no se pueden generar códigos. Escanee el QR con un lector de QR y pegue aquí el enlace que empieza con otpauth:// (si el QR solo trae este identificador, el token no se puede replicar en Direct).':'La clave no parece válida (solo letras A–Z y números 2–7, o un enlace otpauth://).'; return; }
   const tick=async()=>{ try { const r=await TOTP.generate(v); el.style.color='var(--green,#15924a)'; el.textContent='Código ahora: '+r.code.slice(0,3)+' '+r.code.slice(3)+' ('+r.remaining+' s). Compruebe que es el mismo que muestra la app del celular.'; } catch(_){} };
   tick(); _totpPrevTimer=setInterval(tick,1000);
 }

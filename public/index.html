@@ -2361,7 +2361,7 @@ async function enterCompany(credId) {
   // This must happen before any other await: once the new tab has focus, Chrome
   // can leave a clipboard write pending and the tab would wait forever.
   if (newTab && loginUrl && !dOpen) {
-    try { autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab); }
+    try { autoLoginForm(loginUrl, instKey, _chUser, _chPass, _chCedula, _chTarjeta, _chDgiiCodes, newTab, _chTotp); }
     catch { newTab.close(); toast('No se pudo abrir el portal. Intenta de nuevo.','err'); return; }
     navigator.clipboard?.writeText(_chUser).catch(() => {});
     // Update actions so if user manually opens the panel they get Reintentar + Abrir directo
@@ -2391,7 +2391,7 @@ async function enterCompany(credId) {
   document.getElementById('cred-helper').hidden=false;
 }
 
-function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCodes=[], existingTab=null) {
+function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCodes=[], existingTab=null, totp='') {
   const inst = INST[institution] || {};
   const aspF = inst.aspFields || {};
   // TSS is WebForms and its exact fields are known. Ignore any stale custom
@@ -2406,6 +2406,7 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
   if (cedula) payload.cedula = cedula;
   if (tarjeta) payload.tarjeta = tarjeta;
   if (Array.isArray(dgiiCodes) && dgiiCodes.length) payload.dgiiCodes = dgiiCodes;
+  if (totp && institution === 'dgii') payload.totp = totp;
   if (userField) payload.userField = userField;
   if (passField) payload.passField = passField;
   if (submitField) payload.submitField = submitField;
@@ -2444,6 +2445,7 @@ function autoLoginForm(url, institution, user, pass, cedula, tarjeta='', dgiiCod
   if (payload.cedula) proxyPayload.cedula = payload.cedula;
   if (payload.tarjeta) proxyPayload.tarjeta = payload.tarjeta;
   if (payload.dgiiCodes) proxyPayload.dgiiCodes = payload.dgiiCodes;
+  if (payload.totp) proxyPayload.totp = payload.totp; // solo viaja en el hash (nunca al servidor del relay)
   const hash = btoa(encodeURIComponent(JSON.stringify(proxyPayload)));
   const proxyUrl = CF_RELAY + '/proxy?url=' + encodeURIComponent(url) + '&flow=' + encodeURIComponent(proxyPayload.flow) + '#' + hash;
 
@@ -2540,7 +2542,7 @@ function chToggleSirlaPw() {
 function chLaunch() {
   if (!_chUrl) return;
   if (INST[activePortal]?.directOpen) { window.open(_chUrl, '_blank'); return; }
-  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'', _chDgiiCodes||[]);
+  autoLoginForm(_chUrl, activePortal, _chUser, _chPass, _chCedula||'', _chTarjeta||'', _chDgiiCodes||[], null, _chTotp||'');
 }
 
 function chOpenDirect() {

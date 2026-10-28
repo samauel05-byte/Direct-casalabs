@@ -179,3 +179,13 @@ test('el relay avisa a Direct el resultado del inicio de sesión (postMessage)',
   assert.match(html, /window\.opener\.postMessage/);
   assert.match(html, /p\.origin/);
 });
+
+test('DGII con Token Digital: el robot calcula el código y no envía la pantalla sin él', async () => {
+  const html = await (await proxied('https://www.dgii.gov.do/ofv/login.aspx')).text();
+  assert.match(html, /function tokenInput\(\)/);
+  assert.match(html, /async function totpCode\(raw\)/);
+  // sin clave del token se deja el cursor en la casilla y no se envía
+  assert.match(html, /if\(!p\.totp\)\{ try \{ tokEl\.focus\(\); \}/);
+  // la tarjeta de códigos no se escribe en la casilla del token
+  assert.match(html, /if\(cfg && cfg\.tarjeta && !tokEl\)/);
+});

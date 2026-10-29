@@ -1,26 +1,48 @@
 <!--
-  Botón de suscripción mensual de PayPal para tu página web.
-  1) Reemplaza TU_CLIENT_ID por el «Client ID» de tu app de PayPal (modo live; en pruebas, el de sandbox).
-  2) Reemplaza P-XXXXXXXXXXXXXXXXXXXXXXXX por el «Plan ID» de tu plan mensual (PayPal → Productos → Planes de suscripción).
-  3) Pega este bloque donde quieras mostrar el botón.
+  Botones de suscripción de PayPal para tu página web: plan mensual (US$150/mes) y anual (US$1,812/año).
+  Ambos siguen cobrando hasta que el cliente cancele.
+  1) Reemplaza TU_CLIENT_ID por el «Client ID» de tu app de PayPal (el mismo entorno donde creaste los planes).
+  2) Reemplaza P-MENSUAL-XXXXXXXX y P-ANUAL-XXXXXXXX por los «Plan ID» de cada plan
+     (PayPal → Productos y servicios → Suscripciones → Planes).
+  3) Pega este bloque donde quieras mostrar los botones.
   Cuando el cliente paga, PayPal avisa a Direct (webhook), Direct crea su licencia y le manda por correo el enlace
-  para crear su usuario y su contraseña. Cada mes, el cobro renueva su licencia solo.
+  para crear su usuario y su contraseña. En cada cobro, la licencia se renueva hasta el siguiente cobro.
 -->
-<div id="paypal-direct-boton" style="max-width:380px"></div>
+<style>
+  .direct-planes{display:flex;flex-wrap:wrap;gap:24px;font-family:system-ui,sans-serif}
+  .direct-plan{flex:1 1 280px;max-width:360px;border:1px solid #ddd;border-radius:14px;padding:22px}
+  .direct-plan h3{margin:0 0 4px}
+  .direct-plan .precio{font-size:28px;font-weight:700;margin:6px 0 14px}
+  .direct-plan .precio small{font-size:14px;font-weight:400;color:#666}
+</style>
+<div class="direct-planes" id="direct-planes">
+  <div class="direct-plan">
+    <h3>Plan mensual</h3>
+    <div class="precio">US$150 <small>/ mes</small></div>
+    <div id="paypal-direct-mensual"></div>
+  </div>
+  <div class="direct-plan">
+    <h3>Plan anual</h3>
+    <div class="precio">US$1,812 <small>/ año</small></div>
+    <div id="paypal-direct-anual"></div>
+  </div>
+</div>
 <p id="paypal-direct-gracias" style="display:none;font-family:system-ui,sans-serif">
   ¡Gracias! Te enviamos un correo con el enlace para crear tu usuario y tu contraseña de Direct.
   Si no lo ves en unos minutos, revisa spam o escríbenos.
 </p>
 <script src="https://www.paypal.com/sdk/js?client-id=TU_CLIENT_ID&vault=true&intent=subscription&currency=USD"></script>
 <script>
-  paypal.Buttons({
-    style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
-    createSubscription: function (data, actions) {
-      return actions.subscription.create({ plan_id: 'P-XXXXXXXXXXXXXXXXXXXXXXXX' });
-    },
-    onApprove: function () {
-      document.getElementById('paypal-direct-boton').style.display = 'none';
-      document.getElementById('paypal-direct-gracias').style.display = 'block';
-    }
-  }).render('#paypal-direct-boton');
+  function direct_boton(selector, planId) {
+    paypal.Buttons({
+      style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
+      createSubscription: function (data, actions) { return actions.subscription.create({ plan_id: planId }); },
+      onApprove: function () {
+        document.getElementById('direct-planes').style.display = 'none';
+        document.getElementById('paypal-direct-gracias').style.display = 'block';
+      }
+    }).render(selector);
+  }
+  direct_boton('#paypal-direct-mensual', 'P-MENSUAL-XXXXXXXX');
+  direct_boton('#paypal-direct-anual', 'P-ANUAL-XXXXXXXX');
 </script>

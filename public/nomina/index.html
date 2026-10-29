@@ -1043,8 +1043,8 @@
       const v=cur[c.key];
       const on = v!=null && String(v)!=='' && !(c.type!=='texto' && Number(v)===0);
       const amt = c.type==='texto'
-        ? `<input class="na" data-k="${c.key}" value="${esc(v||'')}" ${closed||!on?'disabled':''}>`
-        : `<input class="na num" inputmode="decimal" data-k="${c.key}" value="${on&&v!=null?esc(v):''}" ${closed||!on?'disabled':''}>`;
+        ? `<input class="na" data-k="${c.key}" value="${esc(v||'')}" ${closed?'disabled':''}>`
+        : `<input class="na num" inputmode="decimal" data-k="${c.key}" value="${on&&v!=null?esc(v):''}" ${closed?'disabled':''}>`;
       return `<div class="nv"><label class="sw"><input type="checkbox" data-on="${c.key}" ${on?'checked':''} ${closed?'disabled':''}></label><span class="nl">${esc(c.label)}</span>${amt}</div>`;
     };
     const formulaRow=c=>`<div class="nv ro"><span class="sw" style="width:36px"></span><span class="nl">${esc(c.label)} <span class="pill calc">fx</span></span><span class="nr" data-calc="${c.key}">—</span></div>`;
@@ -1067,8 +1067,9 @@
     function recompute(){ const res=computeRow(cols, gather());
       cols.forEach(c=>{ if(c.type==='formula'){ const el=bg.querySelector(`[data-calc="${c.key}"]`); if(el) el.textContent=money(res.cells[c.key]); } });
       bg.querySelector('[data-t="ing"]').textContent=money(res.ingresos); bg.querySelector('[data-t="ded"]').textContent=money(res.deducciones); bg.querySelector('[data-t="neto"]').textContent=money(res.neto); }
-    bg.querySelectorAll('[data-on]').forEach(cb=> cb.addEventListener('change', ()=>{ const inp=cb.closest('.nv').querySelector('[data-k]'); if(inp){ inp.disabled=!cb.checked||closed; if(!cb.checked) inp.value=''; else inp.focus(); } recompute(); }));
-    bg.querySelectorAll('.na').forEach(inp=> inp.addEventListener('input', recompute));
+    bg.querySelectorAll('[data-on]').forEach(cb=> cb.addEventListener('change', ()=>{ const inp=cb.closest('.nv').querySelector('[data-k]'); if(inp){ if(!cb.checked) inp.value=''; else inp.focus(); } recompute(); }));
+    // Escribir un monto enciende solo el interruptor (si no, el valor se perdía al guardar).
+    bg.querySelectorAll('.na').forEach(inp=> inp.addEventListener('input', ()=>{ const cb=inp.closest('.nv').querySelector('[data-on]'); if(cb&&!closed) cb.checked=String(inp.value).trim()!==''; recompute(); }));
     recompute();
   }
 

@@ -20,4 +20,4 @@ insert into public.direct_clients (id, tenant_id, client_key, legal_name, rnc, c
   ('00000000-0000-0000-0000-0000000c00e1', '00000000-0000-0000-0000-0000000000e2', '101010632', 'Cliente Uno SRL (del Este)', '101010632', '00000000-0000-0000-0000-00000000b001', 'manual');
 insert into public.direct_credentials (tenant_id, id, institution, category, iv, ct, updated_at)
   values ((select id from direct_tenants where slug = 'save'), 'cred-1', 'dgii', 'acceso', 'iv', 'ct', 1);
-insert into public.direct_config (key, value) values ('vaultSalt', 'salt') on conflict do nothing;
+insert into public.direct_config (tenant_id, key, value) values ((select id from direct_tenants where slug = 'save'), 'vaultSalt', 'salt') on conflict do nothing;

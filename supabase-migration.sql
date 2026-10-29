@@ -1,5 +1,15 @@
 -- Run this in the Supabase SQL editor for your project
 
+-- 0. Firmas (tenants). direct_config e ir2_resumen la referencian, así que
+--    existe antes que ellas; supabase/migrations/202609120001_multi_tenant_clients.sql
+--    la define igual (create if not exists) y agrega la firma inicial.
+CREATE TABLE IF NOT EXISTS direct_tenants (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL CHECK (char_length(trim(name)) BETWEEN 2 AND 120),
+  slug text NOT NULL UNIQUE CHECK (slug = lower(slug) AND slug ~ '^[a-z0-9-]{2,80}$'),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
 -- 1. Profiles table (linked to auth.users)
 CREATE TABLE IF NOT EXISTS direct_profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,

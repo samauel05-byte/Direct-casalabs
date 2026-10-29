@@ -10,14 +10,17 @@ PSQL=(sudo -u postgres psql -v ON_ERROR_STOP=1 -q)
 "${PSQL[@]}" -c "drop database if exists ${DB} with (force)" -c "create database ${DB}"
 "${PSQL[@]}" -d "$DB" -f "$ROOT/tests/nala/support/bootstrap.sql"
 "${PSQL[@]}" -d "$DB" -f "$ROOT/supabase-migration.sql"
+# Las migraciones se aplican en orden. Justo antes de la de NALA se siembran los
+# datos que ya existían (deben sobrevivir a esa migración) y ésta se aplica dos
+# veces para comprobar que es idempotente.
 for f in "$ROOT"/supabase/migrations/*.sql; do
-  case "$f" in *nala_fiscal_pipeline*) continue;; esac
-  "${PSQL[@]}" -d "$DB" -f "$f"
+  case "$f" in
+    *nala_fiscal_pipeline*)
+      "${PSQL[@]}" -d "$DB" -f "$ROOT/tests/nala/support/seed_existing.sql"
+      "${PSQL[@]}" -d "$DB" -f "$f"
+      "${PSQL[@]}" -d "$DB" -f "$f";;
+    *) "${PSQL[@]}" -d "$DB" -f "$f";;
+  esac
 done
-# Pre-existing data (before NALA's migration) that must be preserved.
-"${PSQL[@]}" -d "$DB" -f "$ROOT/tests/nala/support/seed_existing.sql"
-"${PSQL[@]}" -d "$DB" -f "$ROOT/supabase/migrations/202609300001_nala_fiscal_pipeline.sql"
-# Idempotency: applying the migration twice must not fail.
-"${PSQL[@]}" -d "$DB" -f "$ROOT/supabase/migrations/202609300001_nala_fiscal_pipeline.sql"
 "${PSQL[@]}" -d "$DB" -c "grant all on all tables in schema public to service_role; grant all on all sequences in schema public to service_role; grant execute on all functions in schema public to service_role;"
 echo "db ${DB} listo"

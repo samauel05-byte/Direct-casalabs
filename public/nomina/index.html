@@ -256,7 +256,7 @@
   function paramsFromSettings(st){ if(!st) return {}; const e=st.empleado||{}, i=st.isr||{}; const n=(v,d)=>isFinite(Number(v))?Number(v):d; return { p_div: st.period_type==='mensual'?1:2, p_afp:n(e.afp,0), p_sfs:n(e.sfs,0), p_tope_sfs:n(e.tope_sfs,1e12), p_tope_afp:n(e.tope_afp,1e12), p_isr_ex:n(i.exento,0), p_isr_t2:n(i.tramo2,0), p_isr_t3:n(i.tramo3,0) }; }
   function computeRow(columns, values, params){
     params = params || (S.period && paramsFromSettings(S.period.settings)) || {};
-    const sc={...params}; for(const c of columns) if(c.type==='monto'||c.type==='numero') sc[c.key]=Number(values[c.key])||0;
+    const sc={...params}; for(const c of columns) if(c.type==='monto'||c.type==='numero') sc[c.key]=Number(String(values[c.key]==null?'':values[c.key]).replace(/rd\$|\$|,|\s/gi,''))||0;
     const cells={};
     for(const c of columns){
       if(c.type==='formula'){ const r=evalFormula(c.formula,sc); sc[c.key]=r; cells[c.key]=r; }

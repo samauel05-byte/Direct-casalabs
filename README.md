@@ -1,4 +1,4 @@
-# SERP — Plataforma contable multiempresa
+# DIRECT — Plataforma contable multiempresa
 
 Sistema para equipos contables que centraliza clientes, credenciales cifradas y herramientas de trabajo para los portales dominicanos.
 

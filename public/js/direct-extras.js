@@ -294,6 +294,72 @@
       </div>`;
   };
 
+
+  // Licencias de la plataforma (solo el administrador de la plataforma, root).
+  const licFmt = iso => iso ? new Date(iso).toLocaleDateString('es-DO', { dateStyle: 'medium' }) : '—';
+  const licState = t => {
+    const st = t.state || {};
+    if (st.code === 'suspended') return ['Suspendida', 'dx-chip-bad'];
+    if (st.code === 'expired') return ['Vencida', 'dx-chip-bad'];
+    if (st.code === 'grace') return [`En gracia · ${st.graceDaysLeft} d`, 'dx-chip-warn'];
+    if (st.code === 'unlimited') return ['Sin vencimiento', 'dx-chip-ok'];
+    return [`Activa · ${st.daysLeft} d`, 'dx-chip-ok'];
+  };
+  DX.openLicenses = async function () {
+    show('view-dx-licenses');
+    const root = document.getElementById('dx-lic-body');
+    if (!root.dataset.ready) root.innerHTML = '<p class="dx-muted">Cargando licencias…</p>';
+    let d;
+    try { d = await A.get('/api/licenses/list'); }
+    catch (e) { root.innerHTML = `<div class="client-empty"><h2>No se pudo cargar</h2><p>${esc(e.message)}</p></div>`; return; }
+    root.dataset.ready = '1';
+    const tenants = d.tenants || [], lics = d.licenses || [];
+    const pending = lics.filter(l => l.status === 'pending');
+    const stLbl = { pending: ['Pendiente', 'dx-chip-warn'], activated: ['Activada', 'dx-chip-ok'], revoked: ['Anulada', 'dx-chip-bad'] };
+    const tenantRows = tenants.map(t => { const [lbl, cls] = licState(t); const slug = t.slug === 'save';
+      return `<tr><td><b>${esc(t.name)}</b><div class="dx-muted dx-sm" style="margin:0">${esc(t.billing_email || t.slug)}</div></td>
+        <td>${esc(t.license_plan || '—')}</td><td>${licFmt(t.license_until)}</td><td><span class="dx-chip ${cls}">${esc(lbl)}</span></td>
+        <td class="dx-mono">${t.users}${t.max_users ? ' / ' + t.max_users : ''}</td>
+        <td style="white-space:nowrap">${t.license_until || !slug ? `<button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="1">+1 mes</button><button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="12">+12</button>` : ''}
+        ${slug ? '' : t.license_status === 'suspended' ? `<button class="back-btn" style="margin:0" data-lic="resume" data-id="${t.id}">Reactivar</button>` : `<button class="back-btn" style="margin:0;color:var(--danger)" data-lic="suspend" data-id="${t.id}">Suspender</button>`}</td></tr>`; }).join('');
+    const licRows = lics.map(l => { const [lbl, cls] = stLbl[l.status] || [l.status, '']; const expired = l.status === 'pending' && new Date(l.link_expires_at) < new Date();
+      return `<tr><td><b>${esc(l.customer_name)}</b><div class="dx-muted dx-sm" style="margin:0">${esc(l.customer_email)}</div></td><td>${esc(l.plan || '—')}</td><td>${l.months} m${l.max_users ? ' · ' + l.max_users + ' usr.' : ''}</td>
+        <td><span class="dx-chip ${cls}">${esc(lbl)}</span>${expired ? ' <span class="dx-muted dx-sm">(enlace vencido)</span>' : ''}</td><td class="dx-mono dx-sm">${licFmt(l.created_at)}</td>
+        <td style="white-space:nowrap">${l.status === 'pending' ? `<button class="back-btn" style="margin:0 4px 0 0" data-lic="resend" data-id="${l.id}">Nuevo enlace</button><button class="back-btn" style="margin:0;color:var(--danger)" data-lic="revoke" data-id="${l.id}">Anular</button>` : ''}</td></tr>`; }).join('');
+    root.innerHTML = `
+      <div class="dx-card"><div class="dx-h">Emitir licencia</div>
+        <p class="dx-muted dx-sm">${d.emailConfigured ? 'El enlace de activación se envía por correo al cliente.' : '<b>El envío de correo no está configurado</b> (variables SMTP): al emitir verás el enlace para copiarlo y mandarlo tú.'} Es de un solo uso y vence en 14 días.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:10px">
+          <div class="field"><label>Cliente</label><input id="lic-name" placeholder="Nombre o firma"></div>
+          <div class="field"><label>Correo</label><input id="lic-email" type="email" placeholder="cliente@correo.com"></div>
+          <div class="field"><label>Plan (etiqueta)</label><input id="lic-plan" placeholder="Ej: Completo"></div>
+          <div class="field"><label>Meses</label><input id="lic-months" type="number" min="1" max="36" value="1"></div>
+          <div class="field"><label>Máx. usuarios</label><input id="lic-max" type="number" min="1" max="500" placeholder="sin tope"></div>
+        </div>
+        <button class="btn btn-pri" id="lic-create">Emitir y enviar enlace</button> <span id="lic-msg" class="dx-muted"></span>
+        <div id="lic-link" style="margin-top:10px"></div></div>
+      <div class="dx-card" style="margin-top:14px"><div class="dx-h">Firmas (${tenants.length})</div><div class="table-wrap"><table class="dx-table"><tr><th>Firma</th><th>Plan</th><th>Vence</th><th>Estado</th><th>Usuarios</th><th></th></tr>${tenantRows || '<tr><td colspan="6" class="dx-muted">Sin firmas.</td></tr>'}</table></div>
+        <p class="dx-muted dx-sm" style="margin-top:8px">Pasado el vencimiento hay ${d.graceDays} días de gracia; luego la firma no puede entrar (sus datos se conservan). Tu firma no vence.</p></div>
+      <div class="dx-card" style="margin-top:14px"><div class="dx-h">Licencias emitidas (${lics.length}${pending.length ? ' · ' + pending.length + ' pendientes' : ''})</div><div class="table-wrap"><table class="dx-table"><tr><th>Cliente</th><th>Plan</th><th>Duración</th><th>Estado</th><th>Emitida</th><th></th></tr>${licRows || '<tr><td colspan="6" class="dx-muted">Aún no has emitido licencias.</td></tr>'}</table></div></div>`;
+    const showLink = (link, sent) => { const box = document.getElementById('lic-link'); box.innerHTML = `<div class="dx-card dx-alert" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.07)"><b>${sent ? 'Correo enviado.' : 'Correo no enviado: copia el enlace y mándalo al cliente.'}</b><div class="dx-mono dx-sm" style="word-break:break-all;margin:6px 0">${esc(link)}</div><button class="back-btn" id="lic-copy" style="margin:0">Copiar enlace</button></div>`;
+      document.getElementById('lic-copy').onclick = () => { navigator.clipboard?.writeText(link).then(() => toast('Enlace copiado', 'ok')).catch(() => {}); }; };
+    document.getElementById('lic-create').onclick = async () => {
+      const body = { customer_name: document.getElementById('lic-name').value, customer_email: document.getElementById('lic-email').value, plan: document.getElementById('lic-plan').value, months: document.getElementById('lic-months').value, max_users: document.getElementById('lic-max').value };
+      const msg = document.getElementById('lic-msg'); msg.textContent = 'Emitiendo…';
+      try { const r = await A.post('/api/licenses/create', body); msg.textContent = ''; toast('Licencia emitida', 'ok'); await DX.openLicenses(); showLink(r.link, r.emailSent); }
+      catch (e) { msg.textContent = ''; toast(e.message, 'err'); }
+    };
+    root.querySelectorAll('[data-lic]').forEach(b => b.addEventListener('click', async () => {
+      const act = b.dataset.lic, id = b.dataset.id;
+      if (act === 'suspend' && !confirm('¿Suspender esta firma? Sus usuarios no podrán entrar hasta que la reactives.')) return;
+      if (act === 'revoke' && !confirm('¿Anular esta licencia pendiente?')) return;
+      try {
+        const r = await A.post('/api/licenses/' + act, act === 'extend' ? { tenant_id: id, months: Number(b.dataset.m) } : act === 'suspend' || act === 'resume' ? { tenant_id: id } : { id });
+        toast('Listo', 'ok'); await DX.openLicenses(); if (r.link) showLink(r.link, r.emailSent);
+      } catch (e) { toast(e.message, 'err'); }
+    }));
+  };
+
   DX.readUserCompanies = function () {
     const all = document.getElementById('u-all-companies');
     if (!all || all.checked) return null;

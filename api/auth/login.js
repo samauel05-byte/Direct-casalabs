@@ -3,11 +3,13 @@ const db = require('../../lib/db');
 const { authenticate, loadProfile } = require('../../lib/auth');
 const { allow } = require('../../lib/rate-limit');
 const { randomUUID } = require('crypto');
+const L = require('../../lib/licenses');
 
 const VAULT_COLUMNS = ', user_key_salt, vault_key_iv, vault_key_ct';
 
-function profileResponse(profile, defaultPortals) {
+function profileResponse(profile, defaultPortals, extra = {}) {
   return {
+    ...extra,
     ok: true,
     role: profile.role,
     access_direct: profile.access_direct !== false,
@@ -70,12 +72,15 @@ module.exports = async (req, res) => {
         supabase.from('direct_active_sessions').upsert({ user_id: user.id, session_id: nextSessionId, issued_at: now, updated_at: now }, { onConflict: 'user_id' }),
       ]);
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
+      const license = await L.tenantState(profile.tenant_id);
+      if (license.blocked) return res.status(403).json({ error: license.message });
+      const platformAdmin = await L.isPlatformAdmin(user.id);
       // La config (incluido el verificador de bóveda) viaja con el login, pero
       // debe ser la de la firma del usuario, así que se lee ya con su tenant.
       const config = await db.getConfig(profile.tenant_id || null).catch(() => null);
 
       return res.json({
-        ...profileResponse(profile, []),
+        ...profileResponse(profile, [], { platformAdmin, license: { code: license.code, daysLeft: license.daysLeft, graceDaysLeft: license.graceDaysLeft } }),
         access_token,
         refresh_token,
         expires_at,
@@ -94,7 +99,8 @@ module.exports = async (req, res) => {
     try {
       const { profile } = await loadProfile(session.userId, VAULT_COLUMNS);
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
-      return res.json(profileResponse(profile, ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul']));
+      const license = await L.tenantState(profile.tenant_id);
+      return res.json(profileResponse(profile, ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'], { platformAdmin: await L.isPlatformAdmin(session.userId), license: { code: license.code, daysLeft: license.daysLeft, graceDaysLeft: license.graceDaysLeft } }));
     } catch (e) {
       console.error(e); return res.status(500).json({ error: 'Error interno del servidor' });
     }

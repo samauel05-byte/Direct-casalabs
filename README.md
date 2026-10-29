@@ -322,6 +322,7 @@ SERP/
 ├── api/                   — Funciones serverless (auth, credentials, clients, users, nala, nomina)
 ├── lib/                   — Núcleo: auth, tenant, db/supabase y librerías NALA y Nómina
 ├── public/
+│   ├── activar.html       — Alta de una firma nueva con el enlace de licencia
 │   ├── index.html         — App Direct (HTML + CSS + JS)
 │   ├── js/                — direct-extras (inicio, historial, tarjetas, permisos)
 │   ├── nala/              — App NALA (módulos + asistente)
@@ -345,11 +346,26 @@ SERP/
 
 ---
 
+## Licencias y alta de firmas nuevas
+
+Cada cliente que compra Direct es una **firma (tenant)** propia, aislada de las demás. Todas comparten la misma infraestructura (el relay de Cloudflare y la clave de OpenAI son de la plataforma: **ninguna firma configura ni toca claves ni código**); una firma nueva solo carga su información (clientes y empresas por Excel, accesos) y empieza a trabajar.
+
+- **Administrador de la plataforma:** el usuario `root` (firma Save) tiene `direct_profiles.is_platform_admin = true`. Solo él ve el botón **Licencias** en Accesos y puede usar `/api/licenses/list|create|resend|revoke|extend|suspend|resume`. Una firma de cliente, aunque su administrador sea `admin`, no puede.
+- **Emitir:** en el panel se registra cliente, correo, plan (etiqueta), meses y tope de usuarios. Se crea una fila en `direct_licenses` con el **hash** del token (el token en claro solo viaja en el enlace) y se manda por correo `https://app.casalabs.com.do/activar?t=…` (SMTP `LICENSE_SMTP_*`; si no existen usa el buzón del monitor `MONITOR_SMTP_*` / `MONITOR_ALERT_FROM`; si no hay correo, el panel muestra el enlace para copiarlo). El enlace es de **un solo uso** y vence en 14 días; se puede reenviar (genera uno nuevo y anula el anterior) o anular.
+- **Activar** (`/activar`, página pública): el cliente elige nombre de firma, usuario y contraseña. La bóveda se crea **en su navegador** con el mismo esquema que el primer uso de Direct (llave PBKDF2 `v2$` de la contraseña envuelve un secreto aleatorio; verificador en `direct_config`). El servidor reclama la licencia de forma atómica, crea la firma (`direct_tenants`), el usuario administrador (todos los módulos y portales), la config de la bóveda y, si algo falla, deshace todo y deja la licencia pendiente. Usuario repetido → 409; usuarios reservados (`root`, `admin`, `soporte`…) no se permiten.
+- **Vigencia:** `direct_tenants.license_until` (la firma Save y las anteriores a las licencias tienen `null` = sin vencimiento). Pasado el vencimiento hay **5 días de gracia** (aviso en Accesos); después la firma no puede iniciar sesión ni usar la API (los datos se conservan). `license_status = 'suspended'` bloquea de inmediato. `lib/licenses.js` (`stateOf`, caché de 60 s por firma) lo aplica en `lib/auth.js` y en el login con un mensaje claro. El panel permite **+1 mes / +12 meses**, suspender y reactivar (la firma de la plataforma no se puede suspender).
+- **Tope de usuarios:** `direct_tenants.max_users` (null = sin tope) se valida al crear usuarios (`POST /api/users`).
+- **Siguiente etapa:** cobro en línea (pasarela) que llame a este mismo flujo al confirmarse el pago y renueve cada mes.
+- Migración `202610290001_licencias.sql`. Pruebas: `npm run test:licenses` (API de punta a punta en el stack local: permisos, activación, aislamiento, vencimiento, suspensión, tope).
+
+---
+
 ## Pruebas
 
 ```bash
 npm run test:direct   # app Direct + relay (worker.js)
 npm run test:nala     # flujo fiscal NALA (unit + UI)
+npm run test:licenses # licencias y alta de firmas (stack local)
 ```
 
 ---

@@ -10,7 +10,8 @@
     "test:ir2": "node --test tests/ir2/formulario.test.js",
     "test:cami": "node --test tests/cami/analisis.test.js tests/cami/nala-source.test.js",
     "nala:local": "node tests/nala/support/stack.js",
-    "test:conciliacion": "node --test tests/conciliacion/engine.test.js"
+    "test:conciliacion": "node --test tests/conciliacion/engine.test.js",
+    "test:licenses": "node --test --test-concurrency=1 tests/licenses/flow.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.8",

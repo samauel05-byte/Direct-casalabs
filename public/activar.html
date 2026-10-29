@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Activar licencia · Direct</title>
+<meta name="robots" content="noindex">
+<link rel="icon" type="image/png" href="/img/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f1ec;--card:#fffdfa;--text:#1f1710;--text2:#6b5d4f;--border:#e3d9cd;--accent:#1d4ed8;--accent2:#2563eb;--danger:#dc2626;--ok:#059669}
+@media (prefers-color-scheme:dark){:root{--bg:#070d1a;--card:#0e1a30;--text:#e8eefc;--text2:#9fb0d0;--border:#22324f;--accent:#3d8bff;--accent2:#3d8bff}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;font-family:'Poppins',system-ui,sans-serif;background:var(--bg);color:var(--text)}
+.card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:34px 30px;box-shadow:0 10px 40px rgba(0,0,0,.08)}
+.logo{height:40px;margin-bottom:18px}
+.on-dark{display:none}
+@media (prefers-color-scheme:dark){.on-light{display:none}.on-dark{display:block}}
+h1{font-size:21px;margin:0 0 6px}
+p.sub{margin:0 0 20px;color:var(--text2);font-size:13.5px;line-height:1.55}
+.field{margin-bottom:15px}
+label{display:block;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--text2);margin-bottom:6px}
+input{width:100%;height:44px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--text);padding:0 14px;font:inherit;font-size:14px;outline:none}
+input:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.hint{font-size:11.5px;color:var(--text2);margin-top:5px}
+.err{font-size:12.5px;color:var(--danger);margin:0 0 12px}
+button{width:100%;height:48px;border:0;border-radius:12px;background:var(--accent);color:#fff;font:inherit;font-size:15px;font-weight:700;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
+.warn{background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:16px}
+.done{text-align:center}
+.done .ok{font-size:42px;color:var(--ok)}
+a.btn{display:block;text-align:center;text-decoration:none;line-height:48px;border-radius:12px;background:var(--accent);color:#fff;font-weight:700;margin-top:18px}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="card" id="card">
+  <img class="logo on-light" src="/img/direct-logo-light.png" alt="Direct"><img class="logo on-dark" src="/img/direct-logo.png" alt="Direct" style="mix-blend-mode:screen">
+  <div id="loading"><p class="sub">Verificando tu enlace…</p></div>
+
+  <div id="bad" hidden>
+    <h1>Enlace no válido</h1>
+    <p class="sub" id="bad-msg">Este enlace no es válido, ya se usó o venció. Pide uno nuevo a soporte.</p>
+  </div>
+
+  <form id="form" hidden autocomplete="on">
+    <h1>Activa tu licencia</h1>
+    <p class="sub" id="welcome">Crea el acceso de tu firma. Lo haces una sola vez.</p>
+    <div class="field"><label for="firm">Nombre de tu firma o empresa</label><input id="firm" maxlength="120" required placeholder="Ej: Contadores Asociados SRL"></div>
+    <div class="field"><label for="user">Usuario</label><input id="user" maxlength="64" required autocomplete="username" placeholder="Ej: maria.perez"><div class="hint">3 a 64 caracteres: letras, números, punto, guion. Será tu usuario de administrador.</div></div>
+    <div class="field"><label for="pw">Contraseña</label><input id="pw" type="password" minlength="8" required autocomplete="new-password" placeholder="Mínimo 8 caracteres"></div>
+    <div class="field"><label for="pw2">Confirmar contraseña</label><input id="pw2" type="password" required autocomplete="new-password" placeholder="Repite la contraseña"></div>
+    <div class="warn"><b>Guárdala bien:</b> tus claves de portales se cifran con tu contraseña en tu navegador. Si la olvidas, nadie puede recuperarlas, ni siquiera soporte.</div>
+    <p class="err" id="err" hidden></p>
+    <button type="submit" id="go">Crear mi cuenta</button>
+  </form>
+
+  <div id="done" class="done" hidden>
+    <div class="ok">✓</div>
+    <h1>¡Listo!</h1>
+    <p class="sub">Tu firma y tu usuario <b id="done-user"></b> ya están creados. Entra a Direct, empieza cargando tus clientes y empresas desde Excel y agrega tus accesos.</p>
+    <a class="btn" href="/">Entrar a Direct</a>
+  </div>
+</div>
+
+<script>
+(function(){
+  const token = new URLSearchParams(location.search).get('t') || '';
+  const $ = id => document.getElementById(id);
+  const show = id => { for (const x of ['loading','bad','form','done']) $(x).hidden = x !== id; };
+
+  // Mismo esquema de cifrado que Direct (index.html): la llave sale de la contraseña
+  // (PBKDF2 600.000, sal «v2$…») y envuelve un secreto aleatorio que es el de la bóveda.
+  const b64 = u8 => btoa(String.fromCharCode(...u8));
+  const u8 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+  const rand = n => b64(crypto.getRandomValues(new Uint8Array(n)));
+  async function userKey(pw, salt){
+    const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({name:'PBKDF2', salt:u8(salt.slice(3)), iterations:600000, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['encrypt']);
+  }
+  async function vaultKey(raw, salt){
+    const km = await crypto.subtle.importKey('raw', raw, 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({name:'PBKDF2', salt:u8(salt), iterations:200000, hash:'SHA-256'}, km, {name:'AES-GCM', length:256}, false, ['encrypt']);
+  }
+  async function seal(key, bytes){
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({name:'AES-GCM', iv}, key, bytes);
+    return {iv: b64(iv), ct: b64(new Uint8Array(ct))};
+  }
+
+  async function init(){
+    if (!token) return show('bad');
+    try {
+      const r = await fetch('/api/licenses/activate?token=' + encodeURIComponent(token));
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { $('bad-msg').textContent = d.error || $('bad-msg').textContent; return show('bad'); }
+      $('welcome').textContent = 'Hola ' + d.customerName + '. Crea el acceso de tu firma; lo haces una sola vez.';
+      show('form');
+    } catch { $('bad-msg').textContent = 'No se pudo conectar. Revisa tu internet e inténtalo de nuevo.'; show('bad'); }
+  }
+
+  $('form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const err = $('err'); err.hidden = true;
+    const firmName = $('firm').value.trim(), username = $('user').value.trim().toLowerCase(), pw = $('pw').value;
+    if (pw.length < 8) { err.textContent = 'La contraseña debe tener al menos 8 caracteres.'; err.hidden = false; return; }
+    if (pw !== $('pw2').value) { err.textContent = 'Las contraseñas no coinciden.'; err.hidden = false; return; }
+    const btn = $('go'); btn.disabled = true; btn.textContent = 'Creando tu cuenta…';
+    try {
+      const secret = crypto.getRandomValues(new Uint8Array(32));
+      const userSalt = 'v2$' + rand(16), vaultSalt = rand(16);
+      const wrapped = await seal(await userKey(pw, userSalt), secret);
+      const verifier = await seal(await vaultKey(secret, vaultSalt), new TextEncoder().encode(JSON.stringify({v:'direct-ok'})));
+      const r = await fetch('/api/licenses/activate', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ token, firmName, username, password: pw, userSalt, vaultKeyIv: wrapped.iv, vaultKeyCt: wrapped.ct, vaultSalt, verifierIv: verifier.iv, verifierCt: verifier.ct }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { err.textContent = d.error || 'No se pudo crear la cuenta.'; err.hidden = false; btn.disabled = false; btn.textContent = 'Crear mi cuenta'; return; }
+      $('done-user').textContent = d.username; show('done');
+    } catch (ex) {
+      err.textContent = 'Ocurrió un error: ' + ex.message; err.hidden = false; btn.disabled = false; btn.textContent = 'Crear mi cuenta';
+    }
+  });
+  init();
+})();
+</script>
+</body>
+</html>

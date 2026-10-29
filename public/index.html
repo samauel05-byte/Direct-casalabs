@@ -418,6 +418,9 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
       <button class="icon-btn" id="btn-usage" title="Uso del sistema" onclick="DX.openUsage()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </button>
+      <button class="icon-btn" id="btn-lic" title="Licencias (administrador de la plataforma)" onclick="DX.openLicenses()" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.6 7.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+      </button>
       <button class="icon-btn" id="btn-sis" title="SISALRIL por relay (prueba de autollenado)" onclick="toggleSisTest()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5z"/></svg>
       </button>
@@ -577,6 +580,13 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
   <main class="main"><button class="back-btn" onclick="showPortals()">← Volver a portales</button>
     <div class="page-head"><div><h1>Historial de entradas</h1><p>Quién entró a cada portal y cuándo.</p></div></div>
     <div id="dx-history-body" style="margin-top:14px"></div></main></div>
+
+<div id="view-dx-licenses" class="layer" hidden>
+  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div>
+    <div class="hdr-right"><button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+  <main class="main"><button class="back-btn" onclick="showPortals()">← Volver a portales</button>
+    <div class="page-head"><div><h1>Licencias</h1><p>Emite licencias, manda el enlace de activación y controla las firmas.</p></div><button class="back-btn" onclick="DX.openLicenses()" style="margin:0">↻ Actualizar</button></div>
+    <div id="dx-lic-body" style="margin-top:14px"></div></main></div>
 
 <div id="view-dx-usage" class="layer" hidden>
   <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div>
@@ -1186,7 +1196,7 @@ async function boot() {
         if(refreshToken && tokenExpiresAt && tokenExpiresAt < Date.now()+60000) await refreshSession();
         scheduleRefresh();
         const s = JSON.parse(storedSess);
-        currentUser = {username:s.username||'', role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_nomina:s.access_nomina, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_clientes:s.access_clientes, portals:s.portals};
+        currentUser = {username:s.username||'', role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_nomina:s.access_nomina, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_clientes:s.access_clientes, portals:s.portals, platformAdmin:s.platformAdmin===true, license:s.license||null};
         const v = JSON.parse(storedVault);
         vaultSecret = C._u8(v.secret);
         const homeData = fetchHomeData();
@@ -1301,7 +1311,7 @@ async function handleLogin() {
     activeSessionId = res.session_id || null;
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     storeSession(res);
-    currentUser = { username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals };
+    currentUser = { username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals, platformAdmin:res.platformAdmin===true, license:res.license||null };
 
     // 2. Home data only needs the token: fetch it while the vault keys are derived.
     const homeData = fetchHomeData();
@@ -1320,7 +1330,7 @@ async function handleLogin() {
     }
     sessionStorage.setItem('dtoken', sessionToken);
     broadcastSession();
-    sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals}));
+    sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_clientes:res.access_clientes, portals:res.portals, platformAdmin:res.platformAdmin===true, license:res.license||null}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
     if (C.isLegacySalt(res.userSalt)) migrateKdf(pw, res.userSalt, vaultSecret); // en segundo plano
     await loadHome(homeData);
@@ -1385,7 +1395,7 @@ function confirmLogout() {
 
 /* ── Views ── */
 function show(id) {
-  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-nomina','view-ir2','view-dgii-modulos','view-monitor','view-dx-cards','view-dx-history','view-dx-usage'].forEach(v=>document.getElementById(v).hidden=(v!==id));
+  ['view-loading','view-setup','view-login','view-portals','view-clients','view-companies','view-users','view-cami','view-nala','view-nomina','view-ir2','view-dgii-modulos','view-monitor','view-dx-cards','view-dx-history','view-dx-usage','view-dx-licenses'].forEach(v=>document.getElementById(v).hidden=(v!==id));
 }
 
 let _sessionTracked=false;
@@ -1411,6 +1421,9 @@ function showPortals() {
   const bc=document.getElementById('btn-cards'); if (bc) bc.hidden = !isAdmin;
   const bh=document.getElementById('btn-history'); if (bh) bh.hidden = !isAdmin;
   const bu=document.getElementById('btn-usage'); if (bu) bu.hidden = !isAdmin;
+  const lc=currentUser?.license;
+  if(lc && !window._licToast && (lc.code==='grace' || (lc.code==='active' && lc.daysLeft<=7))){ window._licToast=true; toast(lc.code==='grace' ? `Tu licencia venció. Tienes ${lc.graceDaysLeft} día(s) para renovarla.` : `Tu licencia vence en ${lc.daysLeft} día(s). Renuévala para no perder el acceso.`,'warn'); }
+  const bl=document.getElementById('btn-lic'); if (bl) bl.hidden = !(currentUser?.platformAdmin===true);
   const bs=document.getElementById('btn-sis'); if (bs) { bs.hidden = !isAdmin; reflectSisTest(); }
   DX.renderHome?.();
 }

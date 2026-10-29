@@ -62,6 +62,13 @@ module.exports = async (req, res) => {
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
+      // Tope de usuarios de la licencia (null = sin tope).
+      const { data: ten } = await supabase.from('direct_tenants').select('max_users').eq('id', session.tenantId).maybeSingle();
+      if (ten?.max_users) {
+        const { count } = await supabase.from('direct_profiles').select('*', { count: 'exact', head: true }).eq('tenant_id', session.tenantId);
+        if ((count || 0) >= ten.max_users) return res.status(403).json({ error: `Tu licencia permite hasta ${ten.max_users} usuarios. Pide ampliarla a soporte.` });
+      }
+
       const { data: { user }, error } = await supabase.auth.admin.createUser({
         email,
         password,

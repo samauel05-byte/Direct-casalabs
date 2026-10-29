@@ -7,7 +7,9 @@
     { "source": "/api/nala/:path*", "destination": "/api/nala?route=:path*" },
     { "source": "/api/nomina/:path*", "destination": "/api/nomina?route=:path*" },
     { "source": "/api/monitor/:path*", "destination": "/api/monitor?route=:path*" },
-    { "source": "/api/ai/:path*", "destination": "/api/ai?route=:path*" }
+    { "source": "/api/ai/:path*", "destination": "/api/ai?route=:path*" },
+    { "source": "/api/licenses/:path*", "destination": "/api/licenses?route=:path*" },
+    { "source": "/activar", "destination": "/activar.html" }
   ],
   "headers": [
     {

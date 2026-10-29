@@ -75,6 +75,19 @@ async function start({ port, postgrestUrl, jwtSecret, dbUrl, storageDir }) {
           const { rows } = await db.query('select id, email from auth.users');
           return json(res, 200, { users: rows, aud: 'authenticated' });
         }
+        if (req.method === 'POST') {
+          const { email, password } = JSON.parse((await readBody(req)).toString() || '{}');
+          if (!email || !password) return json(res, 400, { msg: 'email y password requeridos' });
+          const dup = await db.query('select 1 from auth.users where lower(email) = lower($1)', [email]);
+          if (dup.rows[0]) return json(res, 422, { msg: 'A user with this email address has already been registered', error_code: 'email_exists' });
+          const { rows } = await db.query('insert into auth.users (id, email, encrypted_password) values (gen_random_uuid(), $1, $2) returning id, email', [email, password]);
+          return json(res, 200, { id: rows[0].id, email: rows[0].email, aud: 'authenticated', role: 'authenticated' });
+        }
+        if (req.method === 'DELETE') {
+          const id = url.pathname.split('/').pop();
+          await db.query('delete from auth.users where id = $1', [id]);
+          return json(res, 200, {});
+        }
         return json(res, 405, { msg: 'not implemented in test gateway' });
       }
       if (url.pathname.startsWith('/storage/v1/')) return storage(req, res, url);

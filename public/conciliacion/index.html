@@ -55,7 +55,11 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
   const FIELDS=[['fecha','Fecha'],['desc','Descripción'],['ref','Referencia / No.'],['monto','Monto (una columna)'],['debito','Débito / salida'],['credito','Crédito / entrada']];
 
   function readFile(file){ return new Promise((res,rej)=>{ const fr=new FileReader(); fr.onerror=()=>rej(new Error('No se pudo leer el archivo'));
-    fr.onload=()=>{ try{ const wb=XLSX.read(fr.result,{type:'array',cellDates:false}); res(wb); }catch(e){ rej(new Error('Formato de archivo no reconocido')); } }; fr.readAsArrayBuffer(file); }); }
+    fr.onload=()=>{ try{ const t=csvText(fr.result); res(t==null?XLSX.read(fr.result,{type:'array',cellDates:false}):XLSX.read(t,{type:'string',raw:true})); }catch(e){ rej(new Error('Formato de archivo no reconocido')); } }; fr.readAsArrayBuffer(file); }); }
+  // Los CSV se leen como texto: UTF-8 (lo normal) o, si no lo es, Windows-1252 (Excel en español).
+  // Sin esto las tildes salen rotas («DescripciÃ³n») y no se reconocen Débito/Crédito.
+  function csvText(buf){ const u=new Uint8Array(buf); if((u[0]===0x50&&u[1]===0x4B)||(u[0]===0xD0&&u[1]===0xCF)) return null; /* xlsx (zip) o xls (OLE) */
+    try{ return new TextDecoder('utf-8',{fatal:true}).decode(u).replace(/^\uFEFF/,''); }catch(e){ return new TextDecoder('windows-1252').decode(u); } }
   function sheetRows(wb,name){ return XLSX.utils.sheet_to_json(wb.Sheets[name],{header:1,raw:true,defval:null,blankrows:false}); }
 
   async function load(which,file){

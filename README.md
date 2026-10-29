@@ -402,7 +402,7 @@ Cuando se vende el sistema a una firma nueva (p. ej. `Contadores del Este`), se 
 El script `upload-companies.mjs` lee el Excel de credenciales y las sube a la bóveda cifrada:
 
 ```bash
-node upload-companies.mjs
+DIRECT_ADMIN_PASS='…' node upload-companies.mjs ruta/al/archivo.xlsx   # DIRECT_ADMIN_USER opcional (por defecto root)
 ```
 
 El script inicia sesión como admin, deriva el masterKey en local, cifra cada credencial con AES-256-GCM y hace PUT a la API. El servidor nunca ve las contraseñas en texto plano.

@@ -318,17 +318,17 @@
     const stLbl = { pending: ['Pendiente', 'dx-chip-warn'], activated: ['Activada', 'dx-chip-ok'], revoked: ['Anulada', 'dx-chip-bad'] };
     const tenantRows = tenants.map(t => { const [lbl, cls] = licState(t); const slug = t.slug === 'save';
       return `<tr><td><b>${esc(t.name)}</b><div class="dx-muted dx-sm" style="margin:0">${esc(t.billing_email || t.slug)}</div></td>
-        <td>${esc(t.license_plan || '—')}</td><td>${licFmt(t.license_until)}</td><td><span class="dx-chip ${cls}">${esc(lbl)}</span></td>
+        <td>${esc(t.license_plan || '—')}${t.paypal_subscription_id ? ' <span class="dx-chip dx-chip-ok">PayPal</span>' : ''}</td><td>${licFmt(t.license_until)}</td><td><span class="dx-chip ${cls}">${esc(lbl)}</span></td>
         <td class="dx-mono">${t.users}${t.max_users ? ' / ' + t.max_users : ''}</td>
         <td style="white-space:nowrap">${t.license_until || !slug ? `<button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="1">+1 mes</button><button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="12">+12</button>` : ''}
         ${slug ? '' : t.license_status === 'suspended' ? `<button class="back-btn" style="margin:0" data-lic="resume" data-id="${t.id}">Reactivar</button>` : `<button class="back-btn" style="margin:0;color:var(--danger)" data-lic="suspend" data-id="${t.id}">Suspender</button>`}</td></tr>`; }).join('');
     const licRows = lics.map(l => { const [lbl, cls] = stLbl[l.status] || [l.status, '']; const expired = l.status === 'pending' && new Date(l.link_expires_at) < new Date();
-      return `<tr><td><b>${esc(l.customer_name)}</b><div class="dx-muted dx-sm" style="margin:0">${esc(l.customer_email)}</div></td><td>${esc(l.plan || '—')}</td><td>${l.months} m${l.max_users ? ' · ' + l.max_users + ' usr.' : ''}</td>
+      return `<tr><td><b>${esc(l.customer_name)}</b><div class="dx-muted dx-sm" style="margin:0">${esc(l.customer_email)}</div></td><td>${esc(l.plan || '—')}${l.source === 'paypal' ? ` <span class="dx-chip ${/^(CANCELLED|SUSPENDED|EXPIRED|PAYMENT_FAILED)$/.test(l.paypal_status || '') ? 'dx-chip-warn' : 'dx-chip-ok'}">PayPal${l.paypal_status ? ' · ' + esc(String(l.paypal_status).toLowerCase()) : ''}</span>` : ''}</td><td>${l.source === 'paypal' ? 'mensual' : l.months + ' m'}${l.max_users ? ' · ' + l.max_users + ' usr.' : ''}</td>
         <td><span class="dx-chip ${cls}">${esc(lbl)}</span>${expired ? ' <span class="dx-muted dx-sm">(enlace vencido)</span>' : ''}</td><td class="dx-mono dx-sm">${licFmt(l.created_at)}</td>
         <td style="white-space:nowrap">${l.status === 'pending' ? `<button class="back-btn" style="margin:0 4px 0 0" data-lic="resend" data-id="${l.id}">Nuevo enlace</button><button class="back-btn" style="margin:0;color:var(--danger)" data-lic="revoke" data-id="${l.id}">Anular</button>` : ''}</td></tr>`; }).join('');
     root.innerHTML = `
       <div class="dx-card"><div class="dx-h">Emitir licencia</div>
-        <p class="dx-muted dx-sm">${d.emailConfigured ? 'El enlace de activación se envía por correo al cliente.' : '<b>El envío de correo no está configurado</b> (variables SMTP): al emitir verás el enlace para copiarlo y mandarlo tú.'} Es de un solo uso y vence en 14 días.</p>
+        <p class="dx-muted dx-sm">${d.emailConfigured ? 'El enlace de activación se envía por correo al cliente.' : '<b>El envío de correo no está configurado</b> (variables SMTP): al emitir verás el enlace para copiarlo y mandarlo tú.'} Es de un solo uso y vence en 14 días. ${d.paypalConfigured ? 'Los clientes que paguen con <b>PayPal</b> reciben su enlace solos y se renuevan cada mes.' : 'PayPal aún no está configurado (variables PAYPAL_*).'}</p>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:10px">
           <div class="field"><label>Cliente</label><input id="lic-name" placeholder="Nombre o firma"></div>
           <div class="field"><label>Correo</label><input id="lic-email" type="email" placeholder="cliente@correo.com"></div>

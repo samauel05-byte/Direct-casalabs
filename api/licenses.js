@@ -3,6 +3,7 @@
 // Público (con el enlace de un solo uso que llega por correo):
 //   GET  /api/licenses/activate?token=…   datos de la licencia pendiente
 //   POST /api/licenses/activate           crea la firma, su administrador y su bóveda
+//   POST /api/licenses/paypal-webhook     avisos de PayPal (firma verificada): alta y renovación
 // Sólo super-administrador (root, direct_profiles.is_platform_admin):
 //   GET  /api/licenses/list               licencias y firmas
 //   POST /api/licenses/create             emite una licencia y manda el enlace
@@ -15,6 +16,7 @@ const db = require('../lib/db');
 const { authenticate } = require('../lib/auth');
 const { allow } = require('../lib/rate-limit');
 const L = require('../lib/licenses');
+const PP = require('../lib/paypal');
 
 const B64 = /^[A-Za-z0-9+/]+={0,2}$/;
 const RESERVED = new Set(['root', 'admin', 'administrador', 'soporte', 'support', 'direct', 'sistema', 'system']);
@@ -63,7 +65,7 @@ async function activate(req, res) {
   const { data: claimed, error: claimErr } = await supabase.from('direct_licenses')
     .update({ status: 'activated', activated_at: now.toISOString() })
     .eq('token_hash', L.hashToken(token)).eq('status', 'pending').gt('link_expires_at', now.toISOString())
-    .select('id, customer_email, plan, months, max_users').maybeSingle();
+    .select('id, customer_email, plan, months, max_users, paid_until, paypal_subscription_id').maybeSingle();
   if (claimErr) throw claimErr;
   if (!claimed) return fail(res, 404, 'Este enlace no es válido, ya se usó o venció. Pida uno nuevo a soporte.');
 
@@ -73,8 +75,11 @@ async function activate(req, res) {
     for (let i = 0; i < 6 && !tenantId; i++) {
       const slug = i === 0 ? slugOf(firmName) : `${slugOf(firmName).slice(0, 52)}-${Math.random().toString(36).slice(2, 6)}`;
       const { data, error } = await supabase.from('direct_tenants').insert({
-        name: firmName, slug, license_until: addMonths(now, claimed.months).toISOString(), license_status: 'active',
+        name: firmName, slug, license_status: 'active',
+        // Con PayPal manda lo pagado (próximo cobro); si no, los meses de la licencia.
+        license_until: (claimed.paid_until && new Date(claimed.paid_until) > now ? new Date(claimed.paid_until) : addMonths(now, claimed.months)).toISOString(),
         license_plan: claimed.plan || null, max_users: claimed.max_users || null, billing_email: claimed.customer_email,
+        paypal_subscription_id: claimed.paypal_subscription_id || null,
       }).select('id').single();
       if (!error) tenantId = data.id;
       else if (error.code !== '23505') throw error;
@@ -110,6 +115,68 @@ async function activate(req, res) {
     } catch { /* se informa el error original */ }
     return fail(res, 500, 'No se pudo completar la activación. Inténtalo de nuevo o escribe a soporte.');
   }
+}
+
+
+// ── PayPal ──
+// Estado de la suscripción en PayPal → vigencia. La fuente de verdad es PayPal:
+// el aviso solo dice «algo cambió en esta suscripción» y aquí se consulta su estado.
+async function syncSubscription(subId, eventType) {
+  const sub = await PP.getSubscription(subId);
+  const paidUntil = sub.billing_info?.next_billing_time ? new Date(sub.billing_info.next_billing_time) : null;
+  const { data: lic, error } = await supabase.from('direct_licenses').select('id, tenant_id, status, paid_until').eq('paypal_subscription_id', subId).maybeSingle();
+  if (error) throw error;
+
+  if (!lic) {
+    if (sub.status !== 'ACTIVE') return 'ignorada (suscripción no activa)';
+    const email = String(sub.subscriber?.email_address || '').trim().toLowerCase();
+    const first = sub.subscriber?.name?.given_name || '', last = sub.subscriber?.name?.surname || '';
+    const name = `${first} ${last}`.trim() || email.split('@')[0];
+    if (!email) throw new Error('La suscripción no trae correo del cliente');
+    let planName = null; try { planName = (await PP.getPlan(sub.plan_id)).name; } catch { /* se usa el id */ }
+    const info = PP.planInfo(sub.plan_id, planName);
+    const until = paidUntil && paidUntil > new Date() ? paidUntil : addMonths(new Date(), 1);
+    const issued = await issue({ customer_name: name.length >= 2 ? name : 'Cliente PayPal', customer_email: email, plan: info.plan, months: 1, max_users: info.maxUsers, note: `PayPal ${subId}`,
+      source: 'paypal', paypal_subscription_id: subId, paypal_status: sub.status, paid_until: until.toISOString() }, null);
+    const sent = await sendMail({ customer_name: name, customer_email: email, plan: info.plan, months: 1 }, issued.link);
+    return sent ? 'licencia creada y enlace enviado' : 'licencia creada (correo no enviado: usar «Nuevo enlace»)';
+  }
+
+  const patch = { paypal_status: sub.status };
+  if (paidUntil && (!lic.paid_until || paidUntil > new Date(lic.paid_until))) patch.paid_until = paidUntil.toISOString();
+  await supabase.from('direct_licenses').update(patch).eq('id', lic.id);
+  // Renovación: la firma ya activada hereda el próximo cobro. Una suspensión puesta a mano por root no se revierte.
+  if (lic.tenant_id && patch.paid_until && sub.status === 'ACTIVE') {
+    await supabase.from('direct_tenants').update({ license_until: patch.paid_until }).eq('id', lic.tenant_id);
+    L.forget(lic.tenant_id);
+  }
+  return `suscripción ${sub.status}`;
+}
+
+const PP_SYNC = new Set(['BILLING.SUBSCRIPTION.ACTIVATED', 'PAYMENT.SALE.COMPLETED', 'BILLING.SUBSCRIPTION.RE-ACTIVATED', 'BILLING.SUBSCRIPTION.UPDATED']);
+const PP_STATUS = new Set(['BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.SUSPENDED', 'BILLING.SUBSCRIPTION.EXPIRED', 'BILLING.SUBSCRIPTION.PAYMENT.FAILED']);
+
+async function paypalWebhook(req, res) {
+  if (req.method !== 'POST') return fail(res, 405, 'Método no permitido');
+  if (!PP.configured()) return fail(res, 503, 'PayPal no está configurado.');
+  const event = req.body;
+  if (!event || typeof event !== 'object' || !event.id || !event.event_type) return fail(res, 400, 'Aviso inválido');
+  if (!await PP.verifyWebhook(req.headers, event)) return fail(res, 400, 'Firma inválida');
+
+  const done = await supabase.from('direct_paypal_events').select('event_id').eq('event_id', event.id).maybeSingle();
+  if (done.data) return res.json({ ok: true, duplicate: true });
+
+  const r = event.resource || {};
+  const subId = event.event_type.startsWith('PAYMENT.SALE') ? r.billing_agreement_id : r.id || r.billing_agreement_id;
+  let result = 'sin acción';
+  if (subId && PP_SYNC.has(event.event_type)) result = await syncSubscription(subId, event.event_type);
+  else if (subId && PP_STATUS.has(event.event_type)) {
+    // No se cambia la vigencia: lo pagado se respeta y, si no hay más cobros, vence solo.
+    await supabase.from('direct_licenses').update({ paypal_status: { 'BILLING.SUBSCRIPTION.CANCELLED': 'CANCELLED', 'BILLING.SUBSCRIPTION.SUSPENDED': 'SUSPENDED', 'BILLING.SUBSCRIPTION.EXPIRED': 'EXPIRED', 'BILLING.SUBSCRIPTION.PAYMENT.FAILED': 'PAYMENT_FAILED' }[event.event_type] }).eq('paypal_subscription_id', subId);
+    result = 'estado actualizado';
+  }
+  await supabase.from('direct_paypal_events').insert({ event_id: event.id, event_type: event.event_type });
+  return res.json({ ok: true, result });
 }
 
 // ── Administración (sólo root) ──
@@ -153,15 +220,15 @@ async function admin(route, req, res) {
   const b = req.body || {};
   if (route === 'list' && req.method === 'GET') {
     const [lic, ten, prof] = await Promise.all([
-      supabase.from('direct_licenses').select('id, customer_name, customer_email, plan, months, max_users, status, link_expires_at, tenant_id, created_at, activated_at, note').order('created_at', { ascending: false }).limit(300),
-      supabase.from('direct_tenants').select('id, name, slug, license_until, license_status, license_plan, max_users, billing_email, created_at').order('created_at'),
+      supabase.from('direct_licenses').select('id, customer_name, customer_email, plan, months, max_users, status, link_expires_at, tenant_id, created_at, activated_at, note, source, paypal_status, paid_until').order('created_at', { ascending: false }).limit(300),
+      supabase.from('direct_tenants').select('id, name, slug, license_until, license_status, license_plan, max_users, billing_email, created_at, paypal_subscription_id').order('created_at'),
       supabase.from('direct_profiles').select('tenant_id'),
     ]);
     if (lic.error) throw lic.error; if (ten.error) throw ten.error;
     const users = {};
     for (const p of prof.data || []) users[p.tenant_id] = (users[p.tenant_id] || 0) + 1;
     const mail = L.mailConfig();
-    return res.json({ ok: true, emailConfigured: mail.ok, graceDays: L.GRACE_DAYS,
+    return res.json({ ok: true, emailConfigured: mail.ok, paypalConfigured: PP.configured(), graceDays: L.GRACE_DAYS,
       licenses: lic.data || [],
       tenants: (ten.data || []).map(t => ({ ...t, users: users[t.id] || 0, state: L.stateOf(t) })) });
   }
@@ -216,6 +283,7 @@ module.exports = async (req, res) => {
       if (req.method === 'POST') return await activate(req, res);
       return fail(res, 405, 'Método no permitido');
     }
+    if (route === 'paypal-webhook') return await paypalWebhook(req, res);
     return await admin(route, req, res);
   } catch (e) {
     console.error('[licenses]', route, e);

@@ -1,9 +1,9 @@
 <!--
-  Botones de suscripción de PayPal para tu página web: plan mensual (US$150/mes) y anual (US$1,812/año).
+  Botones de suscripción de PayPal para Direct: US$20 por usuario/mes o US$220 por usuario/año.
   Ambos siguen cobrando hasta que el cliente cancele.
   1) Reemplaza TU_CLIENT_ID por el «Client ID» de tu app de PayPal (el mismo entorno donde creaste los planes).
-  2) Reemplaza P-MENSUAL-XXXXXXXX y P-ANUAL-XXXXXXXX por los «Plan ID» de cada plan
-     (PayPal → Productos y servicios → Suscripciones → Planes).
+  2) Los planes activos son P-40C63856H2223050UNLRQ22A (mensual) y
+     P-3Y610531YH220333YNLRQ22I (anual, con un mes gratis).
   3) Pega este bloque donde quieras mostrar los botones.
   Cuando el cliente paga, PayPal avisa a Direct (webhook), Direct crea su licencia y le manda por correo el enlace
   para crear su usuario y su contraseña. En cada cobro, la licencia se renueva hasta el siguiente cobro.
@@ -16,14 +16,15 @@
   .direct-plan .precio small{font-size:14px;font-weight:400;color:#666}
 </style>
 <div class="direct-planes" id="direct-planes">
+  <label>Usuarios (1 a 10): <input id="direct-usuarios" type="number" min="1" max="10" value="1"></label>
   <div class="direct-plan">
     <h3>Plan mensual</h3>
-    <div class="precio">US$150 <small>/ mes</small></div>
+    <div class="precio">US$20 <small>por usuario / mes</small></div>
     <div id="paypal-direct-mensual"></div>
   </div>
   <div class="direct-plan">
-    <h3>Plan anual</h3>
-    <div class="precio">US$1,812 <small>/ año</small></div>
+    <h3>Plan anual · un mes gratis</h3>
+    <div class="precio">US$220 <small>por usuario / año</small></div>
     <div id="paypal-direct-anual"></div>
   </div>
 </div>
@@ -33,16 +34,21 @@
 </p>
 <script src="https://www.paypal.com/sdk/js?client-id=TU_CLIENT_ID&vault=true&intent=subscription&currency=USD"></script>
 <script>
+  function cantidad() {
+    const n = Number(document.getElementById('direct-usuarios').value);
+    if (!Number.isInteger(n) || n < 1 || n > 10) throw new Error('Elige entre 1 y 10 usuarios.');
+    return n;
+  }
   function direct_boton(selector, planId) {
     paypal.Buttons({
       style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
-      createSubscription: function (data, actions) { return actions.subscription.create({ plan_id: planId }); },
+      createSubscription: function (data, actions) { return actions.subscription.create({ plan_id: planId, quantity: String(cantidad()) }); },
       onApprove: function () {
         document.getElementById('direct-planes').style.display = 'none';
         document.getElementById('paypal-direct-gracias').style.display = 'block';
       }
     }).render(selector);
   }
-  direct_boton('#paypal-direct-mensual', 'P-MENSUAL-XXXXXXXX');
-  direct_boton('#paypal-direct-anual', 'P-ANUAL-XXXXXXXX');
+  direct_boton('#paypal-direct-mensual', 'P-40C63856H2223050UNLRQ22A');
+  direct_boton('#paypal-direct-anual', 'P-3Y610531YH220333YNLRQ22I');
 </script>

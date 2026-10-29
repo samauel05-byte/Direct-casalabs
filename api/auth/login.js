@@ -73,8 +73,8 @@ module.exports = async (req, res) => {
       ]);
       if (!profile) return res.status(404).json({ error: 'Perfil no encontrado' });
       const license = await L.tenantState(profile.tenant_id);
-      if (license.blocked) return res.status(403).json({ error: license.message });
       const platformAdmin = await L.isPlatformAdmin(user.id);
+      if (license.blocked && !platformAdmin) return res.status(403).json({ error: license.message });
       // La config (incluido el verificador de bóveda) viaja con el login, pero
       // debe ser la de la firma del usuario, así que se lee ya con su tenant.
       const config = await db.getConfig(profile.tenant_id || null).catch(() => null);

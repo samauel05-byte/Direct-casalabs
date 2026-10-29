@@ -142,3 +142,19 @@ test('suspender y reactivar una firma', async () => {
   // Las firmas anteriores a las licencias no tienen vencimiento y siguen entrando igual.
   assert.equal((await login('oficial', 'Oficial#2026')).data.license.code, 'unlimited');
 });
+
+test('el administrador de la plataforma no se queda fuera si vence la licencia de su propia firma', async () => {
+  await db.query('delete from rate_limits');
+  const saveId = (await db.query("select id from direct_tenants where slug = 'save'")).rows[0].id;
+  try {
+    await db.query('update direct_tenants set license_until = $2 where id = $1', [saveId, new Date(Date.now() - 20 * 864e5)]); L.forget(saveId);
+    const root = await login('admin', 'Admin#2026');
+    assert.equal(root.status, 200, JSON.stringify(root.data));
+    assert.equal((await call('admin', 'GET', '/api/licenses/list')).status, 200, 'root sigue administrando las licencias');
+    const other = await login('oficial', 'Oficial#2026');
+    assert.equal(other.status, 403, 'los demás usuarios de la firma vencida sí quedan fuera');
+    assert.match(other.data.error, /venció/);
+  } finally {
+    await db.query('update direct_tenants set license_until = null where id = $1', [saveId]); L.forget(saveId);
+  }
+});

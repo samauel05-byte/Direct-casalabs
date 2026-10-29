@@ -162,6 +162,7 @@ async function paypalWebhook(req, res) {
   if (!PP.configured()) return fail(res, 503, 'PayPal no está configurado.');
   const event = req.body;
   if (!event || typeof event !== 'object' || !event.id || !event.event_type) return fail(res, 400, 'Aviso inválido');
+  console.log('[paypal] aviso recibido:', event.event_type, event.id);
   if (!await PP.verifyWebhook(req.headers, event)) return fail(res, 400, 'Firma inválida');
 
   const done = await supabase.from('direct_paypal_events').select('event_id').eq('event_id', event.id).maybeSingle();
@@ -177,6 +178,7 @@ async function paypalWebhook(req, res) {
     result = 'estado actualizado';
   }
   await supabase.from('direct_paypal_events').insert({ event_id: event.id, event_type: event.event_type });
+  console.log('[paypal] aviso procesado:', event.event_type, event.id, '→', result);
   return res.json({ ok: true, result });
 }
 

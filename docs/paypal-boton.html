@@ -1,0 +1,26 @@
+<!--
+  Botón de suscripción mensual de PayPal para tu página web.
+  1) Reemplaza TU_CLIENT_ID por el «Client ID» de tu app de PayPal (modo live; en pruebas, el de sandbox).
+  2) Reemplaza P-XXXXXXXXXXXXXXXXXXXXXXXX por el «Plan ID» de tu plan mensual (PayPal → Productos → Planes de suscripción).
+  3) Pega este bloque donde quieras mostrar el botón.
+  Cuando el cliente paga, PayPal avisa a Direct (webhook), Direct crea su licencia y le manda por correo el enlace
+  para crear su usuario y su contraseña. Cada mes, el cobro renueva su licencia solo.
+-->
+<div id="paypal-direct-boton" style="max-width:380px"></div>
+<p id="paypal-direct-gracias" style="display:none;font-family:system-ui,sans-serif">
+  ¡Gracias! Te enviamos un correo con el enlace para crear tu usuario y tu contraseña de Direct.
+  Si no lo ves en unos minutos, revisa spam o escríbenos.
+</p>
+<script src="https://www.paypal.com/sdk/js?client-id=TU_CLIENT_ID&vault=true&intent=subscription&currency=USD"></script>
+<script>
+  paypal.Buttons({
+    style: { shape: 'rect', color: 'blue', layout: 'vertical', label: 'subscribe' },
+    createSubscription: function (data, actions) {
+      return actions.subscription.create({ plan_id: 'P-XXXXXXXXXXXXXXXXXXXXXXXX' });
+    },
+    onApprove: function () {
+      document.getElementById('paypal-direct-boton').style.display = 'none';
+      document.getElementById('paypal-direct-gracias').style.display = 'block';
+    }
+  }).render('#paypal-direct-boton');
+</script>

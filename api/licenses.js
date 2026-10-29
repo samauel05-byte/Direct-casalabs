@@ -134,7 +134,8 @@ async function syncSubscription(subId, eventType) {
     const name = `${first} ${last}`.trim() || email.split('@')[0];
     if (!email) throw new Error('La suscripción no trae correo del cliente');
     let planName = null; try { planName = (await PP.getPlan(sub.plan_id)).name; } catch { /* se usa el id */ }
-    const info = PP.planInfo(sub.plan_id, planName);
+    const info = PP.planInfo(sub.plan_id, planName, sub.quantity);
+    if (!info) return 'ignorada (plan o cantidad no autorizados)';
     const until = paidUntil && paidUntil > new Date() ? paidUntil : addMonths(new Date(), 1);
     const issued = await issue({ customer_name: name.length >= 2 ? name : 'Cliente PayPal', customer_email: email, plan: info.plan, months: 1, max_users: info.maxUsers, note: `PayPal ${subId}`,
       source: 'paypal', paypal_subscription_id: subId, paypal_status: sub.status, paid_until: until.toISOString() }, null);

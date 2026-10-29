@@ -5,9 +5,15 @@ const XLSX = require('xlsx');
 
 const { subtle } = webcrypto;
 const BASE_URL = 'https://app.casalabs.com.do';
-const ADMIN_USER = 'root';
-const ADMIN_PASS = '050700';
-const EXCEL_PATH = '/root/.claude/uploads/16fc45d8-96de-5e25-9879-9e6b37aae4e2/182d0384-PARA_SUBIR.xlsx';
+// Credenciales y archivo por entorno/argumento; nunca escritos en el código.
+//   DIRECT_ADMIN_USER=root DIRECT_ADMIN_PASS=... node upload-companies.mjs ruta/al/archivo.xlsx
+const ADMIN_USER = process.env.DIRECT_ADMIN_USER || 'root';
+const ADMIN_PASS = process.env.DIRECT_ADMIN_PASS;
+const EXCEL_PATH = process.argv[2] || process.env.EXCEL_PATH;
+if (!ADMIN_PASS || !EXCEL_PATH) {
+  console.error('Uso: DIRECT_ADMIN_PASS=... node upload-companies.mjs <archivo.xlsx>  (opcional: DIRECT_ADMIN_USER, por defecto root)');
+  process.exit(1);
+}
 
 const b64enc = (bytes) => Buffer.from(bytes).toString('base64');
 const b64dec = (b64) => new Uint8Array(Buffer.from(b64, 'base64'));

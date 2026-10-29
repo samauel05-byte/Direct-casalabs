@@ -320,7 +320,7 @@
       return `<tr><td><b>${esc(t.name)}</b><div class="dx-muted dx-sm" style="margin:0">${esc(t.billing_email || t.slug)}</div></td>
         <td>${esc(t.license_plan || '—')}${t.paypal_subscription_id ? ' <span class="dx-chip dx-chip-ok">PayPal</span>' : ''}</td><td>${licFmt(t.license_until)}</td><td><span class="dx-chip ${cls}">${esc(lbl)}</span></td>
         <td class="dx-mono">${t.users}${t.max_users ? ' / ' + t.max_users : ''}</td>
-        <td style="white-space:nowrap">${t.license_until || !slug ? `<button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="1">+1 mes</button><button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="12">+12</button>` : ''}
+        <td style="white-space:nowrap">${t.license_until || !slug ? `<button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="1" data-name="${esc(t.name)}">+1 mes</button><button class="back-btn" style="margin:0 4px 0 0" data-lic="extend" data-id="${t.id}" data-m="12" data-name="${esc(t.name)}">+12 meses</button>` : ''}
         ${slug ? '' : t.license_status === 'suspended' ? `<button class="back-btn" style="margin:0" data-lic="resume" data-id="${t.id}">Reactivar</button>` : `<button class="back-btn" style="margin:0;color:var(--danger)" data-lic="suspend" data-id="${t.id}">Suspender</button>`}</td></tr>`; }).join('');
     const licRows = lics.map(l => { const [lbl, cls] = stLbl[l.status] || [l.status, '']; const expired = l.status === 'pending' && new Date(l.link_expires_at) < new Date();
       return `<tr><td><b>${esc(l.customer_name)}</b><div class="dx-muted dx-sm" style="margin:0">${esc(l.customer_email)}</div></td><td>${esc(l.plan || '—')}${l.source === 'paypal' ? ` <span class="dx-chip ${/^(CANCELLED|SUSPENDED|EXPIRED|PAYMENT_FAILED)$/.test(l.paypal_status || '') ? 'dx-chip-warn' : 'dx-chip-ok'}">PayPal${l.paypal_status ? ' · ' + esc(String(l.paypal_status).toLowerCase()) : ''}</span>` : ''}</td><td>${l.source === 'paypal' ? 'mensual' : l.months + ' m'}${l.max_users ? ' · ' + l.max_users + ' usr.' : ''}</td>
@@ -339,7 +339,7 @@
         <button class="btn btn-pri" id="lic-create">Emitir y enviar enlace</button> <span id="lic-msg" class="dx-muted"></span>
         <div id="lic-link" style="margin-top:10px"></div></div>
       <div class="dx-card" style="margin-top:14px"><div class="dx-h">Firmas (${tenants.length})</div><div class="table-wrap"><table class="dx-table"><tr><th>Firma</th><th>Plan</th><th>Vence</th><th>Estado</th><th>Usuarios</th><th></th></tr>${tenantRows || '<tr><td colspan="6" class="dx-muted">Sin firmas.</td></tr>'}</table></div>
-        <p class="dx-muted dx-sm" style="margin-top:8px">Pasado el vencimiento hay ${d.graceDays} días de gracia; luego la firma no puede entrar (sus datos se conservan). Tu firma no vence.</p></div>
+        <p class="dx-muted dx-sm" style="margin-top:8px">Pasado el vencimiento hay ${d.graceDays} días de gracia; luego la firma no puede entrar (sus datos se conservan). La firma de la plataforma no se puede suspender y <b>root</b> siempre puede entrar, aunque su licencia venza.</p></div>
       <div class="dx-card" style="margin-top:14px"><div class="dx-h">Licencias emitidas (${lics.length}${pending.length ? ' · ' + pending.length + ' pendientes' : ''})</div><div class="table-wrap"><table class="dx-table"><tr><th>Cliente</th><th>Plan</th><th>Duración</th><th>Estado</th><th>Emitida</th><th></th></tr>${licRows || '<tr><td colspan="6" class="dx-muted">Aún no has emitido licencias.</td></tr>'}</table></div></div>`;
     const showLink = (link, sent) => { const box = document.getElementById('lic-link'); box.innerHTML = `<div class="dx-card dx-alert" style="border-color:rgba(16,185,129,.4);background:rgba(16,185,129,.07)"><b>${sent ? 'Correo enviado.' : 'Correo no enviado: copia el enlace y mándalo al cliente.'}</b><div class="dx-mono dx-sm" style="word-break:break-all;margin:6px 0">${esc(link)}</div><button class="back-btn" id="lic-copy" style="margin:0">Copiar enlace</button></div>`;
       document.getElementById('lic-copy').onclick = () => { navigator.clipboard?.writeText(link).then(() => toast('Enlace copiado', 'ok')).catch(() => {}); }; };
@@ -351,6 +351,7 @@
     };
     root.querySelectorAll('[data-lic]').forEach(b => b.addEventListener('click', async () => {
       const act = b.dataset.lic, id = b.dataset.id;
+      if (act === 'extend' && !confirm(`¿Sumar ${b.dataset.m} mes(es) a la licencia de «${b.dataset.name}»? Se mueve su fecha de vencimiento.`)) return;
       if (act === 'suspend' && !confirm('¿Suspender esta firma? Sus usuarios no podrán entrar hasta que la reactives.')) return;
       if (act === 'revoke' && !confirm('¿Anular esta licencia pendiente?')) return;
       try {

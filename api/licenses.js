@@ -199,7 +199,7 @@ function cleanLicense(b) {
   if (name.length < 2 || name.length > 160) return { error: 'Escribe el nombre del cliente.' };
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 160) return { error: 'El correo del cliente no es válido.' };
   if (!(months >= 1 && months <= 36)) return { error: 'Los meses de licencia deben ser de 1 a 36.' };
-  if (maxUsers !== null && !(maxUsers >= 1 && maxUsers <= 500)) return { error: 'El máximo de usuarios debe ser de 1 a 500.' };
+  if (maxUsers !== null && !(Number.isSafeInteger(maxUsers) && maxUsers >= 1)) return { error: 'El máximo de usuarios debe ser un número entero desde 1 (o vacío = sin tope).' };
   return { row: { customer_name: name, customer_email: email, months, max_users: maxUsers, plan, note: typeof b.note === 'string' ? b.note.slice(0, 300) : null } };
 }
 

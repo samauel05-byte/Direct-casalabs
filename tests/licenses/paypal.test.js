@@ -121,6 +121,23 @@ test('cancelar o fallar el cobro no quita lo ya pagado; una suspensión manual d
   assert.equal((await db.query('select license_status from direct_tenants where id = $1', [state.tenantId])).rows[0].license_status, 'suspended');
 });
 
+test('planes por usuario: la cantidad pagada no tiene tope y una cantidad inválida se ignora', async () => {
+  const mk = (id, qty) => { subs[id] = { id, status: 'ACTIVE', plan_id: 'P-40C63856H2223050UNLRQ22A', quantity: qty, subscriber: { email_address: `${id.toLowerCase()}@firma.com`, name: { given_name: 'Cliente' } }, billing_info: { next_billing_time: new Date(Date.now() + 30 * day).toISOString() } }; return hook({ id: 'EV-' + id, event_type: 'BILLING.SUBSCRIPTION.ACTIVATED', resource: { id } }); };
+  for (const [id, qty] of [['U-25', '25'], ['U-600', '600'], ['U-5000', '5000']]) {
+    assert.equal((await mk(id, qty)).status, 200);
+    assert.equal((await db.query('select max_users, plan from direct_licenses where paypal_subscription_id = $1', [id])).rows[0].max_users, Number(qty));
+  }
+  for (const [id, qty] of [['U-0', '0'], ['U-NEG', '-3'], ['U-ABC', 'abc'], ['U-FRAC', '2.5']]) {
+    const r = await mk(id, qty); assert.equal(r.status, 200);
+    assert.match(r.data.result, /no autorizados/);
+    assert.equal((await db.query('select count(*)::int n from direct_licenses where paypal_subscription_id = $1', [id])).rows[0].n, 0, `cantidad ${qty} no crea licencia`);
+  }
+  // Emitida a mano también sin tope.
+  const c = await call('admin', 'POST', '/api/licenses/create', { customer_name: 'Cliente Grande', customer_email: 'grande@firma.com', months: 1, max_users: 2500, send_email: false });
+  assert.equal(c.status, 201);
+  assert.equal((await call('admin', 'POST', '/api/licenses/create', { customer_name: 'Cliente Cero', customer_email: 'cero@firma.com', months: 1, max_users: 0, send_email: false })).status, 400);
+});
+
 test('el panel de root informa que PayPal está configurado y marca las licencias de PayPal', async () => {
   const d = (await call('admin', 'GET', '/api/licenses/list')).data;
   assert.equal(d.paypalConfigured, true);

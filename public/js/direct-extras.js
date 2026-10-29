@@ -334,7 +334,7 @@
           <div class="field"><label>Correo</label><input id="lic-email" type="email" placeholder="cliente@correo.com"></div>
           <div class="field"><label>Plan (etiqueta)</label><input id="lic-plan" placeholder="Ej: Completo"></div>
           <div class="field"><label>Meses</label><input id="lic-months" type="number" min="1" max="36" value="1"></div>
-          <div class="field"><label>Máx. usuarios</label><input id="lic-max" type="number" min="1" max="500" placeholder="sin tope"></div>
+          <div class="field"><label>Máx. usuarios</label><input id="lic-max" type="number" min="1" placeholder="sin tope"></div>
         </div>
         <button class="btn btn-pri" id="lic-create">Emitir y enviar enlace</button> <span id="lic-msg" class="dx-muted"></span>
         <div id="lic-link" style="margin-top:10px"></div></div>

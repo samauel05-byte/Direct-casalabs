@@ -16,7 +16,7 @@
   .direct-plan .precio small{font-size:14px;font-weight:400;color:#666}
 </style>
 <div class="direct-planes" id="direct-planes">
-  <label>Usuarios (1 a 10): <input id="direct-usuarios" type="number" min="1" max="10" value="1"></label>
+  <label>Usuarios: <input id="direct-usuarios" type="number" min="1" step="1" value="1"></label>
   <div class="direct-plan">
     <h3>Plan mensual</h3>
     <div class="precio">US$20 <small>por usuario / mes</small></div>
@@ -36,7 +36,7 @@
 <script>
   function cantidad() {
     const n = Number(document.getElementById('direct-usuarios').value);
-    if (!Number.isInteger(n) || n < 1 || n > 10) throw new Error('Elige entre 1 y 10 usuarios.');
+    if (!Number.isInteger(n) || n < 1) throw new Error('Elige al menos 1 usuario.');
     return n;
   }
   function direct_boton(selector, planId) {

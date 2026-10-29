@@ -96,10 +96,10 @@ td select:focus{border-color:var(--acc2)}
 .rm-btn:hover{color:var(--red)}
 
 /* ── Resumen tiles ── */
-.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:11px;margin-bottom:14px}
-.tile{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:13px 15px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:11px;margin-bottom:14px}
+.tile{background:var(--surf);border:1px solid var(--bdr);border-radius:12px;padding:13px 14px}
 .tile-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--fg3);margin-bottom:5px}
-.tile-val{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;word-break:break-all}
+.tile-val{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
 .tile-val.green{color:var(--green)}
 .tile-val.red{color:var(--red)}
 .tile-val.warn{color:var(--warn)}

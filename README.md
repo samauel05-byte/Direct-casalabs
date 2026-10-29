@@ -41,7 +41,7 @@ Direct abre cada portal en una pestaña nueva. Según el portal, el acceso es de
 | Cámara de Comercio (Firma digital) | `camara` | Formulario público por relay |
 | Digisign — Facturación electrónica | `digisign` | Abrir directo |
 | Correo GD (Webmail) | `gdmail` | Abrir directo |
-| Nexo — Gestor de pendientes | `nexo` | Solo abre |
+| Nexo — Gestor de pendientes (`https://nexo.casalabs.com.do/`) | `nexo` | Solo abre |
 | Citrus — Pagos y servicios | `citrus` | Auto-login por relay |
 
 **SISALRIL** inicia sesión con Keycloak en un dominio aparte (`idp.sisalril.gob.do`) que rechaza cualquier origen que no sea el suyo, por lo que el auto-login por relay no es posible. Direct ofrece un panel semi-automático de 2 pasos: copia el correo al abrir y la contraseña con un toque, para pegarlos en el portal real.

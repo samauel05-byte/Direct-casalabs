@@ -1701,8 +1701,10 @@ function process607(rows, overrides) {
   const invalidNCF=data.filter(r=>!r._ncfRaw||!(/^(?:B\d{10}|E\d{12})$/.test(r._ncfRaw))).length;
   const duplicateNCF=[...ncfSeen.values()].filter(n=>n>1).reduce((n,count)=>n+count-1,0);
   const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
+  const cRows=data.filter(r=>r._constr18);
+  const constr={count:cRows.length,facturado:r2(cRows.reduce((n,r)=>n+(Math.abs(r._total)-Math.abs(r._itbis))*r._fiscalSign,0)),gravado:r2(sum(cRows,'_gravado')),exento:r2(sum(cRows,'_exento')),itbis:r2(sum(cRows,'_itbis'))};
   const facturas=data.map((p,i)=>({i,ncf:p._ncfRaw,fecha:cm.fecha?String(p[cm.fecha]==null?'':p[cm.fecha]):'',rnc:cm.rnc?String(p[cm.rnc]==null?'':p[cm.rnc]):'',total:p._total,itbis:p._itbis,auto:p._tasaAuto,tasa:(ov[i]==='C18'||Number(ov[i])>0)&&Math.abs(p._itbis)>0?ov[i]:0}));
-  return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), facturas, overrides:ov };
+  return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,constr,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), facturas, overrides:ov };
 }
 
 function processCardReport(rows, provider) {
@@ -2208,7 +2210,12 @@ function updateIT1() {
   const comprasHtml=has606?`<div class="cuadre-group-title">Compras por tipo de comprobante</div>${cuadreRows([...comprasNcfRows,{lbl:'Total compras facturadas (neto de notas de crédito)',amt:compraTotal},{lbl:'ITBIS facturado en compras',amt:s6.totItbis},{lbl:'ITBIS por adelantar (crédito fiscal)',amt:s6.totAdel},...(s6.totCosto?[{lbl:'ITBIS llevado al costo',amt:s6.totCosto}]:[]),...(s6.totRet?[{lbl:'ITBIS retenido',amt:s6.totRet}]:[]),{lbl:'Impuesto Selectivo al Consumo',source:'informativo · no suma al ITBIS',amt:s6.totIsc||0,muted:true},{lbl:'Otros impuestos / tasas',source:'informativo · no suma al ITBIS',amt:s6.totOtrosImp||0,muted:true},...(s6.totPropina?[{lbl:'Propina legal',source:'informativo · no suma al ITBIS',amt:s6.totPropina,muted:true}]:[])])}`
     +`<div class="cuadre-group-title">Compras por forma de pago</div>${cuadreRows(comprasPagoRows)}${cp.hasPago?'':'<div class="field-help" style="margin:6px 0">El archivo del 606 no trae la columna «Forma de Pago»; por eso no se puede repartir.</div>'}`
     +(cp.hasTipo?`<div class="cuadre-group-title">Compras por tipo de bienes y servicios</div>${cuadreRows(comprasTipoRows)}`:''):'';
-  const ventasHtml=has607?`<div class="cuadre-group-title">Ventas por tipo de comprobante</div>${cuadreRows(ncfRows)}<div class="cuadre-group-title">Ventas por forma de pago</div>${cuadreRows(paymentRows)}`:'';
+  const co=s7.constr||{facturado:0},coM=r2(co.facturado*0.10);
+  const constrHtml=has607&&co.facturado>0?`<div class="cuadre-group-title">Operaciones de constructoras (Anexo A, casillas 34–38)</div>${cuadreRows([
+    {lbl:'34 · Dirección técnica — Total facturado (sin ITBIS)',amt:co.facturado,source:`${fmtI(co.count)} factura${co.count!==1?'s':''} con «18 % Construcción»`},
+    {lbl:'34 · Dirección técnica — Monto sujeto a ITBIS (10 %)',amt:coM},
+    {lbl:'38 · Operaciones no sujetas a ITBIS por servicios de construcción',amt:r2(Math.max(co.facturado-coM,0))}])}`:'';
+  const ventasHtml=has607?`<div class="cuadre-group-title">Ventas por tipo de comprobante</div>${cuadreRows(ncfRows)}<div class="cuadre-group-title">Ventas por forma de pago</div>${cuadreRows(paymentRows)}${constrHtml}`:'';
   $('cuadre-body').innerHTML=`${ventasHtml}${comprasHtml}<div class="cuadre-group-title">Liquidación del ITBIS</div>${cuadreRows(taxRows)}`;
   const isPagar=resultado>0, isEven=resultado===0;
   $('ct-lbl').textContent=isEven?'CUADRE EXACTO':isPagar?'ITBIS A PAGAR':'SALDO A FAVOR';
@@ -2412,20 +2419,26 @@ async function exportIT1DGII() {
     if(Math.abs(sales.discrepancy)>.01) throw new Error('Las formas de pago no concilian con las ventas brutas. Revisa el 607 antes de exportar.');
     const anexoNumbers={W28:pay.cash,W29:pay.transfer,W30:pay.card,W31:pay.credit,W32:pay.bonds,W33:pay.swap,W34:pay.other,W38:r2(s7.totGrav+s7.totExento+consumer.net+auditCard.additionalBase),W47:cardRet,W49:s7.totRet,O80:s6.credBien,P81:s6.credServ,T80:imports};
     Object.entries(anexoNumbers).forEach(([cell,value])=>{anexo=setTemplateCell(anexo,cell,value);});
-    const base18=r2((bt.t18?.monto||0)+consumer.taxable+auditCard.additionalBase);
-    const totalExento=r2(s7.totExento+consumer.exempt);
+    // Operaciones de constructoras (Anexo A, casillas 34–38): el total facturado sin ITBIS de las facturas
+    // «18 % Construcción» va en la casilla 34 (Dirección técnica); el monto sujeto es el 10 % (fórmula del
+    // formulario) y la casilla 38 (no sujetas) pasa a la casilla 20 del IT-1, por eso se descuenta del exento.
+    const co=s7.constr||{facturado:0,exento:0},coT=r2(co.facturado),coM=r2(coT*0.10),coNo=r2(Math.max(coT-coM,0));
+    if(coT>0){ anexo=setTemplateCell(anexo,'T56',coT); }
+    const base18=r2((bt.t18?.monto||0)+consumer.taxable+auditCard.additionalBase+coM);
+    const totalExento=r2(Math.max(s7.totExento+consumer.exempt-(co.exento||0),0));
     const it1Numbers={V16:0,V17:0,V18:totalExento,V19:0,V22:0,V26:base18,V27:bt.t16?.monto||0,V28:bt.t9?.monto||0,V29:bt.t8?.monto||0,V30:0,V45:0,V46:saldo,V48:abonos,V49:0};
     Object.entries(it1Numbers).forEach(([cell,value])=>{it1=setTemplateCell(it1,cell,value);});
     const anexoTotal=r2(ncf.credito.monto+ncf.consumo.monto+ncf.debito.monto+ncf.unico.monto+ncf.especial.monto+ncf.gobierno.monto+ncf.exportacion.monto+ncf.otros.monto-ncf.notaCredito.monto);
     const retenciones=r2(s7.totRet+cardRet),creditoTotal=r2(s6.credBien+s6.credServ+imports);
     const anexoCaches={W25:anexoTotal,W35:sales.total,W44:anexoTotal,W53:retenciones,O82:s6.credBien,P82:s6.credServ,T82:imports,W82:creditoTotal,O87:s6.credBien,P87:s6.credServ,T87:imports,W87:creditoTotal};
     Object.entries(anexoCaches).forEach(([cell,value])=>{anexo=setFormulaCache(anexo,cell,value);});
-    const exento=totalExento,gravado=r2(Math.max(anexoTotal-exento,0));
+    [['W56',coM],['T59',coT],['W59',coM],['W60',coNo]].forEach(([cell,value])=>{anexo=setFormulaCache(anexo,cell,value);});
+    const exento=r2(totalExento+coNo),gravado=r2(Math.max(anexoTotal-exento,0));
     const debitoCalculado=r2((s7.totItbis||0)+consumer.itbis+auditCard.additionalItbis);
     const impuesto=r2(Math.max(debitoCalculado-creditoTotal,0)),saldoPeriodo=r2(Math.max(creditoTotal-debitoCalculado,0));
     const diferencia=r2(Math.max(impuesto-saldo-retenciones-abonos,0));
     const nuevoSaldo=r2(Math.max(saldoPeriodo+saldo+retenciones+abonos-impuesto,0));
-    const it1Caches={V14:anexoTotal,V23:exento,V25:gravado,V33:r2(base18*.18),V34:r2((bt.t16?.monto||0)*.16),V35:r2((bt.t9?.monto||0)*.09),V36:r2((bt.t8?.monto||0)*.08),V37:0,V38:debitoCalculado,V39:s6.credBien,V40:s6.credServ,V41:imports,V42:creditoTotal,V43:impuesto,V44:saldoPeriodo,V47:retenciones,V50:diferencia,V51:nuevoSaldo,V54:0,V55:0,V59:diferencia,V96:diferencia};
+    const it1Caches={V14:anexoTotal,V20:coNo,V23:exento,V25:gravado,V33:r2(base18*.18),V34:r2((bt.t16?.monto||0)*.16),V35:r2((bt.t9?.monto||0)*.09),V36:r2((bt.t8?.monto||0)*.08),V37:0,V38:debitoCalculado,V39:s6.credBien,V40:s6.credServ,V41:imports,V42:creditoTotal,V43:impuesto,V44:saldoPeriodo,V47:retenciones,V50:diferencia,V51:nuevoSaldo,V54:0,V55:0,V59:diferencia,V96:diferencia};
     Object.entries(it1Caches).forEach(([cell,value])=>{it1=setFormulaCache(it1,cell,value);});
     zip.file('xl/worksheets/sheet1.xml',anexo);
     zip.file('xl/worksheets/sheet2.xml',it1);

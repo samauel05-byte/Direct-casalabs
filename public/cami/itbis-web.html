@@ -1624,6 +1624,13 @@ function process607(rows, overrides) {
     p._payBonds=cm.pago_bonos?Math.abs(cleanNum(r[cm.pago_bonos])):0;
     p._paySwap=cm.pago_permuta?Math.abs(cleanNum(r[cm.pago_permuta])):0;
     p._payOther=cm.pago_otras?Math.abs(cleanNum(r[cm.pago_otras])):0;
+    // El «Monto Facturado» del 607 de la DGII va SIN ITBIS (el ITBIS es otra columna) y las formas de pago suman
+    // monto + ITBIS. Si las formas de pago lo confirman, el total de la factura es monto + ITBIS (no se resta
+    // el ITBIS del monto ni se reporta como «diferencia» al cuadrar con las formas de pago).
+    const payTot=p._payCash+p._payTransfer+p._payCard+p._payCredit+p._payBonds+p._paySwap+p._payOther;
+    if(payTot>0&&p._itbis>0&&Math.abs(Math.abs(p._total)+p._itbis-payTot)<=Math.max(0.5,payTot*0.0005)&&Math.abs(Math.abs(p._total)-payTot)>Math.max(0.5,payTot*0.0005)){
+      p._total=Math.abs(p._total)+p._itbis;
+    }
     if(p._fiscalSign<0){
       p._serv=-Math.abs(p._serv);p._bien=-Math.abs(p._bien);p._total=-Math.abs(p._total);
       p._itbis=-Math.abs(p._itbis);p._ret=-Math.abs(p._ret);

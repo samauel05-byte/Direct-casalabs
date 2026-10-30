@@ -217,13 +217,18 @@
     if (sid) h['X-Direct-Session'] = sid;
     return h;
   }
-  async function api(method, path, body){
+  async function api(method, path, body, retried){
     const res = await fetch('/api/nomina/'+path, {
       method, headers: { ...authHeaders(), ...(body!==undefined?{'Content-Type':'application/json'}:{}) },
       body: body!==undefined ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(()=> ({}));
-    if (!res.ok){ const e = new Error(data.error || ('Error '+res.status)); e.status = res.status; throw e; }
+    // Sesión vencida mientras se trabajaba: pedir a Direct un token renovado y reintentar una vez.
+    if (res.status===401 && !retried && window.serpRequestToken){ const t = await window.serpRequestToken(); if (t) return api(method, path, body, true); }
+    if (!res.ok){
+      const msg = res.status===401 ? 'Tu sesión venció o se abrió tu usuario en otro lugar. Abre Direct, inicia sesión y vuelve a pulsar Guardar (lo escrito en esta pantalla sigue aquí).' : (data.error || ('Error '+res.status));
+      const e = new Error(msg); e.status = res.status; throw e;
+    }
     return data;
   }
   let toastT;

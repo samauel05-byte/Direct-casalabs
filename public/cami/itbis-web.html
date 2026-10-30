@@ -2035,7 +2035,12 @@ function calculateIT1({debito,credito,importaciones,retenciones,saldo,abonos}) {
 function get607GrossTotal(s7) {
   const base=r2((s7.totGrav||0)+(s7.totExento||0));
   const grossFromBase=r2(base+(s7.totItbis||0));
-  return Math.abs((s7.totTotal||0)-grossFromBase)<=Math.abs((s7.totTotal||0)-base)?r2(s7.totTotal):grossFromBase;
+  const gross=Math.abs((s7.totTotal||0)-grossFromBase)<=Math.abs((s7.totTotal||0)-base)?r2(s7.totTotal):grossFromBase;
+  // Si las formas de pago del 607 suman bruto + ITBIS, el monto facturado venía SIN ITBIS (formato DGII).
+  const ps=s7.paymentSummary,paid=ps?r2(['cash','transfer','card','credit','bonds','swap','other'].reduce((n,k)=>n+(ps[k]||0),0)):0;
+  const tol=Math.max(0.5,paid*0.0005);
+  if(paid>0&&(s7.totItbis||0)>0&&Math.abs(paid-(gross+s7.totItbis))<=tol&&Math.abs(paid-gross)>tol)return r2(gross+s7.totItbis);
+  return gross;
 }
 
 function getConsumerSummary() {

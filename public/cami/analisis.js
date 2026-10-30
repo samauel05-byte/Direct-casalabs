@@ -95,8 +95,10 @@
       for (const [id, v] of Object.entries(snap.inputs || {})) { const el = $(id); if (!el || skipInput(el)) continue; if (el.type === 'checkbox' || el.type === 'radio') el.checked = !!v; else el.value = v; }
       if (snap.currency && CURRENCIES[snap.currency] && snap.currency !== DISPLAY_CURRENCY) { DISPLAY_CURRENCY = snap.currency; $('currency-select').value = snap.currency; }
       const n = snap.names || {}, S = snap.STATE || {}, C = snap.CARD_STATE || {};
-      if (S['606']) { STATE['606'] = S['606']; render606(STATE['606'], n['606'] || 'Archivo 606'); }
-      if (S['607']) { STATE['607'] = S['607']; render607(STATE['607'], n['607'] || 'Archivo 607'); }
+      // Los análisis guardados se recalculan con las reglas actuales (a partir de las filas originales).
+      const fresh = (d, fn) => { try { return d && d.allRows && d.allRows.length ? Object.assign({}, d, fn(d.allRows, d.overrides || {})) : d; } catch (e) { return d; } };
+      if (S['606']) { STATE['606'] = fresh(S['606'], rows => process606(rows)); render606(STATE['606'], n['606'] || 'Archivo 606'); }
+      if (S['607']) { STATE['607'] = fresh(S['607'], (rows, ov) => process607(rows, ov)); render607(STATE['607'], n['607'] || 'Archivo 607'); }
       if (C.cardnet) { CARD_STATE.cardnet = C.cardnet; renderCardReport('CardNET', CARD_STATE.cardnet, n.cardnet || 'Reporte CardNET'); }
       if (C.azul) { CARD_STATE.azul = C.azul; renderCardReport('Azul', CARD_STATE.azul, n.azul || 'Reporte Azul'); }
       if (snap.IR2_STATE) {

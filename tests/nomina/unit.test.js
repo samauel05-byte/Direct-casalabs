@@ -103,3 +103,14 @@ test('compute: fórmulas con tasas de ajustes (p_*)', () => {
   const pm = paramsFromSettings({ ...st, period_type:'mensual' });
   assert.equal(computeRow(cols, {sueldo:55000}, pm).cells.afp, 1578.5);
 });
+
+test('imponible: «Otros (+)» no se duplica cuando se cobra el mes entero', () => {
+  // Misma fórmula de las empresas: con cobra_entero=1 el período ya trae el mes completo,
+  // así que el extra no se multiplica por p_div (antes salía 113,806.16 en vez de 65,606.40).
+  const imp = compile('round(sueldo_mensual-(sfs+pension)*p_div/(1+cobra_entero)+otros_mas*p_div/(1+cobra_entero),2)');
+  const sfs = 562.40, pension = 530.96;
+  const base = { sueldo_mensual: 18500, sfs, pension, p_div: 2, otros_mas: 48199.76 };
+  assert.equal(imp.evaluate({ ...base, cobra_entero: 1 }), 65606.4);
+  // Quincenal normal (cobra_entero=0): el extra se sigue anualizando como siempre.
+  assert.equal(imp.evaluate({ ...base, sfs: 304, pension: 287, otros_mas: 591, sueldo_mensual: 20000, cobra_entero: 0 }), 20000 - (304 + 287) * 2 + 591 * 2);
+});

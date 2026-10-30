@@ -856,11 +856,11 @@ tbody tr:nth-child(even){background:var(--surface-2);}
   <div class="dash" id="da-607" hidden>
     <div class="slabel">Tipo de ITBIS por factura</div>
     <div class="manual-card" id="tipo-card" style="margin-bottom:24px;border-top-color:var(--violet);">
-      <div class="field-help">Elige el tipo de ITBIS de cada factura (por ejemplo <strong>10 % Construcción</strong>). CAMI toma el ITBIS facturado, calcula la base gravada con esa tasa y deja el resto como exento; los totales, las tarjetas por tasa y el IT-1 se recalculan al instante. «Automático» deja la tasa que CAMI deduce del archivo.</div>
+      <div class="field-help">Elige el tipo de ITBIS de cada factura (por ejemplo <strong>18 % Construcción</strong>, que es el 18 % aplicado solo a la parte gravada de la obra). CAMI toma el ITBIS facturado, calcula la base gravada con esa tasa y deja el resto como exento; los totales, las tarjetas por tasa y el IT-1 se recalculan al instante. «Automático» deja la tasa que CAMI deduce del archivo.</div>
       <div class="rv-tools">
         <input class="field-inp" id="tipo-q" type="search" placeholder="Buscar por NCF, RNC o fecha…" aria-label="Buscar facturas del 607">
         <select class="field-inp" id="tipo-f" aria-label="Filtrar facturas del 607"><option value="">Todas las facturas</option><option value="set">Con tipo asignado</option><option value="auto">Sin tipo asignado</option></select>
-        <select class="field-inp" id="tipo-bulk" aria-label="Tipo para aplicar a todas las filtradas"><option value="">Tipo para todas las filtradas…</option><option value="18">18 %</option><option value="16">16 %</option><option value="10">10 % Construcción</option><option value="9">9 %</option><option value="8">8 %</option></select>
+        <select class="field-inp" id="tipo-bulk" aria-label="Tipo para aplicar a todas las filtradas"><option value="">Tipo para todas las filtradas…</option><option value="18">18 %</option><option value="C18">18 % Construcción</option><option value="16">16 %</option><option value="9">9 %</option><option value="8">8 %</option></select>
         <button class="btn btn-primary" id="tipo-bulk-btn" style="background:var(--violet);">Aplicar a las filtradas</button>
         <button class="btn btn-ghost" id="tipo-clear">Quitar todos los tipos</button>
         <span class="rv-count" id="tipo-count"></span>
@@ -1649,20 +1649,21 @@ function process607(rows, overrides) {
     p._tasaAuto=p._tasa;
     // Tipo de ITBIS asignado a mano a esta factura: con el ITBIS facturado y la tasa elegida se
     // reconstruye la base gravada y el resto de la factura queda como exento.
-    const ovRate=Number(ov[idx])||0, itbisAbs=Math.abs(p._itbis);
+    const ovRaw=ov[idx], constr18=ovRaw==='C18', ovRate=constr18?18:(Number(ovRaw)||0), itbisAbs=Math.abs(p._itbis);
+    p._constr18=false;
     if (ovRate>0 && itbisAbs>0) {
       const gravAbs=r2(itbisAbs/(ovRate/100)), net=Math.abs(p._total)-itbisAbs;
       const base=gravAbs>net+1?Math.abs(p._total):Math.max(net,0);
-      p._tasa=ovRate; p._gravado=gravAbs*p._fiscalSign; p._exento=r2(Math.max(base-gravAbs,0))*p._fiscalSign;
+      p._constr18=constr18; p._tasa=ovRate; p._gravado=gravAbs*p._fiscalSign; p._exento=r2(Math.max(base-gravAbs,0))*p._fiscalSign;
     }
     if (cm.construccion) { const v=String(r[cm.construccion]||'').toLowerCase(); p._constr=v==='si'||v==='sí'||v==='1'||v==='true'||v==='construccion'; }
     else { p._constr=p._tasa===10; }
-    if (ovRate>0 && itbisAbs>0) p._constr=ovRate===10;
+    if (ovRate>0 && itbisAbs>0) p._constr=constr18||ovRate===10;
     return p;
   });
   const totTotal=r2(sum(data,'_total')),totGrav=r2(sum(data,'_gravado')),totExento=r2(sum(data,'_exento'));
   const totItbis=r2(sum(data,'_itbis')),totRet=r2(sum(data,'_ret'));
-  const tasa18=data.filter(r=>r._tasa===18),tasa16=data.filter(r=>r._tasa===16),tasa10=data.filter(r=>r._tasa===10),tasa9=data.filter(r=>r._tasa===9),tasa8=data.filter(r=>r._tasa===8);
+  const tasa18=data.filter(r=>r._tasa===18&&!r._constr18),tasa16=data.filter(r=>r._tasa===16),tasa10=data.filter(r=>r._tasa===10||r._constr18),tasa9=data.filter(r=>r._tasa===9),tasa8=data.filter(r=>r._tasa===8);
   const tasa0=data.filter(r=>r._tasa===0||(!r._tasa&&r._itbis===0));
   const byTasa={
     t18:{monto:r2(sum(tasa18,'_gravado')),itbis:r2(sum(tasa18,'_itbis')),count:tasa18.length},
@@ -1693,7 +1694,7 @@ function process607(rows, overrides) {
   const invalidNCF=data.filter(r=>!r._ncfRaw||!(/^(?:B\d{10}|E\d{12})$/.test(r._ncfRaw))).length;
   const duplicateNCF=[...ncfSeen.values()].filter(n=>n>1).reduce((n,count)=>n+count-1,0);
   const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
-  const facturas=data.map((p,i)=>({i,ncf:p._ncfRaw,fecha:cm.fecha?String(p[cm.fecha]==null?'':p[cm.fecha]):'',rnc:cm.rnc?String(p[cm.rnc]==null?'':p[cm.rnc]):'',total:p._total,itbis:p._itbis,auto:p._tasaAuto,tasa:Number(ov[i])>0&&Math.abs(p._itbis)>0?Number(ov[i]):0}));
+  const facturas=data.map((p,i)=>({i,ncf:p._ncfRaw,fecha:cm.fecha?String(p[cm.fecha]==null?'':p[cm.fecha]):'',rnc:cm.rnc?String(p[cm.rnc]==null?'':p[cm.rnc]):'',total:p._total,itbis:p._itbis,auto:p._tasaAuto,tasa:(ov[i]==='C18'||Number(ov[i])>0)&&Math.abs(p._itbis)>0?ov[i]:0}));
   return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), facturas, overrides:ov };
 }
 
@@ -1847,7 +1848,7 @@ function renderReview606(){
   $('rv-page').textContent=`Página ${RV.page+1} de ${pages}`;
   $('rv-prev').disabled=RV.page===0; $('rv-next').disabled=RV.page>=pages-1;
 }
-function tipoLabel(r){return r===10?'10 % Construcción':r+' %';}
+function tipoLabel(r){return r==='C18'?'18 % Construcción':r===10?'10 % Construcción':r+' %';}
 function renderTipo607(){
   const d=STATE['607']; if(d&&!d.facturas&&d.allRows)Object.assign(d,process607(d.allRows,d.overrides||{}));
   if(!d||!d.facturas)return;
@@ -1856,7 +1857,7 @@ function renderTipo607(){
   const list=all.filter(r=>(TIPO.f==='set'?r.tasa:TIPO.f==='auto'?!r.tasa:true)&&matchQ(r,q));
   const pages=Math.max(1,Math.ceil(list.length/RV_PAGE)); TIPO.page=Math.min(TIPO.page,pages-1);
   const rows=list.slice(TIPO.page*RV_PAGE,(TIPO.page+1)*RV_PAGE);
-  const opts=cur=>[['','Automático'],[18,'18 %'],[16,'16 %'],[10,'10 % Construcción'],[9,'9 %'],[8,'8 %']].map(([v,l])=>`<option value="${v}"${Number(v)===Number(cur||0)&&(v!==''||!cur)?' selected':''}>${l}</option>`).join('');
+  const opts=cur=>[['','Automático'],[18,'18 %'],['C18','18 % Construcción'],[16,'16 %'],[9,'9 %'],[8,'8 %'],...(cur===10?[[10,'10 % Construcción']]:[])].map(([v,l])=>`<option value="${v}"${String(v)===String(cur||'')?' selected':''}>${l}</option>`).join('');
   $('tipo-tb').innerHTML=rows.map(r=>`<tr><td>${r.i+1}</td><td>${escH(r.fecha)}</td><td>${escH(r.rnc)}</td><td>${escH(r.ncf)}</td><td style="text-align:right">${fmtM(r.total)}</td><td style="text-align:right">${fmtM(r.itbis)}</td><td>${Math.abs(r.itbis)>0?(r.auto?escH(r.auto)+' %':'—'):'Exento'}</td><td>${Math.abs(r.itbis)>0?`<select class="field-inp tipo-sel" data-i="${r.i}" style="min-width:150px;padding:5px 8px;">${opts(r.tasa)}</select>`:'<span style="color:var(--muted)">Sin ITBIS</span>'}</td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--muted)">No hay facturas con ese filtro.</td></tr>';
   $('tipo-count').textContent=`${fmtI(all.length)} facturas · ${fmtI(asg)} con tipo asignado · mostrando ${fmtI(list.length)}`;
   $('tipo-page').textContent=`Página ${TIPO.page+1} de ${pages}`;
@@ -1885,9 +1886,9 @@ function filteredTipo607(){
   on('tipo-f','change',e=>{TIPO.f=e.target.value;TIPO.page=0;renderTipo607();});
   on('tipo-prev','click',()=>{TIPO.page=Math.max(0,TIPO.page-1);renderTipo607();});
   on('tipo-next','click',()=>{TIPO.page++;renderTipo607();});
-  on('tipo-tb','change',e=>{const sel=e.target.closest('.tipo-sel'); if(!sel)return; setTipo607([[Number(sel.dataset.i),Number(sel.value)||0]]);});
+  on('tipo-tb','change',e=>{const sel=e.target.closest('.tipo-sel'); if(!sel)return; setTipo607([[Number(sel.dataset.i),sel.value==='C18'?'C18':(Number(sel.value)||0)]]);});
   on('tipo-bulk-btn','click',()=>{
-    const rate=Number($('tipo-bulk').value)||0; if(!rate){showToast('Elige primero el tipo de ITBIS.','err');return;}
+    const bv=$('tipo-bulk').value, rate=bv==='C18'?'C18':(Number(bv)||0); if(!rate){showToast('Elige primero el tipo de ITBIS.','err');return;}
     const list=filteredTipo607().filter(r=>Math.abs(r.itbis)>0); if(!list.length){showToast('No hay facturas con ITBIS en este filtro.','err');return;}
     if(!confirm(`¿Asignar ${tipoLabel(rate)} a ${list.length} factura${list.length!==1?'s':''}?`))return;
     setTipo607(list.map(r=>[r.i,rate]));
@@ -1913,7 +1914,7 @@ function render607(data, filename) {
     (bt.t16.count?kpiCard('ITBIS 16%',fmtM(bt.t16.itbis),'a',`${fmtM(bt.t16.monto)} gravado · ${fmtI(bt.t16.count)} fact.`):'')+
     (bt.t9.count?kpiCard('ITBIS 9%',fmtM(bt.t9.itbis),'a',`${fmtM(bt.t9.monto)} gravado · ${fmtI(bt.t9.count)} fact.`):'')+
     (bt.t8.count?kpiCard('ITBIS 8%',fmtM(bt.t8.itbis),'a',`${fmtM(bt.t8.monto)} gravado · ${fmtI(bt.t8.count)} fact.`):'')+
-    kpiCard('ITBIS 10% Constr.',fmtM(bt.t10.itbis),'t',`${fmtM(bt.t10.monto)} gravado · ${fmtI(bt.t10.count)} fact.`)+
+    kpiCard('ITBIS Construcción',fmtM(bt.t10.itbis),'t',`${fmtM(bt.t10.monto)} gravado · ${fmtI(bt.t10.count)} fact.`)+
     kpiCard('Exentos / No Grav.',fmtM(bt.t0.monto),'m',`${fmtI(bt.t0.count)} comprobante${bt.t0.count!==1?'s':''}`);
   $('ret-607').innerHTML=`
     <div class="ret-card">

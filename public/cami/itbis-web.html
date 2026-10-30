@@ -366,6 +366,13 @@ tbody tr:hover{background:var(--blue-lt);}
 .num{text-align:right;font-variant-numeric:tabular-nums;}
 #tb-sales-breakdown .total-row{font-weight:800;background:var(--blue-lt)!important;color:var(--blue-dk);border-top:2px solid var(--blue);}
 .tnote{font-size:.7rem;color:var(--muted);text-align:right;padding:6px 0;}
+.rv-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0;}
+.rv-tools .field-inp{width:auto;min-width:180px;}
+.rv-count{font-size:.72rem;color:var(--muted);margin-left:auto;}
+.rv-pager{display:flex;gap:12px;align-items:center;justify-content:center;padding:8px 0;font-size:.75rem;color:var(--muted);}
+.rv-flag{display:inline-block;margin:1px 3px 1px 0;padding:2px 7px;border-radius:10px;font-size:.62rem;font-weight:700;background:var(--amber-lt);color:#92400E;border:1px solid rgba(217,119,6,.3);}
+tr.rv-bad td{background:rgba(217,119,6,.08);}
+.rv-orig{margin:6px 0 24px;}.rv-orig summary{cursor:pointer;font-size:.75rem;color:var(--muted);padding:6px 0;}
 
 /* ── IT-1 module ── */
 .it1-body{padding:24px 28px 72px;max-width:860px;}
@@ -752,9 +759,21 @@ tbody tr:nth-child(even){background:var(--surface-2);}
     <div class="slabel">ITBIS Retenido a Proveedores</div>
     <div class="ret-grid" id="ret-606"></div>
 
-    <div class="slabel">Vista previa de datos</div>
-    <div class="table-wrap"><table><thead id="th-606"></thead><tbody id="tb-606"></tbody></table></div>
-    <p class="tnote" id="tn-606"></p>
+    <div class="slabel">Revisión de facturas</div>
+    <div class="manual-card" style="margin-bottom:18px;border-top-color:#0284C7;">
+      <div class="field-help">Revisa cada factura de compras sin abrir Excel. Las alertas marcan NCF inválidos o duplicados, facturas sin RNC o sin fecha, ITBIS mayor al 18 % y retenciones mayores al ITBIS.</div>
+      <div class="rv-tools">
+        <input class="field-inp" id="rv-q" type="search" placeholder="Buscar por NCF, RNC, fecha o tipo…" aria-label="Buscar facturas del 606">
+        <select class="field-inp" id="rv-f" aria-label="Filtrar facturas del 606"><option value="">Todas las facturas</option><option value="alert">Solo con alertas</option><option value="ok">Sin alertas</option></select>
+        <span class="rv-count" id="rv-count"></span>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>RNC / Cédula</th><th>NCF</th><th>Tipo</th><th>Forma de pago</th><th style="text-align:right">Monto</th><th style="text-align:right">ITBIS</th><th style="text-align:right">Retenido</th><th>Alertas</th></tr></thead><tbody id="rv-tb"></tbody></table></div>
+      <div class="rv-pager"><button class="btn btn-ghost" id="rv-prev">← Anterior</button><span id="rv-page"></span><button class="btn btn-ghost" id="rv-next">Siguiente →</button></div>
+    </div>
+    <details class="rv-orig"><summary>Ver el archivo original (primeras 200 filas, todas las columnas)</summary>
+      <div class="table-wrap"><table><thead id="th-606"></thead><tbody id="tb-606"></tbody></table></div>
+      <p class="tnote" id="tn-606"></p>
+    </details>
   </div>
 </div>
 
@@ -835,6 +854,20 @@ tbody tr:nth-child(even){background:var(--surface-2);}
   </section>
 
   <div class="dash" id="da-607" hidden>
+    <div class="slabel">Tipo de ITBIS por factura</div>
+    <div class="manual-card" id="tipo-card" style="margin-bottom:24px;border-top-color:var(--violet);">
+      <div class="field-help">Elige el tipo de ITBIS de cada factura (por ejemplo <strong>10 % Construcción</strong>). CAMI toma el ITBIS facturado, calcula la base gravada con esa tasa y deja el resto como exento; los totales, las tarjetas por tasa y el IT-1 se recalculan al instante. «Automático» deja la tasa que CAMI deduce del archivo.</div>
+      <div class="rv-tools">
+        <input class="field-inp" id="tipo-q" type="search" placeholder="Buscar por NCF, RNC o fecha…" aria-label="Buscar facturas del 607">
+        <select class="field-inp" id="tipo-f" aria-label="Filtrar facturas del 607"><option value="">Todas las facturas</option><option value="set">Con tipo asignado</option><option value="auto">Sin tipo asignado</option></select>
+        <select class="field-inp" id="tipo-bulk" aria-label="Tipo para aplicar a todas las filtradas"><option value="">Tipo para todas las filtradas…</option><option value="18">18 %</option><option value="16">16 %</option><option value="10">10 % Construcción</option><option value="9">9 %</option><option value="8">8 %</option></select>
+        <button class="btn btn-primary" id="tipo-bulk-btn" style="background:var(--violet);">Aplicar a las filtradas</button>
+        <button class="btn btn-ghost" id="tipo-clear">Quitar todos los tipos</button>
+        <span class="rv-count" id="tipo-count"></span>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>RNC / Cédula</th><th>NCF</th><th style="text-align:right">Monto</th><th style="text-align:right">ITBIS</th><th>Tasa detectada</th><th>Tipo de ITBIS</th></tr></thead><tbody id="tipo-tb"></tbody></table></div>
+      <div class="rv-pager"><button class="btn btn-ghost" id="tipo-prev">← Anterior</button><span id="tipo-page"></span><button class="btn btn-ghost" id="tipo-next">Siguiente →</button></div>
+    </div>
     <div class="manual-card" style="margin-bottom:24px;border-top-color:var(--violet);">
       <div class="slabel" style="margin-bottom:6px;">Ventas adicionales no incluidas en los archivos</div>
       <div class="field-help">Registra aquí solamente cobros que no estén ya incluidos en el 607, CardNET o Azul. Cada forma de pago tiene su propio campo.</div>
@@ -1545,18 +1578,35 @@ function process606(rows) {
   const ret30rows=data.filter(r=>Math.abs(r._pct-30)<8),ret100rows=data.filter(r=>Math.abs(r._pct-100)<8);
   const ret30={monto:r2(sum(ret30rows,'_ret')),count:ret30rows.length},ret100={monto:r2(sum(ret100rows,'_ret')),count:ret100rows.length};
   const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
-  return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras,totIsc,totOtrosImp,totPropina}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
+  const ncfCount=new Map(); data.forEach(p=>{const k=cm.ncf?String(p[cm.ncf]||'').toUpperCase().replace(/[^A-Z0-9]/g,''):''; if(k)ncfCount.set(k,(ncfCount.get(k)||0)+1);});
+  const val=(p,k)=>k?String(p[k]==null?'':p[k]):'';
+  const revision=data.map((p,i)=>{
+    const ncf=cm.ncf?String(p[cm.ncf]||'').toUpperCase().replace(/[^A-Z0-9]/g,''):'';
+    const flags=[];
+    if(!ncf)flags.push('Sin NCF');
+    else if(!/^(?:B\d{10}|E\d{12})$/.test(ncf))flags.push('NCF inválido');
+    if(ncf&&ncfCount.get(ncf)>1)flags.push('NCF duplicado');
+    const rnc=val(p,cm.rnc).replace(/\D/g,'');
+    if(cm.rnc&&!rnc&&!/^(B11|B13|E41|E43)/.test(ncf))flags.push('Sin RNC');
+    if(cm.fecha&&!val(p,cm.fecha).trim())flags.push('Sin fecha');
+    const base=Math.abs(p._total);
+    if(p._itbis!==0&&base>0&&Math.abs(p._itbis)/base>0.185)flags.push('ITBIS mayor al 18%');
+    if(Math.abs(p._ret)>Math.abs(p._itbis)+0.01)flags.push('Retenido mayor al ITBIS');
+    return {i,fecha:val(p,cm.fecha),rnc:val(p,cm.rnc),ncf:ncf||val(p,cm.ncf),tipo:val(p,cm.tipo_comprobante),pago:val(p,cm.forma_pago),total:p._total,itbis:p._itbis,ret:p._ret,flags};
+  });
+  return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras,totIsc,totOtrosImp,totPropina}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), revision };
 }
 
-function process607(rows) {
+function process607(rows, overrides) {
   if (!rows.length) throw new Error('Archivo vacío.');
+  const ov = overrides || {};
   const headers = Object.keys(rows[0]);
   const cm = detectCols(headers, AL607);
   const keyField = cm.monto_total || cm.monto_servicios || cm.monto_bienes || cm.itbis_facturado || cm.ncf;
   const validRows = keyField
     ? rows.filter(r => r[keyField] != null && String(r[keyField]).trim() !== '' && String(r[keyField]).trim() !== '0')
     : rows;
-  const data = validRows.map(r => {
+  const data = validRows.map((r, idx) => {
     const p = {...r};
     p._ncfRaw=cm.ncf?String(r[cm.ncf]||'').toUpperCase().replace(/[^A-Z0-9]/g,''):'';
     // «Tipo de Ingreso» (01–06) no es un tipo de comprobante: no se usa para reconocer notas de crédito.
@@ -1596,8 +1646,18 @@ function process607(rows) {
       p._gravado=r2(best.base*p._fiscalSign);p._tasa=best.error<3?best.rate:r2(Math.abs(p._itbis)/best.base*100);
     }else{p._gravado=0;p._tasa=declaredRate||0;}
     p._exento=cm.monto_exento?Math.abs(cleanNum(r[cm.monto_exento]))*p._fiscalSign:(p._itbis!==0?0:Math.abs(p._total)*p._fiscalSign);
+    p._tasaAuto=p._tasa;
+    // Tipo de ITBIS asignado a mano a esta factura: con el ITBIS facturado y la tasa elegida se
+    // reconstruye la base gravada y el resto de la factura queda como exento.
+    const ovRate=Number(ov[idx])||0, itbisAbs=Math.abs(p._itbis);
+    if (ovRate>0 && itbisAbs>0) {
+      const gravAbs=r2(itbisAbs/(ovRate/100)), net=Math.abs(p._total)-itbisAbs;
+      const base=gravAbs>net+1?Math.abs(p._total):Math.max(net,0);
+      p._tasa=ovRate; p._gravado=gravAbs*p._fiscalSign; p._exento=r2(Math.max(base-gravAbs,0))*p._fiscalSign;
+    }
     if (cm.construccion) { const v=String(r[cm.construccion]||'').toLowerCase(); p._constr=v==='si'||v==='sí'||v==='1'||v==='true'||v==='construccion'; }
     else { p._constr=p._tasa===10; }
+    if (ovRate>0 && itbisAbs>0) p._constr=ovRate===10;
     return p;
   });
   const totTotal=r2(sum(data,'_total')),totGrav=r2(sum(data,'_gravado')),totExento=r2(sum(data,'_exento'));
@@ -1633,7 +1693,8 @@ function process607(rows) {
   const invalidNCF=data.filter(r=>!r._ncfRaw||!(/^(?:B\d{10}|E\d{12})$/.test(r._ncfRaw))).length;
   const duplicateNCF=[...ncfSeen.values()].filter(n=>n>1).reduce((n,count)=>n+count-1,0);
   const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
-  return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow) };
+  const facturas=data.map((p,i)=>({i,ncf:p._ncfRaw,fecha:cm.fecha?String(p[cm.fecha]==null?'':p[cm.fecha]):'',rnc:cm.rnc?String(p[cm.rnc]==null?'':p[cm.rnc]):'',total:p._total,itbis:p._itbis,auto:p._tasaAuto,tasa:Number(ov[i])>0&&Math.abs(p._itbis)>0?Number(ov[i]):0}));
+  return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), facturas, overrides:ov };
 }
 
 function processCardReport(rows, provider) {
@@ -1760,12 +1821,83 @@ function render606(data, filename) {
       <div class="ret-info"><div class="ret-lbl">Retención del 100%</div><div class="ret-val">${fmtM(s.ret100.monto)}</div><div class="ret-cnt">${fmtI(s.ret100.count)} comprobante${s.ret100.count!==1?'s':''}</div></div>
     </div>`;
   renderTable('th-606','tb-606','tn-606',data.columns,data.preview,data.summary.registros);
+  renderReview606();
   $('tf-606').textContent=filename; $('tf-606').hidden=false;
   $('btn-xls-606').hidden=false; $('btn-rst-606').hidden=false;
   $('up-606').hidden=true; $('da-606').hidden=false;
   $('badge-606').textContent='✓'; $('badge-606').className='nav-badge ok';
   updateIT1();
 }
+
+// ── Revisión de facturas del 606 y tipo de ITBIS por factura del 607 ──
+const RV_PAGE=100;
+const RV={q:'',f:'',page:0}, TIPO={q:'',f:'',page:0};
+const escH=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const matchQ=(o,q)=>!q||[o.ncf,o.rnc,o.fecha,o.tipo,o.pago].some(x=>String(x||'').toLowerCase().includes(q));
+function renderReview606(){
+  const d=STATE['606']; if(d&&!d.revision&&d.allRows)Object.assign(d,process606(d.allRows));
+  if(!d||!d.revision)return;
+  const q=RV.q.trim().toLowerCase();
+  const all=d.revision, bad=all.filter(r=>r.flags.length).length;
+  const list=all.filter(r=>(RV.f==='alert'?r.flags.length:RV.f==='ok'?!r.flags.length:true)&&matchQ(r,q));
+  const pages=Math.max(1,Math.ceil(list.length/RV_PAGE)); RV.page=Math.min(RV.page,pages-1);
+  const rows=list.slice(RV.page*RV_PAGE,(RV.page+1)*RV_PAGE);
+  $('rv-tb').innerHTML=rows.map(r=>`<tr class="${r.flags.length?'rv-bad':''}"><td>${r.i+1}</td><td>${escH(r.fecha)}</td><td>${escH(r.rnc)}</td><td>${escH(r.ncf)}</td><td>${escH(r.tipo)}</td><td>${escH(r.pago)}</td><td style="text-align:right">${fmtM(r.total)}</td><td style="text-align:right">${fmtM(r.itbis)}</td><td style="text-align:right">${fmtM(r.ret)}</td><td>${r.flags.map(f=>`<span class="rv-flag">${escH(f)}</span>`).join('')||'<span style="color:var(--muted)">—</span>'}</td></tr>`).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--muted)">No hay facturas con ese filtro.</td></tr>';
+  $('rv-count').textContent=`${fmtI(all.length)} facturas · ${fmtI(bad)} con alertas · mostrando ${fmtI(list.length)}`;
+  $('rv-page').textContent=`Página ${RV.page+1} de ${pages}`;
+  $('rv-prev').disabled=RV.page===0; $('rv-next').disabled=RV.page>=pages-1;
+}
+function tipoLabel(r){return r===10?'10 % Construcción':r+' %';}
+function renderTipo607(){
+  const d=STATE['607']; if(d&&!d.facturas&&d.allRows)Object.assign(d,process607(d.allRows,d.overrides||{}));
+  if(!d||!d.facturas)return;
+  const q=TIPO.q.trim().toLowerCase();
+  const all=d.facturas, asg=all.filter(r=>r.tasa).length;
+  const list=all.filter(r=>(TIPO.f==='set'?r.tasa:TIPO.f==='auto'?!r.tasa:true)&&matchQ(r,q));
+  const pages=Math.max(1,Math.ceil(list.length/RV_PAGE)); TIPO.page=Math.min(TIPO.page,pages-1);
+  const rows=list.slice(TIPO.page*RV_PAGE,(TIPO.page+1)*RV_PAGE);
+  const opts=cur=>[['','Automático'],[18,'18 %'],[16,'16 %'],[10,'10 % Construcción'],[9,'9 %'],[8,'8 %']].map(([v,l])=>`<option value="${v}"${Number(v)===Number(cur||0)&&(v!==''||!cur)?' selected':''}>${l}</option>`).join('');
+  $('tipo-tb').innerHTML=rows.map(r=>`<tr><td>${r.i+1}</td><td>${escH(r.fecha)}</td><td>${escH(r.rnc)}</td><td>${escH(r.ncf)}</td><td style="text-align:right">${fmtM(r.total)}</td><td style="text-align:right">${fmtM(r.itbis)}</td><td>${Math.abs(r.itbis)>0?(r.auto?escH(r.auto)+' %':'—'):'Exento'}</td><td>${Math.abs(r.itbis)>0?`<select class="field-inp tipo-sel" data-i="${r.i}" style="min-width:150px;padding:5px 8px;">${opts(r.tasa)}</select>`:'<span style="color:var(--muted)">Sin ITBIS</span>'}</td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--muted)">No hay facturas con ese filtro.</td></tr>';
+  $('tipo-count').textContent=`${fmtI(all.length)} facturas · ${fmtI(asg)} con tipo asignado · mostrando ${fmtI(list.length)}`;
+  $('tipo-page').textContent=`Página ${TIPO.page+1} de ${pages}`;
+  $('tipo-prev').disabled=TIPO.page===0; $('tipo-next').disabled=TIPO.page>=pages-1;
+}
+// Cambia el tipo de ITBIS de una o varias facturas (índice → tasa; 0 quita el tipo) y recalcula todo.
+function setTipo607(changes){
+  const cur=STATE['607']; if(!cur||!cur.allRows)return;
+  const ov={...(cur.overrides||{})};
+  changes.forEach(([i,r])=>{ if(r)ov[i]=r; else delete ov[i]; });
+  const nd=Object.assign({},cur,process607(cur.allRows,ov));
+  STATE['607']=nd; render607(nd,$('tf-607').textContent||'Archivo 607');
+}
+function filteredTipo607(){
+  const d=STATE['607']; if(!d||!d.facturas)return [];
+  const q=TIPO.q.trim().toLowerCase();
+  return d.facturas.filter(r=>(TIPO.f==='set'?r.tasa:TIPO.f==='auto'?!r.tasa:true)&&matchQ(r,q));
+}
+(function wireReviews(){
+  const on=(id,ev,fn)=>{const el=$(id); if(el)el.addEventListener(ev,fn);};
+  on('rv-q','input',e=>{RV.q=e.target.value;RV.page=0;renderReview606();});
+  on('rv-f','change',e=>{RV.f=e.target.value;RV.page=0;renderReview606();});
+  on('rv-prev','click',()=>{RV.page=Math.max(0,RV.page-1);renderReview606();});
+  on('rv-next','click',()=>{RV.page++;renderReview606();});
+  on('tipo-q','input',e=>{TIPO.q=e.target.value;TIPO.page=0;renderTipo607();});
+  on('tipo-f','change',e=>{TIPO.f=e.target.value;TIPO.page=0;renderTipo607();});
+  on('tipo-prev','click',()=>{TIPO.page=Math.max(0,TIPO.page-1);renderTipo607();});
+  on('tipo-next','click',()=>{TIPO.page++;renderTipo607();});
+  on('tipo-tb','change',e=>{const sel=e.target.closest('.tipo-sel'); if(!sel)return; setTipo607([[Number(sel.dataset.i),Number(sel.value)||0]]);});
+  on('tipo-bulk-btn','click',()=>{
+    const rate=Number($('tipo-bulk').value)||0; if(!rate){showToast('Elige primero el tipo de ITBIS.','err');return;}
+    const list=filteredTipo607().filter(r=>Math.abs(r.itbis)>0); if(!list.length){showToast('No hay facturas con ITBIS en este filtro.','err');return;}
+    if(!confirm(`¿Asignar ${tipoLabel(rate)} a ${list.length} factura${list.length!==1?'s':''}?`))return;
+    setTipo607(list.map(r=>[r.i,rate]));
+  });
+  on('tipo-clear','click',()=>{
+    const d=STATE['607']; if(!d||!Object.keys(d.overrides||{}).length){showToast('No hay tipos asignados.','err');return;}
+    if(!confirm('¿Quitar todos los tipos de ITBIS asignados a mano?'))return;
+    setTipo607(Object.keys(d.overrides).map(i=>[Number(i),0]));
+  });
+})();
 
 function render607(data, filename) {
   const s=data.summary,bt=s.byTasa;
@@ -1793,6 +1925,7 @@ function render607(data, filename) {
       <div class="ret-info"><div class="ret-lbl">Clientes retuvieron 100%</div><div class="ret-val">${fmtM(s.ret100.monto)}</div><div class="ret-cnt">${fmtI(s.ret100.count)} comprobante${s.ret100.count!==1?'s':''}</div></div>
     </div>`;
   renderTable('th-607','tb-607','tn-607',data.columns,data.preview,data.summary.registros);
+  renderTipo607();
   $('tf-607').textContent=filename; $('tf-607').hidden=false;
   $('btn-xls-607').hidden=false; $('btn-rst-607').hidden=false;
   $('up-607').hidden=true; $('da-607').hidden=false;

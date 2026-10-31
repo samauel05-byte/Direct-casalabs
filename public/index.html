@@ -2212,7 +2212,8 @@ function closeDupeModal() {
 
 async function deleteOneDupe(id) {
   try {
-    await A.del(`/api/credentials/${id}`);
+    const gone=await A.del(`/api/credentials/${id}`);
+    if (!gone || gone.ok!==true) throw new Error(gone?.error || 'El servidor no eliminó la entrada');
     credentials = credentials.filter(c => c.id !== id);
     toast('Entrada eliminada','ok');
     await renderCompaniesView();
@@ -2230,7 +2231,7 @@ async function cleanAllDupes() {
   if (!confirm(`¿Eliminar ${ids.length} entrada${ids.length>1?'s':''} duplicada${ids.length>1?'s':''}? Solo se conservará la más reciente de cada empresa. Esta acción no se puede deshacer.`)) return;
   let deleted = 0;
   for (const id of ids) {
-    try { await A.del(`/api/credentials/${id}`); credentials=credentials.filter(c=>c.id!==id); deleted++; } catch {}
+    try { const r=await A.del(`/api/credentials/${id}`); if(r&&r.ok===true){ credentials=credentials.filter(c=>c.id!==id); deleted++; } } catch {}
   }
   toast(`${deleted} duplicado${deleted>1?'s':''} eliminado${deleted>1?'s':''}`,'ok');
   closeDupeModal();
@@ -2625,12 +2626,16 @@ async function chCopyCode() {
 }
 
 /* ── Company modal ── */
+// Portal al que pertenece la empresa que se está editando. Al abrir «Actualizar clave» desde el Inicio no hay
+// portal activo (o es otro), así que se usa el de la propia credencial; antes se guardaba con el portal equivocado.
+let _coInst = null;
 async function openCompanyModal(credId) {
   document.getElementById('modal-co-id').value = credId||'';
   const ftr=document.getElementById('modal-co-ftr');
   const codesRow=document.getElementById('co-dgii-codes-row');
   const tarjetaRow=document.getElementById('co-tarjeta-row');
-  const isDGII = activePortal==='dgii';
+  _coInst = (credId && credentials.find(c=>c.id===credId)?.institution) || activePortal;
+  const isDGII = _coInst==='dgii';
   codesRow.hidden = !isDGII;
   document.getElementById('co-totp-row').hidden = !isDGII;
   document.getElementById('co-totp').value='';
@@ -2686,22 +2691,31 @@ async function saveCompany() {
   const password=document.getElementById('co-pass').value;
   if (!companyName) { toast('Escribe el nombre de la empresa','warn'); return; }
 
-  const payload={companyName,username,password};
+  const existing = credId ? credentials.find(c=>c.id===credId) : null;
+  const inst = (existing && existing.institution) || _coInst || activePortal;
+  if (!inst) { toast('No se pudo saber a qué portal pertenece esta empresa. Ábrela desde su portal.','err'); return; }
+  // Se parte de lo que ya estaba guardado para no perder otros datos (RNC, cédula, etc.).
+  let prev={};
+  if (existing) { try { prev=await C.dec(masterKey,existing.iv,existing.ct); } catch { prev={}; } }
+  const payload={...prev,companyName,username,password};
   const tarjeta=document.getElementById('co-tarjeta').value.trim();
-  if (tarjeta) payload.tarjeta=tarjeta;
-  if (activePortal==='dgii') {
+  if (tarjeta) payload.tarjeta=tarjeta; else delete payload.tarjeta;
+  if (inst==='dgii') {
     const codes=document.getElementById('co-dgii-codes').value.trim();
-    if (codes) payload.dgiiCodes=codes;
+    if (codes) payload.dgiiCodes=codes; else delete payload.dgiiCodes;
     const totp=document.getElementById('co-totp').value.trim();
-    if (totp) { if (!TOTP.isValid(totp)) { toast('La clave del Token Digital no es válida','warn'); return; } payload.totp=totp; }
+    if (totp) { if (!TOTP.isValid(totp)) { toast('La clave del Token Digital no es válida','warn'); return; } payload.totp=totp; } else delete payload.totp;
   }
 
-  const id = credId || (activePortal+'_'+Date.now());
+  const id = credId || (inst+'_'+Date.now());
   try {
     const {iv,ct}=await C.enc(masterKey,payload);
-    await A.put(`/api/credentials/${id}`,{institution:activePortal,category:'acceso',iv,ct});
+    const saved=await A.put(`/api/credentials/${id}`,{institution:inst,category:'acceso',iv,ct});
+    // apiRequest no lanza con 403/400/500: si el servidor no confirmó, NO se da por guardado (antes se mostraba
+    // «Empresa guardada» y al recargar volvía la clave vieja).
+    if (!saved || saved.ok!==true) throw new Error(saved?.error==='Solo administradores' ? 'Solo un administrador puede guardar cambios en las empresas. Pídele a un administrador que actualice la clave.' : (saved?.error || 'El servidor no guardó el cambio'));
     const idx=credentials.findIndex(c=>c.id===id);
-    const entry={id,institution:activePortal,category:'acceso',iv,ct,updated_at:Date.now()};
+    const entry={id,institution:inst,category:'acceso',iv,ct,updated_at:saved.updated_at||Date.now()};
     if(idx>=0) credentials[idx]=entry; else credentials.push(entry);
     closeCompanyModal();
     await renderCompaniesView();
@@ -2713,7 +2727,8 @@ async function saveCompany() {
 async function deleteCompany(credId) {
   if (!confirm('¿Eliminar esta empresa?')) return;
   try {
-    await A.del(`/api/credentials/${credId}`);
+    const gone=await A.del(`/api/credentials/${credId}`);
+    if (!gone || gone.ok!==true) throw new Error(gone?.error==='Solo administradores' ? 'Solo un administrador puede eliminar empresas.' : (gone?.error || 'El servidor no eliminó la empresa'));
     credentials=credentials.filter(c=>c.id!==credId);
     closeCompanyModal();
     await renderCompaniesView();

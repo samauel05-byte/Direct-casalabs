@@ -100,6 +100,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 ## Módulos
 
+**Edición de credenciales (`saveCompany`/`openCompanyModal`, `public/index.html`):** el portal sale de la credencial editada (`_coInst`), no de `activePortal` (que es `null` al abrir «Actualizar clave» desde el Inicio); el payload parte del texto descifrado previo (no pierde `rnc`, `cedula`, etc.); `apiRequest` no lanza con 403/400/500, así que `saveCompany` y los borrados exigen `ok === true` y usan el `updated_at` del servidor. `PUT/DELETE /api/credentials/:id` siguen siendo solo para administradores.
+
 **Buscador de Direct (`public/index.html`):** `buildHomeIndex` indexa las credenciales descifradas y, además, los clientes de `GET /api/clients` que no tienen credencial (`sinAcceso`, sin chips de acceso); la búsqueda por RNC compara solo dígitos. `renderHomeResults` sugiere RNC con distancia de edición ≤ 1 cuando no hay resultados (≥ 7 dígitos). La vista Empresas usa `data-digits` y el Panel de Nómina compara RNC sin guiones.
 
 **NALA — revertir aprobación:** `POST invoices/:id/revert` ya no exige `reason` (sin motivo se registra «Reabierta para editar»); la UI solo pide confirmar. Aprobar con advertencias, excluir y reubicar siguen exigiendo motivo.

@@ -100,7 +100,7 @@ Contraseña del usuario (solo en memoria del navegador)
 
 ## Módulos
 
-**NALA — errores de la DGII → factura:** `views-export.js` expone `NALA.dgiiErrors` (`parse`/`match`): extrae del texto pegado pares `RNC-NCF`, NCF sueltos y números de línea, los cruza con `snapshot.lines` del archivo exportado (columnas `ncf` y `rnc_cedula`, `line_no`) y enlaza cada coincidencia a `#/auditoria/<invoice_id>`; también sugiere la acción de `DGII_ALERTS` según el texto. Pruebas: `tests/direct/nala-dgii-errors.test.js`.
+**NALA — errores de la DGII → factura:** `views-export.js` expone `NALA.dgiiErrors` (`parse`/`match`): extrae del texto pegado pares `RNC-NCF`, NCF sueltos y números de línea, los cruza con `snapshot.lines` del archivo exportado (columnas `ncf` y `rnc_cedula`, `line_no`) y enlaza cada coincidencia a `#/auditoria/<invoice_id>`; también sugiere la acción de `DGII_ALERTS` según el texto. También se abre desde el botón «Errores de la DGII» de la lista de exportaciones (`dgiiErrorsModal`: elige el archivo, carga su `snapshot` con `GET exports/:id` y reutiliza el mismo cuadro). Pruebas: `tests/direct/nala-dgii-errors.test.js`.
 
 **NALA — TXT del 606:** `SCHEMAS['606']` marca `isr_retenido` («Monto Retención Renta») con `alwaysWrite`: `cellText` lo escribe siempre (`0.00` sin retención) e ignora el estilo aprendido (`blank_zero`), porque la DGII rechaza el archivo con «Retencion Renta:(), Numero NO válido» cuando va vacío. El 607 no cambia.
 

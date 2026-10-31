@@ -151,11 +151,13 @@
       <div class="row" style="margin-top:8px"><button class="btn primary" id="dgii-err-go">Buscar facturas</button><span class="muted" id="dgii-err-note"></span></div>
       <div id="dgii-err-out"></div></div>`;
   }
-  function bindDgiiErrors(root, exp) {
+  function bindDgiiErrors(root, exp, waitSnapshot) {
     const out = root.querySelector('#dgii-err-out'); const note = root.querySelector('#dgii-err-note');
     const go = root.querySelector('#dgii-err-go'); if (!go) return;
-    go.addEventListener('click', () => {
+    go.addEventListener('click', async () => {
       const text = root.querySelector('#dgii-err-text').value;
+      if (waitSnapshot) await waitSnapshot();
+      if (!exp.snapshot) { NALA.toast('No pude cargar ese archivo. Elige otro o reintenta.', 'err'); return; }
       if (!text.trim()) { NALA.toast('Pega primero lo que muestra la DGII o escribe los números de línea.', 'warn'); return; }
       const r = matchDgiiErrors(exp.snapshot, text);
       note.textContent = `${r.matches.length} factura(s) encontrada(s)${r.missing.length ? ` · sin coincidencia: ${r.missing.join(', ')}` : ''}`;
@@ -165,6 +167,24 @@
         ${r.advice.length ? `<div class="issue warning" style="margin-top:8px"><span class="ico">!</span><div>${r.advice.map(a => `<div><b>${esc(a.title)}:</b> ${esc(a.advice)}</div>`).join('')}</div></div>` : ''}
         ${r.matches.length ? '<p class="muted" style="margin-top:8px">Después de corregir y aprobar de nuevo la factura, genera un TXT nuevo y vuelve a enviarlo a la DGII.</p>' : ''}`;
     });
+  }
+
+  // Acceso desde la lista de exportaciones: elige el archivo enviado y pega los errores de la DGII.
+  function dgiiErrorsModal(exports) {
+    const list = [...exports].filter(e => e.status !== 'superseded').sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    const holder = { snapshot: null };
+    NALA.modal({ title: 'Errores de la DGII → corregir en NALA', okText: '', cancelText: 'Cerrar', wide: true,
+      body: `<label class="f"><span>Archivo que enviaste a la DGII</span><select id="de-exp">${list.map((e, i) => `<option value="${e.id}"${i === 0 ? ' selected' : ''}>${esc(e.file_name)} · ${esc(NALA.clientName(e.client_id))} · ${e.format} · ${esc(e.status)}</option>`).join('')}</select></label>
+        <div id="de-card" style="margin-top:10px">${dgiiErrorsCard()}</div>` });
+    const m = [...document.querySelectorAll('.modal-bg')].pop()?.querySelector('.modal'); if (!m) return;
+    const sel = m.querySelector('#de-exp');
+    const load = async () => { holder.snapshot = null; try { holder.snapshot = (await NALA.api('GET', `exports/${sel.value}`)).export.snapshot; } catch (e) { NALA.fail(e); } };
+    sel.addEventListener('change', load);
+    const ready = load();
+    // El cuadro usa holder.snapshot al pulsar «Buscar facturas»; se espera a que cargue el archivo.
+    bindDgiiErrors(m, { get snapshot() { return holder.snapshot; } }, () => ready.then(() => holder.snapshot));
+    // Al abrir una factura desde el modal, cerrarlo para ver la pantalla de auditoría.
+    m.addEventListener('click', e => { if (e.target.closest('a[href^="#/auditoria/"]')) m.closest('.modal-bg')?.remove(); });
   }
 
   async function detail(root, id) {
@@ -354,7 +374,7 @@
       <td style="white-space:nowrap">${g.ready
         ? `<button class="btn sm primary" data-exp="${i}" data-type="txt" title="Descargar el TXT para la DGII">TXT</button> <button class="btn sm" data-exp="${i}" data-type="xlsx" title="Descargar el Excel">Excel</button>${g.last_export ? ` <a class="btn sm" href="#/exportar/${g.last_export.id}" title="Ver el archivo y registrar el envío a la DGII">Envío →</a>` : ''}`
         : `<a class="btn sm" href="${auditLink(g)}">Ir a auditar</a>`}</td></tr>`;
-    root.innerHTML = `<div class="stack"><div class="row">${NALA.can('submit') ? '<button class="btn" id="zero" title="Para períodos sin compras ni ventas">Informativo en cero</button>' : ''}<span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
+    root.innerHTML = `<div class="stack"><div class="row">${exports.length ? '<button class="btn" id="dgii-errs" title="Pega los errores que devolvió la DGII y NALA te lleva a las facturas">Errores de la DGII</button>' : ''}${NALA.can('submit') ? '<button class="btn" id="zero" title="Para períodos sin compras ni ventas">Informativo en cero</button>' : ''}<span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
       <div class="card"><h2>Listos para exportar</h2>
         ${items.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th>Formato</th><th>Período</th><th class="num">Aprobados</th><th>Auditoría</th><th>Último archivo</th><th></th></tr>${items.map(readyRow).join('')}</table></div>
         <p class="muted" style="margin-top:8px">Con la auditoría completa, pulsa <b>TXT</b> o <b>Excel</b>: NALA genera el archivo del mes (o reutiliza el último si nada cambió) y lo descarga para enviarlo a la DGII.</p>`
@@ -363,6 +383,7 @@
       ${exports.length ? `<div class="card"><h2>Archivos generados</h2><div class="table-wrap"><table><tr><th>Archivo</th><th>Empresa</th><th>Alcance</th><th>Estado</th><th class="num">Líneas</th><th>Generado</th><th>Enviado</th></tr>
         ${exports.map(e => `<tr class="clickable" data-id="${e.id}"><td class="mono">${esc(e.file_name)}</td><td>${esc(NALA.clientName(e.client_id))}</td><td>${e.scope === 'period' ? 'Mes' : `${e.batch_ids.length} lote(s)`}</td><td>${NALA.badge(e.status)}</td><td class="num">${int(e.line_count)}</td><td>${NALA.dateTime(e.created_at)}</td><td>${NALA.dateTime(e.submitted_at)}</td></tr>`).join('')}</table></div></div>` : ''}</div>`;
     root.querySelector('#zero')?.addEventListener('click', () => zeroFiling());
+    root.querySelector('#dgii-errs')?.addEventListener('click', () => dgiiErrorsModal(exports));
     root.querySelectorAll('button[data-exp]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); exportNow(items[Number(b.dataset.exp)], b.dataset.type, b); }));
     root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', () => NALA.go(`#/exportar/${tr.dataset.id}`)));
   }

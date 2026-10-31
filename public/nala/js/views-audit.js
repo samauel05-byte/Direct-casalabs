@@ -673,9 +673,11 @@
       try { await NALA.api('POST', `invoices/${inv.id}/revert`, { reason: 'Reabierta para editar' }); NALA.toast('Factura reabierta para editar', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });
     root.querySelector('#revert')?.addEventListener('click', async () => {
-      const reason = await NALA.askReason('Revertir aprobación', { extra: '<p class="muted" style="margin-bottom:8px">El comprobante vuelve a revisión. Si estaba en una exportación generada (no enviada), esa exportación queda reemplazada.</p>' });
-      if (!reason) return;
-      try { await NALA.api('POST', `invoices/${inv.id}/revert`, { reason }); NALA.toast('Aprobación revertida', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
+      // Sin pedir motivo: basta confirmar (queda registrado como «Reabierta para editar»).
+      const okRevert = await NALA.modal({ title: 'Revertir aprobación', okText: 'Revertir', okClass: 'danger',
+        body: '<p class="muted">El comprobante vuelve a revisión para que lo puedas editar. Si estaba en una exportación generada (no enviada), esa exportación queda reemplazada.</p>' });
+      if (!okRevert) return;
+      try { await NALA.api('POST', `invoices/${inv.id}/revert`, { reason: 'Reabierta para editar' }); NALA.toast('Aprobación revertida', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });
     root.querySelector('#relocate')?.addEventListener('click', async () => {
       if (NALA.dirty) { NALA.toast('Guarde o deshaga los cambios antes de reubicar.', 'err'); return; }

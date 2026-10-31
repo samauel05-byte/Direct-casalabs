@@ -158,6 +158,8 @@ tr.selected td { background: var(--accent-light); }
 .viewer-canvas img, .viewer-canvas canvas { box-shadow: var(--shadow); background: #fff; transform-origin: center center; max-width: none; }
 .editor { display: flex; flex-direction: column; min-height: 0; }
 .editor-body { flex: 1; overflow: auto; min-height: 0; }
+.editor-tools { display: flex; align-items: center; gap: 6px; justify-content: flex-end; padding: 0 0 6px; }
+.editor-tools .zm { min-width: 44px; text-align: center; font-variant-numeric: tabular-nums; }
 .fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px 10px; }
 .fields input, .fields select, .fields textarea { width: 100%; }
 .fields label.f.changed input, .fields label.f.changed select { border-color: var(--accent); background: var(--accent-light); }

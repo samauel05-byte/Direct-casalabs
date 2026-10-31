@@ -2713,7 +2713,7 @@ async function saveCompany() {
     const saved=await A.put(`/api/credentials/${id}`,{institution:inst,category:'acceso',iv,ct});
     // apiRequest no lanza con 403/400/500: si el servidor no confirmó, NO se da por guardado (antes se mostraba
     // «Empresa guardada» y al recargar volvía la clave vieja).
-    if (!saved || saved.ok!==true) throw new Error(saved?.error==='Solo administradores' ? 'Solo un administrador puede guardar cambios en las empresas. Pídele a un administrador que actualice la clave.' : (saved?.error || 'El servidor no guardó el cambio'));
+    if (!saved || saved.ok!==true) throw new Error(saved?.error || 'El servidor no guardó el cambio');
     const idx=credentials.findIndex(c=>c.id===id);
     const entry={id,institution:inst,category:'acceso',iv,ct,updated_at:saved.updated_at||Date.now()};
     if(idx>=0) credentials[idx]=entry; else credentials.push(entry);
@@ -2728,7 +2728,7 @@ async function deleteCompany(credId) {
   if (!confirm('¿Eliminar esta empresa?')) return;
   try {
     const gone=await A.del(`/api/credentials/${credId}`);
-    if (!gone || gone.ok!==true) throw new Error(gone?.error==='Solo administradores' ? 'Solo un administrador puede eliminar empresas.' : (gone?.error || 'El servidor no eliminó la empresa'));
+    if (!gone || gone.ok!==true) throw new Error(gone?.error || 'El servidor no eliminó la empresa');
     credentials=credentials.filter(c=>c.id!==credId);
     closeCompanyModal();
     await renderCompaniesView();

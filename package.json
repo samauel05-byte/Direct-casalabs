@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "test:direct": "node --test tests/direct/logos.test.js tests/direct/worker.test.js tests/direct/kdf.test.js tests/direct/kdf-endpoint.test.js tests/direct/totp.test.js tests/direct/nala-dgii-errors.test.js",
+    "test:direct": "node --test tests/direct/logos.test.js tests/direct/worker.test.js tests/direct/kdf.test.js tests/direct/kdf-endpoint.test.js tests/direct/totp.test.js tests/direct/nala-dgii-errors.test.js tests/direct/credentials-put.test.js",
     "test:nala": "node --test tests/nala/unit.test.js && node --test --test-concurrency=1 tests/nala/flow.test.js && node --test --test-concurrency=1 tests/nala/ui.test.js",
     "test:monitor": "node --test tests/monitor/unit.test.js tests/monitor/check.test.js",
     "test:nomina": "node --test tests/nomina/unit.test.js tests/nomina/dashboard.test.js",

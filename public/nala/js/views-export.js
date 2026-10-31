@@ -108,6 +108,65 @@
   ];
   const DGII_ALERTS_HTML = `<details style="margin-bottom:10px"><summary><b>Alertas frecuentes de la DGII y qué hacer</b></summary><ul style="margin:6px 0 0 18px;line-height:1.5">${DGII_ALERTS.map(([t, a]) => `<li><b>${esc(t)}:</b> ${esc(a)}</li>`).join('')}</ul></details>`;
 
+  // ── Errores de la DGII → factura de NALA ──────────────────────────────────────────────────────────
+  // La DGII informa «Línea · Descripción · Dato validado» (p. ej. 9 · Emisor o receptor del e-CF no
+  // coinciden · 130879801-E310000014579). Se pega ese texto (o solo «9, 49») y NALA localiza la línea
+  // del archivo exportado, por número de línea y/o por RNC-NCF, para abrir la factura y corregirla.
+  const plain = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  function parseDgiiErrors(text) {
+    const src = String(text || '');
+    const pairs = []; const seen = new Set();
+    for (const m of src.matchAll(/(\d{9,11})\s*[-–—]\s*([BE]\d{10,12})/gi)) { const k = `${m[1]}-${m[2].toUpperCase()}`; if (!seen.has(k)) { seen.add(k); pairs.push({ rnc: m[1], ncf: m[2].toUpperCase() }); } }
+    const ncfs = [...new Set([...src.matchAll(/\b([BE]\d{10,12})\b/gi)].map(m => m[1].toUpperCase()))].filter(n => !pairs.some(p => p.ncf === n));
+    // Números de línea: al inicio de una línea pegada («9  Emisor o receptor…») o una lista simple («9, 49»).
+    const lines = new Set();
+    for (const m of src.matchAll(/^\s*(\d{1,5})(?=\s|$|[,;.)])/gm)) lines.add(Number(m[1]));
+    if (!pairs.length && !ncfs.length) for (const m of src.matchAll(/\b(\d{1,5})\b/g)) lines.add(Number(m[1]));
+    return { pairs, ncfs, lines: [...lines].filter(n => n > 0).sort((a, b) => a - b) };
+  }
+  function matchDgiiErrors(snapshot, text) {
+    const parsed = parseDgiiErrors(text);
+    const cols = (snapshot && snapshot.columns) || [];
+    const iNcf = cols.findIndex(c => c.key === 'ncf'); const iRnc = cols.findIndex(c => c.key === 'rnc_cedula');
+    const digits = v => String(v || '').replace(/\D/g, '');
+    const found = new Map(); const missing = [];
+    const add = (l, how) => { if (l && !found.has(l.line_no)) found.set(l.line_no, { line: l, how }); };
+    const all = (snapshot && snapshot.lines) || [];
+    for (const p of parsed.pairs) {
+      const hits = all.filter(l => iNcf >= 0 && String(l.values[iNcf]).toUpperCase() === p.ncf && (iRnc < 0 || digits(l.values[iRnc]) === p.rnc));
+      const loose = hits.length ? hits : all.filter(l => iNcf >= 0 && String(l.values[iNcf]).toUpperCase() === p.ncf);
+      if (loose.length) loose.forEach(l => add(l, hits.length ? 'RNC-NCF' : 'NCF')); else missing.push(`${p.rnc}-${p.ncf}`);
+    }
+    for (const n of parsed.ncfs) { const hits = all.filter(l => iNcf >= 0 && String(l.values[iNcf]).toUpperCase() === n); if (hits.length) hits.forEach(l => add(l, 'NCF')); else missing.push(n); }
+    for (const n of parsed.lines) { const l = all.find(x => x.line_no === n); if (l) add(l, 'Línea'); else missing.push(`línea ${n}`); }
+    const advice = DGII_ALERTS.filter(([t]) => plain(text).includes(plain(t.split(/\s\/\s|\s\(/)[0]).slice(0, 30))).map(([t, a]) => ({ title: t, advice: a }));
+    return { parsed, matches: [...found.values()].sort((a, b) => a.line.line_no - b.line.line_no), missing, advice, iNcf, iRnc };
+  }
+  NALA.dgiiErrors = { parse: parseDgiiErrors, match: matchDgiiErrors };
+
+  function dgiiErrorsCard() {
+    return `<div class="card" id="dgii-err-card"><h2>Errores de la DGII → corregir en NALA</h2>
+      <div class="muted">Si la DGII marcó líneas con error («Ver Detalle»), pega aquí lo que muestra (líneas y «Dato validado») o solo los números de línea, por ejemplo <span class="mono">9, 49</span>. NALA te lleva a cada factura.</div>
+      <textarea id="dgii-err-text" rows="4" style="width:100%;margin-top:8px" placeholder="9   Emisor o receptor del e-CF no coinciden…   130879801-E310000014579&#10;49  Emisor o receptor del e-CF no coinciden…   101013834-E310002166559"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn primary" id="dgii-err-go">Buscar facturas</button><span class="muted" id="dgii-err-note"></span></div>
+      <div id="dgii-err-out"></div></div>`;
+  }
+  function bindDgiiErrors(root, exp) {
+    const out = root.querySelector('#dgii-err-out'); const note = root.querySelector('#dgii-err-note');
+    const go = root.querySelector('#dgii-err-go'); if (!go) return;
+    go.addEventListener('click', () => {
+      const text = root.querySelector('#dgii-err-text').value;
+      if (!text.trim()) { NALA.toast('Pega primero lo que muestra la DGII o escribe los números de línea.', 'warn'); return; }
+      const r = matchDgiiErrors(exp.snapshot, text);
+      note.textContent = `${r.matches.length} factura(s) encontrada(s)${r.missing.length ? ` · sin coincidencia: ${r.missing.join(', ')}` : ''}`;
+      const cols = exp.snapshot.columns;
+      out.innerHTML = `${r.matches.length ? `<div class="table-wrap" style="margin-top:8px"><table><tr><th>Línea</th><th>Proveedor / Cliente</th><th>RNC</th><th>NCF</th><th class="num">Monto</th><th>Coincidió por</th><th></th></tr>
+        ${r.matches.map(({ line: l, how }) => { const rnc = r.iRnc >= 0 ? l.values[r.iRnc] : ''; const ncf = r.iNcf >= 0 ? l.values[r.iNcf] : ''; const iTot = cols.findIndex(c => c.key === 'total_monto_facturado' || c.key === 'monto_facturado'); return `<tr><td class="muted">${l.line_no}</td><td>${esc(l.counterpart_name || '')}</td><td class="mono">${esc(rnc)}</td><td class="mono">${esc(ncf)}</td><td class="num">${iTot >= 0 && l.values[iTot] ? money(l.values[iTot]) : ''}</td><td class="muted">${esc(how)}</td><td><a class="btn sm primary" href="#/auditoria/${l.invoice_id}">Abrir y corregir</a></td></tr>`; }).join('')}</table></div>` : '<div class="empty" style="margin-top:8px">No encontré facturas con esos datos en este archivo.</div>'}
+        ${r.advice.length ? `<div class="issue warning" style="margin-top:8px"><span class="ico">!</span><div>${r.advice.map(a => `<div><b>${esc(a.title)}:</b> ${esc(a.advice)}</div>`).join('')}</div></div>` : ''}
+        ${r.matches.length ? '<p class="muted" style="margin-top:8px">Después de corregir y aprobar de nuevo la factura, genera un TXT nuevo y vuelve a enviarlo a la DGII.</p>' : ''}`;
+    });
+  }
+
   async function detail(root, id) {
     const { export: exp, dgii_tool: tool } = await NALA.api('GET', `exports/${id}`);
     const steps = [['generated', 'Archivo generado', exp.created_at], ['submitted', 'Enviado a la DGII (Oficina Virtual)', exp.submitted_at], [exp.status === 'rejected' ? 'rejected' : 'accepted', exp.status === 'rejected' ? 'Rechazado por la DGII' : 'Aceptado por la DGII', exp.result_at]];
@@ -130,8 +189,10 @@
         <p class="muted" style="margin-top:8px">NALA genera el archivo; el envío se hace en la Oficina Virtual de la DGII y su resultado se consulta en "Consulta Envíos". Registre aquí cada paso.</p></div>
       ${exp.snapshot.consumer_summary ? `<div class="card"><h2>Resumen de Facturas de Consumo</h2>${int(exp.snapshot.consumer_summary.count)} NCF · RD$ ${money(exp.snapshot.consumer_summary.monto_facturado)} · ITBIS RD$ ${money(exp.snapshot.consumer_summary.itbis)}</div>` : ''}
       ${toolCard(tool)}
+      ${dgiiErrorsCard()}
       <div class="card"><h2>Líneas exportadas</h2>${linesTable(exp.snapshot)}</div></div>`;
     bindToolCard(root, tool);
+    bindDgiiErrors(root, exp);
     root.querySelectorAll('[data-href]').forEach(el => el.addEventListener('click', () => NALA.go(el.dataset.href)));
     const guard = fn => async () => { try { await fn(); } catch (e) { NALA.fail(e); } };
     root.querySelector('#d-txt').addEventListener('click', guard(() => download(exp, 'txt')));

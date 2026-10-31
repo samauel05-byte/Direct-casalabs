@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Privacidad:** la Política de Privacidad ahora dice «Direct» en lugar de «SERP» (título, encabezado y textos).
 - **Nexo para todos:** el acceso a Nexo aparece a todo usuario que entra a la aplicación (también a quien solo tiene CAMI, NALA, Nómina, IR-2 o Estimación), sin asignarlo usuario por usuario.
 - **Usuarios:** la lista de usuarios del administrador ya muestra el nombre de cada uno (antes podía verse «?» en todos); si no se puede resolver, dice «(sin nombre)».
 - **NALA:** el panel de datos de la auditoría de facturas (Datos/Historial/Exportaciones) ahora tiene zoom (−, +, 100 %) igual que el visor de la factura, y recuerda tu tamaño.

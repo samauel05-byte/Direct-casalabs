@@ -1860,6 +1860,8 @@ function renderPortalGrid() {
     // El admin ve todos los portales; cada usuario ve solo los asignados.
     const userPortals=Array.isArray(currentUser?.portals)?currentUser.portals:[];
     allowed.push(...(currentUser?.role==='admin'?DIRECT_PORTALS:userPortals));
+    // Nexo (gestor de pendientes) aparece para todo el que tiene acceso a Direct.
+    if (!allowed.includes('nexo')) allowed.push('nexo');
   }
   if (currentUser?.access_cami) allowed.push('cami');
   if (currentUser?.access_nala) allowed.push('nala');

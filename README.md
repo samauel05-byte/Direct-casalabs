@@ -110,6 +110,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — errores de la DGII → factura:** `views-export.js` expone `NALA.dgiiErrors` (`parse`/`match`): extrae del texto pegado pares `RNC-NCF`, NCF sueltos y números de línea, los cruza con `snapshot.lines` del archivo exportado (columnas `ncf` y `rnc_cedula`, `line_no`) y enlaza cada coincidencia a `#/auditoria/<invoice_id>`; también sugiere la acción de `DGII_ALERTS` según el texto. También se abre desde el botón «Errores de la DGII» de la lista de exportaciones (`dgiiErrorsModal`: elige el archivo, carga su `snapshot` con `GET exports/:id` y reutiliza el mismo cuadro). Pruebas: `tests/direct/nala-dgii-errors.test.js`.
 
+**Nexo para todos:** el portal Nexo (Otros accesos) se muestra a todo usuario con acceso a Direct, sin tener que asignarlo en `portals_direct` (`renderPortalGrid`).
+
 **Usuarios — nombres en la lista:** `GET /api/users` resuelve el nombre de cada usuario con `usernameMap` (paginado y con respaldo `getUserById` por cuenta), de modo que la lista de usuarios ya no muestra «?» si la consulta masiva de Supabase Auth falla o queda incompleta.
 
 **NALA — zoom del panel de datos:** el panel derecho de la auditoría (Datos / Historial / Exportaciones) tiene botones −/+/100 % (0.7×–2×, `zoom` CSS sobre `#ebody`), igual que el visor de la factura; el nivel se recuerda en `localStorage` (`nala_editor_zoom`).

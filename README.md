@@ -100,6 +100,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 ## Módulos
 
+**Buscador de Direct (`public/index.html`):** `buildHomeIndex` indexa las credenciales descifradas y, además, los clientes de `GET /api/clients` que no tienen credencial (`sinAcceso`, sin chips de acceso); la búsqueda por RNC compara solo dígitos. `renderHomeResults` sugiere RNC con distancia de edición ≤ 1 cuando no hay resultados (≥ 7 dígitos). La vista Empresas usa `data-digits` y el Panel de Nómina compara RNC sin guiones.
+
 **NALA — revertir aprobación:** `POST invoices/:id/revert` ya no exige `reason` (sin motivo se registra «Reabierta para editar»); la UI solo pide confirmar. Aprobar con advertencias, excluir y reubicar siguen exigiendo motivo.
 
 **NALA — errores de la DGII → factura:** `views-export.js` expone `NALA.dgiiErrors` (`parse`/`match`): extrae del texto pegado pares `RNC-NCF`, NCF sueltos y números de línea, los cruza con `snapshot.lines` del archivo exportado (columnas `ncf` y `rnc_cedula`, `line_no`) y enlaza cada coincidencia a `#/auditoria/<invoice_id>`; también sugiere la acción de `DGII_ALERTS` según el texto. También se abre desde el botón «Errores de la DGII» de la lista de exportaciones (`dgiiErrorsModal`: elige el archivo, carga su `snapshot` con `GET exports/:id` y reutiliza el mismo cuadro). Pruebas: `tests/direct/nala-dgii-errors.test.js`.

@@ -340,7 +340,7 @@
       if(S.pf==='bloqueadas' && e.estado!=='bloqueada') return false;
       if(S.pf==='cerradas' && e.estado!=='cerrada') return false;
       if(S.pf==='atencion' && !e.atencion) return false;
-      const q=S.pq.trim().toLowerCase(); return !q || (e.nombre.toLowerCase().includes(q) || String(e.rnc||'').includes(q));
+      const q=S.pq.trim().toLowerCase(); const dq=q.replace(/\D/g,''); return !q || (e.nombre.toLowerCase().includes(q) || String(e.rnc||'').includes(q) || (dq.length>=3 && String(e.rnc||'').replace(/\D/g,'').includes(dq)));
     });
     const attn = d.empresas.filter(e=>e.atencion);
     view.innerHTML = `<div class="panel-head"><div><h1>Panel de nómina</h1><div class="muted">${r.empresas} empresas activas · ${r.empleados} empleados</div></div><span class="spacer"></span><button class="btn sm" id="pn-csv" title="Descargar este resumen">⇩ CSV resumen</button><button class="btn sm" id="pn-ref">↻ Actualizar</button></div>

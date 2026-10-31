@@ -54,8 +54,9 @@
     const result = d.result === 'ok' ? 'ok' : 'failed';
     logEvent(cred, result === 'ok' ? 'login_ok' : 'login_failed');
     DX.status[cred.id] = { result, at: new Date().toISOString() };
-    if (result === 'failed') toast(instName(cred.institution) + ': el portal rechazó la contraseña guardada. Revísela.', 'warn');
+    if (result === 'failed' && !DX.verifying) toast(instName(cred.institution) + ': el portal rechazó la contraseña guardada. Revísela.', 'warn');
     DX.decorateCompanies();
+    if (DX.verifyHook) DX.verifyHook(cred, result);
   });
 })();
 
@@ -367,5 +368,76 @@
     const ids = [];
     document.querySelectorAll('#u-company-list .u-company:checked').forEach(c => c.value.split(',').forEach(id => ids.push(id)));
     return ids;
+  };
+})();
+
+
+/* ── Verificar claves en lote (solo DGII: es el portal que informa el resultado del inicio de sesión) ──
+   Todo ocurre en el navegador de quien tiene la bóveda abierta: se descifra cada credencial aquí, se abre
+   el inicio de sesión por el relay en UNA ventana y se espera el resultado que el propio portal informa.
+   Una sola prueba por empresa, sin reintentos (una clave mala suma un intento fallido en esa cuenta). */
+(function () {
+  const { esc, plainOf, instName } = window.DX;
+  const PORTAL = 'dgii';
+  const WAIT_MS = 60000, PAUSE_MS = 3500;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const LABEL = { ok: '✓ Entró', failed: '✗ Clave rechazada', sin_respuesta: '? Sin respuesta', incompleta: '— Sin usuario o clave', error: '? No se pudo probar' };
+
+  DX.verifyKeys = async function () {
+    if (!masterKey) { toast('Abre la bóveda para verificar las claves.', 'warn'); return; }
+    if (DX.verifying) { toast('Ya hay una verificación en curso.', 'warn'); return; }
+    const targets = credentials.filter(c => c.institution === PORTAL);
+    if (!targets.length) { toast('No hay empresas de ' + instName(PORTAL) + ' para verificar.', 'warn'); return; }
+    const mins = Math.max(1, Math.round(targets.length * (PAUSE_MS + 8000) / 60000));
+    if (!confirm('Se intentará iniciar sesión UNA vez en ' + instName(PORTAL) + ' con la clave guardada de cada una de las ' + targets.length + ' empresas, una tras otra (aprox. ' + mins + ' min).\n\nUna clave incorrecta suma un intento fallido en esa cuenta y no se reintenta. Mantén abierta la ventana que se abrirá. ¿Continuar?')) return;
+    // La ventana se abre aquí, con el clic, para que el navegador no la bloquee; se reutiliza para todas.
+    const win = window.open('about:blank', 'serp-verify', 'width=980,height=720');
+    if (!win) { toast('Permite las ventanas emergentes de este sitio y vuelve a intentar.', 'warn'); return; }
+    const loginUrl = (typeof appConfig !== 'undefined' && appConfig[PORTAL + '_loginUrl']) || (INST[PORTAL] && INST[PORTAL].url) || '';
+    if (!loginUrl) { win.close(); toast('Falta la dirección de inicio de sesión de ' + instName(PORTAL) + '.', 'err'); return; }
+
+    const rows = [];
+    let stop = false;
+    const bg = document.createElement('div');
+    bg.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px';
+    bg.innerHTML = '<div style="background:var(--surface,#fff);color:var(--text,#111);border-radius:12px;max-width:760px;width:100%;max-height:88vh;display:flex;flex-direction:column;padding:18px;gap:10px"><div style="display:flex;align-items:center;gap:10px"><strong style="flex:1;font-size:16px">Verificar claves · ' + esc(instName(PORTAL)) + '</strong><button class="btn btn-ghost" id="vk-stop">Detener</button><button class="btn btn-pri" id="vk-close" hidden>Cerrar</button></div><div id="vk-prog" style="font-size:13px;opacity:.8"></div><div id="vk-list" style="overflow:auto;border:1px solid var(--border,#ddd);border-radius:8px"></div></div>';
+    document.body.appendChild(bg);
+    const prog = bg.querySelector('#vk-prog'), list = bg.querySelector('#vk-list');
+    const render = () => {
+      const f = rows.filter(r => r.result === 'failed').length, o = rows.filter(r => r.result === 'ok').length, u = rows.filter(r => !['ok', 'failed'].includes(r.result)).length;
+      prog.textContent = rows.length + ' de ' + targets.length + ' · ' + o + ' bien · ' + f + ' con clave rechazada' + (u ? ' · ' + u + ' sin comprobar' : '');
+      list.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px">' + rows.slice().sort((a, b) => (b.result === 'failed') - (a.result === 'failed')).map(r =>
+        '<tr style="border-bottom:1px solid var(--border,#eee)"><td style="padding:6px 10px">' + esc(r.name) + '</td><td style="padding:6px 10px;white-space:nowrap;color:' + (r.result === 'ok' ? '#15924a' : r.result === 'failed' ? '#d32f2f' : '#b26a00') + '">' + (LABEL[r.result] || r.result) + '</td><td style="padding:6px 10px;text-align:right">' + (r.result === 'failed' ? '<button class="btn btn-ghost" style="font-size:12px;padding:3px 10px" data-fix="' + esc(r.id) + '">Actualizar clave</button>' : '') + '</td></tr>').join('') + '</table>';
+      list.querySelectorAll('[data-fix]').forEach(b => b.addEventListener('click', () => { bg.remove(); openCompanyModal(b.dataset.fix); }));
+    };
+    bg.querySelector('#vk-stop').addEventListener('click', () => { stop = true; bg.querySelector('#vk-stop').disabled = true; });
+    bg.querySelector('#vk-close').addEventListener('click', () => bg.remove());
+    DX.verifying = true;
+    try {
+      for (const cred of targets) {
+        if (stop || win.closed) break;
+        let plain = {}; try { plain = await C.dec(masterKey, cred.iv, cred.ct); } catch { plain = {}; }
+        const row = { id: cred.id, name: (plain.companyName || 'Sin nombre') + (plain.rnc ? ' · ' + plain.rnc : ''), result: 'incompleta' };
+        if (plain.username && plain.password) {
+          prog.textContent = 'Probando ' + (rows.length + 1) + ' de ' + targets.length + ': ' + row.name + '…';
+          window.__serpEnteringCred = cred;
+          row.result = await new Promise(resolve => {
+            const t = setTimeout(() => { DX.verifyHook = null; resolve('sin_respuesta'); }, WAIT_MS);
+            DX.verifyHook = (c, r) => { if (c.id !== cred.id) return; clearTimeout(t); DX.verifyHook = null; resolve(r); };
+            try { autoLoginForm(loginUrl, PORTAL, plain.username, plain.password, plain.cedula || plain.rnc || '', plain.tarjeta || '', parseDgiiCodes(plain.dgiiCodes), win, plain.totp || ''); }
+            catch { clearTimeout(t); DX.verifyHook = null; resolve('error'); }
+          });
+        }
+        rows.push(row); render();
+        if (!stop) await sleep(PAUSE_MS);
+      }
+    } finally {
+      DX.verifying = false; DX.verifyHook = null;
+      try { win.location.href = 'about:blank'; win.close(); } catch (e) { /* ya cerrada */ }
+      bg.querySelector('#vk-stop').hidden = true; bg.querySelector('#vk-close').hidden = false;
+      render(); prog.textContent = (stop ? 'Detenido · ' : 'Terminado · ') + prog.textContent;
+      if (typeof renderPortalGrid === 'function') renderPortalGrid();
+      if (typeof renderCompaniesView === 'function' && activePortal) renderCompaniesView();
+    }
   };
 })();

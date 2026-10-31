@@ -2127,6 +2127,18 @@ async function renderCompaniesView() {
     dupeBanner.hidden=true;
   }
 
+  // Verificación de claves en lote (solo DGII): ver DX.verifyKeys en public/js/direct-extras.js.
+  let verifyBar=document.getElementById('verify-bar');
+  if (!verifyBar) {
+    verifyBar=document.createElement('div');
+    verifyBar.id='verify-bar';
+    verifyBar.style.cssText='border:1px solid var(--border,#ddd);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:10px;margin-bottom:8px';
+    list.parentElement.insertBefore(verifyBar, list);
+  }
+  verifyBar.hidden = !(activePortal==='dgii' && unique.length);
+  verifyBar.innerHTML=`<span style="flex:1">🔑 Comprueba cuáles claves guardadas de la DGII ya no entran.</span>
+    <button class="btn btn-ghost" style="font-size:12px;padding:5px 12px" onclick="DX.verifyKeys()">Verificar claves</button>`;
+
   for (const {cred, plain} of unique) {
     const initial=(plain.companyName||'?').charAt(0).toUpperCase();
     const item=document.createElement('div');

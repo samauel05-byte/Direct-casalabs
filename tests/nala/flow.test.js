@@ -232,7 +232,7 @@ test('reubicación a otra empresa sin duplicar y revertir aprobación', async ()
   assert.equal(after.stats.invoices, before.stats.invoices, 'el total consolidado no cambia');
   const uno = await ok('admin', 'GET', `stats?client_id=${CLIENT_UNO}`); const dos = await ok('admin', 'GET', `stats?client_id=${CLIENT_DOS}`);
   assert.equal(uno.stats.invoices + dos.stats.invoices, after.stats.invoices);
-  const reverted = await ok('admin', 'POST', `invoices/${state.inv.dolar.id}/revert`, { reason: 'Revisar moneda nuevamente' });
+  const reverted = await ok('admin', 'POST', `invoices/${state.inv.dolar.id}/revert`, {}); // revertir para editar no exige motivo
   assert.equal(reverted.invoice.status, 'reviewed');
   state.inv.dolar = (await ok('admin', 'POST', `invoices/${state.inv.dolar.id}/approve`, { version: reverted.invoice.version, accept_warnings: true, reason: 'Confirmado de nuevo' })).invoice;
 });

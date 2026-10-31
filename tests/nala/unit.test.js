@@ -118,7 +118,8 @@ test('606 TXT matches the official macro layout', () => {
   const txt = formats.toTxt(snap);
   const lines = txt.split('\r\n');
   assert.equal(lines[0], '606|101010632|202608|2');
-  assert.equal(lines[1], '401506254|1|02|E310000000007||20260801|||50.00|50.00|0.00||||0.00||||||||02');
+  // «Monto Retención Renta» siempre se escribe (0.00): la DGII rechaza el 606 con «Retencion Renta:(), Numero NO válido» si va vacío.
+  assert.equal(lines[1], '401506254|1|02|E310000000007||20260801|||50.00|50.00|0.00||||0.00|||0.00|||||02');
   assert.equal(lines[2], '130000001|1|02|B0100000123||20260814|20260820|1000.00||1000.00|180.00||||180.00||02|100.00|||||02');
   assert.equal(txt.endsWith('\r\n'), false);
   const check = formats.validateTxt('606', txt);

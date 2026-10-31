@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Usuarios:** la lista de usuarios del administrador ya muestra el nombre de cada uno (antes podía verse «?» en todos); si no se puede resolver, dice «(sin nombre)».
 - **NALA:** el panel de datos de la auditoría de facturas (Datos/Historial/Exportaciones) ahora tiene zoom (−, +, 100 %) igual que el visor de la factura, y recuerda tu tamaño.
 - **Nómina: los montos con coma ya se guardan**: al escribir en la planilla un monto como «1,500.00» o «RD$ 1,500», el servidor lo descartaba en silencio y la casilla quedaba vacía al guardar. Ahora se aceptan comas, espacios y «RD$», y si un valor no es un número, Nómina avisa cuál casilla es en vez de borrarla.
 - **Nómina: el monto de una novedad ya no se pierde**: en la ventana «Novedad» del empleado, los campos (Otros (+), Bonificación, préstamo…) se activaban solo con su interruptor y, si escribías el monto sin encenderlo, se descartaba al guardar. Ahora basta con escribir el monto: el interruptor se enciende solo (y se apaga si borras el monto).

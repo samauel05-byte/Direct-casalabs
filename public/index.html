@@ -1503,8 +1503,8 @@ async function renderUsersList() {
       if (user.access_nomina) modules.push('Nómina');
       if (user.access_ir2) modules.push('IR-2');
       if (user.access_estimacion) modules.push('Estimación');
-      const uname=(user.username||user.email||'?').replace('@direct.local','');
-      const initials=uname.charAt(0).toUpperCase();
+      const uname=(user.username||user.email||'(sin nombre)').replace('@direct.local','');
+      const initials=(uname.replace(/[^A-Za-z0-9]/g,'').charAt(0)||'?').toUpperCase();
       const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,companies_direct:user.companies_direct??null,access_cami:user.access_cami,access_nala:user.access_nala,access_nomina:user.access_nomina,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';

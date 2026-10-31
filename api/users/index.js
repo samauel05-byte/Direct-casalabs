@@ -2,6 +2,30 @@ const supabase = require('../../lib/supabase');
 const { authenticate } = require('../../lib/auth');
 const { requireTenant } = require('../../lib/tenant');
 
+
+// Nombres de usuario (email sin @direct.local) por id. Si la lista masiva falla o
+// no trae a alguien, se consulta cuenta por cuenta para no mostrar nombres vacíos.
+async function usernameMap(ids) {
+  const map = {};
+  const clean = e => (e || '').replace('@direct.local', '');
+  try {
+    for (let page = 1; page <= 20; page++) {
+      const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+      if (error) break;
+      const list = data?.users || [];
+      for (const u of list) map[u.id] = clean(u.email);
+      if (list.length < 1000) break;
+    }
+  } catch (_) { /* se usa el respaldo */ }
+  await Promise.all(ids.filter(id => !map[id]).map(async id => {
+    try {
+      const { data } = await supabase.auth.admin.getUserById(id);
+      if (data?.user?.email) map[id] = clean(data.user.email);
+    } catch (_) {}
+  }));
+  return map;
+}
+
 module.exports = async (req, res) => {
   const session = await authenticate(req);
   if (!session) return res.status(401).json({ error: 'No autorizado' });
@@ -16,8 +40,7 @@ module.exports = async (req, res) => {
         .select('id, role, access_direct, access_cami, access_nala, portals_direct, created_at')
         .order('created_at');
       if (error) throw error;
-      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-      const emailMap = Object.fromEntries((authUsers || []).map(user => [user.id, (user.email || '').replace('@direct.local', '')]));
+      const emailMap = await usernameMap((profiles || []).map(p => p.id));
       return res.json({ ok: true, users: (profiles || []).map(profile => ({
         ...profile,
         username: emailMap[profile.id] || '',
@@ -34,9 +57,7 @@ module.exports = async (req, res) => {
         .eq('tenant_id', session.tenantId)
         .order('created_at');
 
-      const { data: { users: authUsers } } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-      const emailMap = {};
-      for (const u of authUsers || []) emailMap[u.id] = (u.email || '').replace('@direct.local', '');
+      const emailMap = await usernameMap((profiles || []).map(p => p.id));
 
       const users = (profiles || []).map(p => ({
         id: p.id,

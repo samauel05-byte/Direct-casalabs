@@ -543,6 +543,7 @@
       <div class="audit">
         <div class="card viewer" id="viewer"></div>
         <div class="card editor">
+          <div class="editor-tools" id="etools"><span class="muted">Tamaño</span><button class="btn sm" data-ez="out" title="Reducir">−</button><span class="zm" data-ezv>100%</span><button class="btn sm" data-ez="in" title="Ampliar">+</button><button class="btn sm" data-ez="reset" title="Tamaño normal">100%</button></div>
           <div class="tabs"><button class="active" data-tab="data">Datos</button><button data-tab="history">Historial (${d.events.length})</button>${d.exports.length ? `<button data-tab="exports">Exportaciones (${d.exports.length})</button>` : ''}</div>
           <div class="editor-body" id="ebody">
             <div data-pane="data"><div class="stack" style="gap:6px">${issueHtml}</div>
@@ -574,6 +575,23 @@
       root.querySelectorAll('[data-pane]').forEach(p => { p.hidden = p.dataset.pane !== b.dataset.tab; });
     }));
     root.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => NALA.go(`#/auditoria/${b.dataset.open}`)));
+    { // zoom del panel de datos (igual que el de la factura)
+      const eb = root.querySelector('#ebody'); let ez = 1;
+      try { const v = parseFloat(localStorage.getItem('nala_editor_zoom')); if (v >= 0.7 && v <= 2) ez = v; } catch {}
+      const applyEz = () => {
+        eb.style.zoom = ez;
+        root.querySelector('[data-ezv]').textContent = `${Math.round(ez * 100)}%`;
+        try { localStorage.setItem('nala_editor_zoom', String(ez)); } catch {}
+      };
+      root.querySelectorAll('[data-ez]').forEach(b => b.addEventListener('click', () => {
+        const a = b.dataset.ez;
+        if (a === 'in') ez = Math.min(2, Math.round((ez + 0.1) * 100) / 100);
+        else if (a === 'out') ez = Math.max(0.7, Math.round((ez - 0.1) * 100) / 100);
+        else ez = 1;
+        applyEz();
+      }));
+      applyEz();
+    }
     const bindFields = () => {
       root.querySelectorAll('#fieldsbox [data-k]').forEach(el => el.addEventListener('change', () => {
         const k = el.dataset.k;

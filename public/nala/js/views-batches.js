@@ -6,6 +6,17 @@
   const { esc, int, period, ms } = NALA;
   const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar';
 
+  // Mensaje de error de un trabajo. El aviso de «sin saldo de OpenAI» es solo para
+  // administradores; los demás ven un texto genérico sin detalles de la cuenta.
+  const NO_CREDITS_TAG = '[SIN_SALDO_IA]';
+  const fixErr = msg => {
+  const m = String(msg || '');
+  if (!m.includes(NO_CREDITS_TAG)) return m;
+  return NALA.state.me?.is_admin
+    ? '💳 Se acabó el saldo de OpenAI. Recarga en platform.openai.com/settings/organization/billing y pulsa «Reprocesar fallidos».'
+    : 'El servicio de lectura no está disponible por ahora. Avisa al administrador.';
+  };
+
   // Piso de progreso por lote: aunque el servidor ya calcula un porcentaje que
   // sólo sube para archivos sueltos, un ZIP puede revelar más archivos a mitad
   // de camino. Guardamos el máximo visto para que la barra nunca retroceda
@@ -211,7 +222,7 @@
       const attempts = jobs.length ? Math.max(...jobs.map(j => j.attempts)) : 0;
       const dur = jobs.filter(j => j.duration_ms).reduce((s2, j) => s2 + j.duration_ms, 0);
       return `<tr><td>${nested ? '<span class="muted">↳</span> ' : ''}${esc(doc.original_name)}<div class="muted mono" title="SHA-256">${doc.sha256 ? doc.sha256.slice(0, 16) + '…' : ''}</div></td>
-        <td>${doc.kind.toUpperCase()}</td><td class="num">${doc.page_count ?? '—'}</td><td>${NALA.badge(doc.status)}${doc.error ? `<div class="muted" style="max-width:360px">${esc(doc.error)}</div>` : ''}</td>
+        <td>${doc.kind.toUpperCase()}</td><td class="num">${doc.page_count ?? '—'}</td><td>${NALA.badge(doc.status)}${doc.error ? `<div class="muted" style="max-width:360px">${esc(fixErr(doc.error))}</div>` : ''}</td>
         <td class="num">${jobs.length ? `${jobs.filter(j => j.status === 'succeeded').length}/${jobs.length}` : '—'}${attempts > 1 ? ` <span class="badge warn" title="Intentos">${attempts} int.</span>` : ''}</td><td class="num">${dur ? ms(dur) : '—'}</td>
         <td>${doc.status === 'pending_upload'
             ? (NALA.can('upload') ? `<button class="btn sm" data-href="#/lotes/${b.id}?agregar=1">Reintentar subida</button>` : '<span class="muted">Sin subir</span>')
@@ -240,7 +251,7 @@
       <div id="dups"></div>
       <div class="card"><h2>Documentos y trabajos</h2><div class="table-wrap"><table><tr><th>Archivo</th><th>Tipo</th><th class="num">Págs.</th><th>Estado</th><th class="num">Trabajos</th><th class="num">Duración</th><th></th></tr>
         ${top.map(doc => docRow(doc) + children(doc.id).map(ch => docRow(ch, true)).join('')).join('') || '<tr><td colspan="7" class="empty">Sin documentos.</td></tr>'}</table></div>
-        ${d.jobs.some(j => j.status === 'failed') ? `<div class="stack" style="margin-top:10px">${d.jobs.filter(j => j.status === 'failed').map(j => `<div class="issue critical"><span class="ico">✕</span>${esc(j.kind === 'prepare' ? 'Preparación' : `Extracción págs. ${j.payload.page_from}-${j.payload.page_to}`)} falló tras ${j.attempts} intento(s): ${esc(j.last_error || '')}</div>`).join('')}</div>` : ''}</div>
+        ${d.jobs.some(j => j.status === 'failed') ? `<div class="stack" style="margin-top:10px">${(() => { const failed = d.jobs.filter(j => j.status === 'failed'); const nc = failed.filter(j => String(j.last_error || '').includes(NO_CREDITS_TAG)); const rest = failed.filter(j => !nc.includes(j)); return (nc.length ? `<div class="issue critical"><span class="ico">💳</span><span>${esc(fixErr(NO_CREDITS_TAG))}${NALA.state.me?.is_admin ? ` <b>${nc.length}</b> trabajo(s) sin leer.` : ''}</span></div>` : '') + rest.map(j => `<div class="issue critical"><span class="ico">✕</span>${esc(j.kind === 'prepare' ? 'Preparación' : `Extracción págs. ${j.payload.page_from}-${j.payload.page_to}`)} falló tras ${j.attempts} intento(s): ${esc(fixErr(j.last_error))}</div>`).join(''); })()}</div>` : ''}</div>
       <div class="card"><h2>Historial del lote</h2><div class="timeline" id="tl">Cargando…</div></div></div>`;
     root.querySelectorAll('[data-href]').forEach(el => el.addEventListener('click', () => NALA.go(el.dataset.href)));
     root.querySelectorAll('[data-doc]').forEach(btn => btn.addEventListener('click', async () => {

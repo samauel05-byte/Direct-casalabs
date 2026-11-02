@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — aviso de «sin saldo de OpenAI»:** cuando se acaba el saldo, los trabajos fallan de inmediato (sin 3 reintentos) y el lote muestra un solo aviso claro con el paso a seguir (recargar y «Reprocesar fallidos»). Solo lo ve el administrador; los demás usuarios ven un mensaje genérico.
 - **Privacidad:** la Política de Privacidad ahora dice «Direct» en lugar de «SERP» (título, encabezado y textos).
 - **Nexo para todos:** el acceso a Nexo aparece a todo usuario que entra a la aplicación (también a quien solo tiene CAMI, NALA, Nómina, IR-2 o Estimación), sin asignarlo usuario por usuario.
 - **Usuarios:** la lista de usuarios del administrador ya muestra el nombre de cada uno (antes podía verse «?» en todos); si no se puede resolver, dice «(sin nombre)».

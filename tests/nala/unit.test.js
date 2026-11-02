@@ -372,3 +372,11 @@ test('progress: lote vacío y lote totalmente terminado', () => {
   const docs = [{ id: 'a', kind: 'image', status: 'processed' }, { id: 'b', kind: 'image', status: 'failed' }];
   assert.equal(batchProgress(docs, [{ document_id: 'a', status: 'succeeded' }, { document_id: 'b', status: 'failed' }]).percent, 100);
 });
+
+test('extractor: sin saldo de OpenAI corta el reintento y lleva marcador', () => {
+  const { isNoCredits, NO_CREDITS_TAG } = require('../../lib/nala/extractor');
+  assert.equal(isNoCredits(429, '{"error":{"code":"insufficient_quota","message":"You have no credits remaining"}}'), true);
+  assert.equal(isNoCredits(429, 'Rate limit reached for requests'), false);
+  assert.equal(isNoCredits(500, 'insufficient_quota'), false);
+  assert.equal(NO_CREDITS_TAG, '[SIN_SALDO_IA]');
+});

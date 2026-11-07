@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **CAMI con logo nuevo:** el mosaico de CAMI ahora muestra una «C» blanca sobre azul cielo, igual de simple que la «N» morada de NALA.
 - **NALA — aviso de «sin saldo de OpenAI»:** cuando se acaba el saldo, los trabajos fallan de inmediato (sin 3 reintentos) y el lote muestra un solo aviso claro con el paso a seguir (recargar y «Reprocesar fallidos»). Solo lo ve el administrador; los demás usuarios ven un mensaje genérico.
 - **Privacidad:** la Política de Privacidad ahora dice «Direct» en lugar de «SERP» (título, encabezado y textos).
 - **Nexo para todos:** el acceso a Nexo aparece a todo usuario que entra a la aplicación (también a quien solo tiene CAMI, NALA, Nómina, IR-2 o Estimación), sin asignarlo usuario por usuario.

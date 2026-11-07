@@ -110,6 +110,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — errores de la DGII → factura:** `views-export.js` expone `NALA.dgiiErrors` (`parse`/`match`): extrae del texto pegado pares `RNC-NCF`, NCF sueltos y números de línea, los cruza con `snapshot.lines` del archivo exportado (columnas `ncf` y `rnc_cedula`, `line_no`) y enlaza cada coincidencia a `#/auditoria/<invoice_id>`; también sugiere la acción de `DGII_ALERTS` según el texto. También se abre desde el botón «Errores de la DGII» de la lista de exportaciones (`dgiiErrorsModal`: elige el archivo, carga su `snapshot` con `GET exports/:id` y reutiliza el mismo cuadro). Pruebas: `tests/direct/nala-dgii-errors.test.js`.
 
+**CAMI — vista previa al compartir el enlace:** `og:image` de `public/cami/index.html` e `itbis-web.html` apunta a `app.casalabs.com.do/cami/assets/cami-logo-512.png?v=2` (antes a otro sitio); el favicon y el `apple-touch-icon` de `public/cami/assets/` usan el mismo logo (C azul cielo).
+
 **Logo de CAMI:** `public/img/logo-cami.png` es ahora una «C» blanca sobre cuadrado azul cielo (mismo estilo que la «N» morada de NALA); se usa en el mosaico de Direct (`TOOL_LOGOS`).
 
 **NALA — sin saldo de OpenAI:** `extractor.js` detecta `429/402` con `insufficient_quota`/`credit_balance_exhausted` y falla el trabajo **sin reintentar**, con el marcador `[SIN_SALDO_IA]`. En «Carga masiva y lotes» (`views-batches.js`, `fixErr`) solo el **administrador** (`NALA.state.me.is_admin`) ve el aviso «Se acabó el saldo de OpenAI… pulsa Reprocesar fallidos» (un solo cuadro con el conteo, en vez de un error por página); los demás usuarios ven «El servicio de lectura no está disponible por ahora. Avisa al administrador.» sin datos de la cuenta. Prueba: `tests/nala/unit.test.js`.

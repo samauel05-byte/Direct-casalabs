@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **CAMI — imagen al compartir el enlace:** la vista previa (WhatsApp, redes) y el ícono de la pestaña ahora usan la «C» azul cielo, servida desde Direct.
 - **CAMI con logo nuevo:** el mosaico de CAMI ahora muestra una «C» blanca sobre azul cielo, igual de simple que la «N» morada de NALA.
 - **NALA — aviso de «sin saldo de OpenAI»:** cuando se acaba el saldo, los trabajos fallan de inmediato (sin 3 reintentos) y el lote muestra un solo aviso claro con el paso a seguir (recargar y «Reprocesar fallidos»). Solo lo ve el administrador; los demás usuarios ven un mensaje genérico.
 - **Privacidad:** la Política de Privacidad ahora dice «Direct» en lugar de «SERP» (título, encabezado y textos).

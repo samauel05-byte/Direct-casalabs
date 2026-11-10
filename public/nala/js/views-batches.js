@@ -233,6 +233,7 @@
         <button class="btn primary" data-href="#/auditoria?batch=${b.id}">🧾 Auditar lote</button>
         <button class="btn sm" id="refresh" title="Actualizar">↻ Actualizar</button>
         ${NALA.can('upload') ? `<button class="btn sm" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
+        ${NALA.can('upload') && b.format === '606' ? '<button class="btn sm" id="b11" title="Compras a personas informales (B11): copie del Excel y pegue aquí">+ B11 (pegar Excel)</button>' : ''}
         ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn sm" id="reproc">Reprocesar fallidos</button>' : ''}
         ${NALA.can('reprocess') ? '<button class="btn sm" id="reproc-all" title="Vuelve a LEER todas las facturas con la IA. Conserva las correcciones hechas a mano y no toca las aprobadas ni las excluidas.">Reprocesar</button>' : ''}
         ${NALA.can('reprocess') ? '<button class="btn sm" id="reval" title="Vuelve a validar los comprobantes con las reglas y la configuración actuales (sin re-escanear)">Revalidar</button>' : ''}
@@ -267,6 +268,21 @@
           <ul style="margin:6px 0 0 16px"><li>Conserva las <b>correcciones hechas a mano</b>.</li><li><b>No toca</b> las aprobadas ni las excluidas.</li><li>Tiene costo de IA y puede tardar.</li></ul>` });
       if (!ok) return;
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: false }); NALA.toast(`Re-leyendo ${r.requeued} documento(s)…`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
+    });
+    root.querySelector('#b11')?.addEventListener('click', async () => {
+      const ok = await NALA.modal({ title: 'Agregar comprobantes B11 desde Excel', okText: 'Agregar', wide: true,
+        body: `<p class="muted" style="margin-bottom:8px">Copie del Excel las filas con las columnas <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> (con o sin la fila de títulos) y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este lote: ITBIS 18 % retenido al 100 % y retención de renta.</p>
+          <textarea id="b11-text" rows="10" style="width:100%;font-family:monospace" placeholder="Pegue aquí las filas copiadas del Excel"></textarea>
+          <div class="row" style="margin-top:8px"><label>Retención si la fila no la trae (%) <input id="b11-rate" type="number" step="0.01" value="3" style="width:80px"></label>
+          <label><input type="checkbox" id="b11-itbis" checked> Calcular ITBIS 18 % y retenerlo al 100 %</label></div>`,
+        onOk: async m => {
+          const text = m.querySelector('#b11-text').value;
+          if (!text.trim()) throw new Error('Pegue las filas del Excel.');
+          const r = await NALA.api('POST', `batches/${b.id}/b11`, { text, retention_rate: Number(m.querySelector('#b11-rate').value), itbis: m.querySelector('#b11-itbis').checked });
+          NALA.toast(`${r.created} comprobante(s) B11 agregados${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
+          return true;
+        } });
+      if (ok) NALA.route();
     });
     root.querySelector('#reval')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `batches/${b.id}/revalidate`); NALA.toast('Revalidando el lote…', 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }

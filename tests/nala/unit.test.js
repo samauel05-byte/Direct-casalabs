@@ -380,3 +380,12 @@ test('extractor: sin saldo de OpenAI corta el reintento y lleva marcador', () =>
   assert.equal(isNoCredits(500, 'insufficient_quota'), false);
   assert.equal(NO_CREDITS_TAG, '[SIN_SALDO_IA]');
 });
+
+test('validate: factura de un mes anterior en el 606 es solo informativa (no exige motivo)', () => {
+  const { validate } = require('../../lib/nala/validate');
+  const r = validate({ format: '606', period: '202605', fields: { rnc_cedula: '131793916', ncf: 'B0100000001', fecha_comprobante: '2026-03-10', monto_bienes: '1000.00', itbis: '180.00', total: '1180.00' } });
+  const it = r.issues.find(i => i.code === 'COMPROBANTE_PERIODO_ANTERIOR');
+  assert.ok(it);
+  assert.equal(it.severity, 'info');
+  assert.equal(r.issues.filter(i => i.severity === 'warning' && i.code === 'COMPROBANTE_PERIODO_ANTERIOR').length, 0);
+});

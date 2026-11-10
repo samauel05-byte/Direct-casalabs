@@ -145,7 +145,7 @@ Fechas en **UTC** en la base; se muestran en **America/Santo_Domingo**.
 | `MONITOR_CRON_SECRET` | Vercel **y** Cloudflare Worker | Autorizar al scheduler a llamar `/api/monitor/cron` | Configurada en Vercel; en el Worker va como **secreto** (persiste entre redespliegues) |
 | `MONITOR_APP_URL` | Cloudflare Worker | URL base de Direct que llama el cron | **Fijada en `wrangler.toml` (`[vars]`)** = `https://app.casalabs.com.do`; así sobrevive a los redespliegues del Worker |
 | `MONITOR_SMTP_HOST`, `MONITOR_SMTP_PORT`, `MONITOR_SMTP_USER`, `MONITOR_SMTP_PASS`, `MONITOR_ALERT_FROM` | Vercel | **Enviar alertas por SMTP desde tu buzón** (recomendado). Puerto 465 (SSL) o 587 (STARTTLS). | **Pendiente** (sin esto, los avisos se registran pero no se envían) |
-| `MONITOR_RESEND_API_KEY` + `MONITOR_ALERT_FROM` | Vercel | Alternativa de envío por Resend (HTTPS) si no se usa SMTP | Opcional |
+| `MAIL_SMTP_*` / `MAIL_IMAP_*` (`lib/mail.js`) | Vercel | Buzón corporativo único para todo el correo de Direct: SMTP envía; si hay `MAIL_IMAP_HOST`, guarda copia en «Enviados» por IMAP. Ya no existe Resend. | Reemplaza `MONITOR_RESEND_API_KEY` |
 | `MONITOR_HEARTBEAT_URL` | Vercel | Dead-man switch externo para detectar que el monitor se detuvo | **Pendiente** (sin esto, la alerta “monitor detenido” no está disponible) |
 | `CRON_SECRET` | Vercel | Solo si además se quiere activar un cron de Vercel (plan Pro); el endpoint también acepta `Authorization: Bearer CRON_SECRET` | Opcional |
 
@@ -236,8 +236,8 @@ otros servicios e-CF (envío, aprobación, consultas), que no se comprueban.
 1. **Scheduler**: desplegar el Cloudflare Worker con el cron y los secretos
    (sección 7), o configurar un cron externo. Sin esto no hay comprobaciones
    automáticas.
-2. **Alertas por correo**: definir `MONITOR_RESEND_API_KEY` y `MONITOR_ALERT_FROM`
-   (o adaptar a otro proveedor/SMTP). Sin esto, los avisos se registran pero no se
+2. **Alertas por correo**: definir el buzón corporativo (`MAIL_SMTP_HOST/PORT/USER/PASS`,
+   o las variables `MONITOR_SMTP_*` anteriores). Sin esto, los avisos se registran pero no se
    envían.
 3. **Alerta de “monitor detenido”**: configurar `MONITOR_HEARTBEAT_URL` (heartbeat
    externo independiente). Sin esto, esa alerta no está disponible.

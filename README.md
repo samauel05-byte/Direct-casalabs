@@ -110,6 +110,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — errores de la DGII → factura:** `views-export.js` expone `NALA.dgiiErrors` (`parse`/`match`): extrae del texto pegado pares `RNC-NCF`, NCF sueltos y números de línea, los cruza con `snapshot.lines` del archivo exportado (columnas `ncf` y `rnc_cedula`, `line_no`) y enlaza cada coincidencia a `#/auditoria/<invoice_id>`; también sugiere la acción de `DGII_ALERTS` según el texto. También se abre desde el botón «Errores de la DGII» de la lista de exportaciones (`dgiiErrorsModal`: elige el archivo, carga su `snapshot` con `GET exports/:id` y reutiliza el mismo cuadro). Pruebas: `tests/direct/nala-dgii-errors.test.js`.
 
+**Correo — siempre desde el buzón corporativo:** todo correo que envía Direct (activación de licencias y alertas del Monitor) sale por `lib/mail.js`: **SMTP del buzón empresarial** (`MAIL_SMTP_HOST/PORT/USER/PASS`; también se aceptan `LICENSE_SMTP_*` y `MONITOR_SMTP_*`) y, si se define `MAIL_IMAP_HOST` (+ `MAIL_IMAP_PORT`, `MAIL_IMAP_USER/PASS`, `MAIL_IMAP_SENT`), **guarda una copia en «Enviados» por IMAP** (IMAP no puede enviar, solo guarda la copia; si falla, el envío no se cancela). El remitente es siempre la cuenta del buzón (`MAIL_FROM_NAME` solo cambia el nombre visible). Se eliminó Resend: sin buzón configurado, el correo no se envía. Pruebas: `tests/direct/mail.test.js`.
+
 **NALA — facturas de meses anteriores (606):** `validate.js` marca `COMPROBANTE_PERIODO_ANTERIOR` como **informativo** (`info`) en vez de advertencia: una factura de un mes pasado que se reporta en el 606 del mes actual ya no exige confirmar advertencia ni motivo para aprobar (se sigue mostrando el aviso). El 607 sigue exigiendo reubicar (`PERIODO_INCORRECTO`). Las ya cargadas conservan la advertencia hasta pulsar «Revalidar» en el lote.
 
 **Licencias — suspender a Save:** el panel de licencias ya permite **Suspender/Reactivar** también a la firma Save (antes la API respondía 409 «La firma de la plataforma no se puede suspender»), para suspenderla por falta de pago. **root** (`is_platform_admin`) sigue exento del bloqueo en login y API, así que puede reactivarla desde el panel.
@@ -271,8 +273,8 @@ servidores, por lo que no son fuentes fiables de estado y no se monitorean.
 - **Permisos**: todos los usuarios autorizados consultan; solo admin configura,
   pausa, verifica manualmente y administra alertas. Destinatarios de alertas
   privados por firma.
-- **Alertas por correo** por cambio de estado (sin duplicados), por **SMTP del
-  buzón del usuario** (IMAP solo lee; SMTP envía) o Resend como alternativa, con
+- **Alertas por correo** por cambio de estado (sin duplicados), por el **buzón
+  corporativo** (`lib/mail.js`; ya no hay Resend), con
   envío de prueba; pendiente de configurar el proveedor y el heartbeat externo.
 
 Detalles de activación, variables de entorno, fuente oficial y pruebas en

@@ -128,7 +128,10 @@ test('vencimiento: gracia, bloqueo y renovación; la firma de la plataforma nunc
   assert.equal(ext.status, 200);
   assert.equal((await login('nuevo.admin', 'ClaveSegura#1')).status, 200, 'renovada, vuelve a entrar');
   const saveId = (await db.query("select id from direct_tenants where slug = 'save'")).rows[0].id;
-  assert.equal((await call('admin', 'POST', '/api/licenses/suspend', { tenant_id: saveId })).status, 409);
+  // Save (la firma de la plataforma) también se puede suspender por falta de pago; root nunca queda fuera.
+  assert.equal((await call('admin', 'POST', '/api/licenses/suspend', { tenant_id: saveId })).status, 200);
+  assert.equal((await call('admin', 'GET', '/api/licenses/list')).status, 200, 'root sigue entrando con su firma suspendida');
+  assert.equal((await call('admin', 'POST', '/api/licenses/resume', { tenant_id: saveId })).status, 200);
   assert.equal((await call('admin', 'POST', '/api/licenses/extend', { tenant_id: saveId, months: 1 })).status, 409);
 });
 

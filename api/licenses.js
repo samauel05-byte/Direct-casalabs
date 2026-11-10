@@ -259,7 +259,7 @@ async function admin(route, req, res) {
     const { data: t, error } = await supabase.from('direct_tenants').select('id, slug, license_until').eq('id', tenantId).maybeSingle();
     if (error) throw error;
     if (!t) return fail(res, 404, 'Firma no encontrada.');
-    if (route === 'suspend' && t.slug === 'save') return fail(res, 409, 'La firma de la plataforma no se puede suspender.');
+    // Save también puede suspenderse por falta de pago: root (administrador de la plataforma) nunca queda fuera.
     let patch;
     if (route === 'suspend') patch = { license_status: 'suspended' };
     else if (route === 'resume') patch = { license_status: 'active' };

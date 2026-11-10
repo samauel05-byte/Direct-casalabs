@@ -389,3 +389,28 @@ test('validate: factura de un mes anterior en el 606 es solo informativa (no exi
   assert.equal(it.severity, 'info');
   assert.equal(r.issues.filter(i => i.severity === 'warning' && i.code === 'COMPROBANTE_PERIODO_ANTERIOR').length, 0);
 });
+
+test('b11: filas pegadas desde Excel → campos del 606 sin errores de validación', () => {
+  const b11 = require('../../lib/nala/b11');
+  const { validate } = require('../../lib/nala/validate');
+  const txt = 'Fecha\tNCF\tNo.ck\tCedula \tNombre\tMonto\tRetencion\tValor de pago \n30/09/2026\tB1100001422\t13\t05500418123\tJUAN PEREZ\t13402.06\t402.06\t13000\n05/09/2026\t\t7\t40214390318\tNULO\t100\t0\t100\n';
+  const r = b11.parse(txt, { retentionRate: 3 });
+  assert.equal(r.rows.length, 1);
+  assert.equal(r.skipped.length, 1);
+  const f = { ...r.rows[0].fields, receptor_id: '132614666', receptor_nombre: 'ANNIBEL SRL' };
+  assert.equal(f.itbis, '2412.37');
+  assert.equal(f.itbis_retenido, '2412.37');
+  assert.equal(f.isr_retenido, '402.06');
+  assert.equal(f.total, '15814.43');
+  const v = validate({ format: '606', period: '202609', fields: f, client: { rnc: '132614666', legal_name: 'ANNIBEL SRL' } });
+  assert.deepEqual(v.issues.filter(i => i.severity !== 'info'), []);
+});
+
+test('b11: sin encabezado usa el orden de su Excel; deduce el monto del valor de pago y la retención por porcentaje', () => {
+  const b11 = require('../../lib/nala/b11');
+  const r = b11.parse('04/11/2026\t\t13\t05500418123\tJORDANI\t\t\t50000', { retentionRate: 2 });
+  assert.equal(r.rows.length, 1);
+  assert.equal(r.rows[0].fields.monto_servicios, '50000.00');
+  assert.equal(r.rows[0].fields.isr_retenido, '1000.00');
+  assert.equal(b11.parse('xx').rows.length, 0);
+});

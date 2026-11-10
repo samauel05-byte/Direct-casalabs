@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Licencias — Save se puede suspender por falta de pago:** el panel de licencias ahora muestra Suspender/Reactivar también para la firma Save. Root siempre puede entrar, así que puede reactivarla cuando paguen.
 - **CAMI — imagen al compartir el enlace:** la vista previa (WhatsApp, redes) y el ícono de la pestaña ahora usan la «C» azul cielo, servida desde Direct.
 - **CAMI con logo nuevo:** el mosaico de CAMI ahora muestra una «C» blanca sobre azul cielo, igual de simple que la «N» morada de NALA.
 - **NALA — aviso de «sin saldo de OpenAI»:** cuando se acaba el saldo, los trabajos fallan de inmediato (sin 3 reintentos) y el lote muestra un solo aviso claro con el paso a seguir (recargar y «Reprocesar fallidos»). Solo lo ve el administrador; los demás usuarios ven un mensaje genérico.

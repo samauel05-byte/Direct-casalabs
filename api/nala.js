@@ -47,6 +47,7 @@ const ROUTES = [
   ['POST', /^invoices\/approve-bulk$/, (ctx, q, b) => invoices.approveBulk(ctx, b)],
   ['POST', /^invoices\/([^/]+)\/approve$/, (ctx, q, b, m) => invoices.approve(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/revert$/, (ctx, q, b, m) => invoices.revert(ctx, m[1], b)],
+  ['POST', /^invoices\/import-b11$/, (ctx, q, b) => invoices.importB11ForPeriod(ctx, b)],
   ['POST', /^batches\/([^/]+)\/b11$/, (ctx, q, b, m) => invoices.importB11(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/relocate$/, (ctx, q, b, m) => invoices.relocate(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/exclude$/, (ctx, q, b, m) => invoices.setExcluded(ctx, m[1], b, true)],

@@ -112,6 +112,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — edición rápida desde la lista de Auditoría:** el botón **«✎ Editar»/«✎ Corregir»** aparece en toda factura editable (no solo en las que tienen observaciones) y abre el panel en línea con los campos importantes siempre visibles —606: tipo de bien/servicio (tipo de gasto), monto en servicios, monto en bienes e ITBIS; 607: tipo de ingreso, monto facturado e ITBIS— más los campos señalados; lo demás se edita en «Abrir detalle». **IR-17/B11 por archivo:** el botón «+ B11» del lote 606 también acepta subir el Excel (`.xlsx`, `.csv` o `.txt`; `POST batches/:id/b11` con `file_base64`/`file_name`, máx. 4 MB), que se lee con `b11.workbookToText` (primera hoja visible, primeras 12 columnas) igual que si se pegara.
 
+**NALA — IR-17/B11 también desde «Exportar»:** en «Listos para exportar», cada fila del 606 tiene el botón **«+ IR-17 (Excel)»** (`NALA.openB11`, misma ventana que el lote): `POST /api/nala/invoices/import-b11` `{client_id, period, text | file_base64}` usa el lote 606 más reciente de ese período o crea uno «IR-17 / B11 AAAAMM», e importa las filas (`importB11ForPeriod`). Los comprobantes quedan pendientes: la fila pasa a «Faltan N por auditar» hasta aprobarlos y se vuelve a exportar el mes.
+
 **NALA — actualización automática:** `app.js` compara la huella (ETag) de los scripts de NALA al abrir, cada 5 minutos y al volver a la pestaña; si hay una versión nueva y no hay cambios sin guardar, recarga sola (con cambios sin guardar solo avisa). Evita que una pestaña abierta días siga con el código anterior.
 
 **NALA — «✓ Aprobar» en el panel en línea:** solo se deshabilita si el comprobante tiene errores críticos; con advertencias se puede aprobar directo.

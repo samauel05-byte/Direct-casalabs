@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — subir el IR-17 después de trabajar un 606:** en «Exportar DGII 606/607», cada fila del 606 tiene el botón «+ IR-17 (Excel)». Subes (o pegas) el Excel, NALA crea los comprobantes B11 en ese mes, los apruebas y exportas de nuevo el 606 con todo junto.
 - **NALA se actualiza sola:** si dejas NALA abierta y hay una versión nueva, la pestaña se recarga sola (si no tienes cambios sin guardar). Así dejan de verse pantallas viejas después de una mejora.
 - **NALA — Aprobar desde la lista con advertencias:** el botón «✓ Aprobar» del panel de edición rápida ya no se bloquea por advertencias como «lectura de baja confianza»; solo por errores críticos.
 - **NALA — edición rápida y IR-17 por archivo:** en la lista de Auditoría, el botón «✎ Editar» de cada factura abre un panel con tipo de gasto, monto e ITBIS (sin entrar al detalle). Y en un lote del 606 se puede subir directamente el Excel del IR-17 (comprobantes B11 que emite el cliente), no solo pegarlo.

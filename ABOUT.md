@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — aprobar con advertencias sin cuadro ni comentario:** al pulsar Aprobar en una factura con advertencias (por ejemplo «lectura de baja confianza») se aprueba directo; ya no pide escribir un comentario. Los errores críticos siguen impidiendo aprobar y las advertencias quedan registradas en el historial.
 - **NALA — B11 desde Excel:** en un lote del 606 hay un botón «+ B11 (pegar Excel)». Se copian del Excel las filas de compras a personas informales (fecha, cédula, nombre, monto, retención) y NALA crea los comprobantes B11 con su ITBIS retenido y la retención de renta, listos para revisar y exportar en el mismo 606.
 - **Correos solo desde tu buzón empresarial:** los correos de Direct (activación de licencias y alertas del Monitor) salen únicamente por el buzón corporativo, con copia en «Enviados» por IMAP; ya no se usa ningún otro proveedor.
 - **NALA — facturas de meses pasados en el 606:** ya no piden confirmar una advertencia ni escribir un motivo para aprobar: solo muestran un aviso informativo con el mes de la factura. En el 607 se sigue pidiendo reubicar.

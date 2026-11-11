@@ -195,11 +195,8 @@ test('auditoría: versión, bloqueo, guardar ≠ aprobar, críticos bloquean, ad
   assert.equal(saved.invoice.status, 'reviewed');
   assert.ok(saved.invoice.corrected_fields.includes('tipo_bienes_servicios'));
   assert.equal(saved.invoice.critical_count, 0);
-  const warnings = saved.invoice.issues.filter(i => i.severity === 'warning');
-  if (warnings.length) {
-    assert.equal((await api('admin', 'POST', `invoices/${alfa.id}/approve`, { version: saved.invoice.version })).status, 422);
-  }
-  const approved = await ok('admin', 'POST', `invoices/${alfa.id}/approve`, { version: saved.invoice.version, accept_warnings: true, reason: 'Revisado contra el original' });
+  // Aprobar con advertencias ya no exige confirmar ni comentario: se aprueba directo y las advertencias quedan registradas.
+  const approved = await ok('admin', 'POST', `invoices/${alfa.id}/approve`, { version: saved.invoice.version });
   assert.equal(approved.invoice.status, 'approved');
   assert.equal((await api('admin', 'PATCH', `invoices/${alfa.id}`, { version: approved.invoice.version, fields: { total: '1' } })).status, 409, 'aprobada no se edita');
   state.inv.alfa = approved.invoice;

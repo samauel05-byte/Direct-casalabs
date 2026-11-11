@@ -669,16 +669,8 @@
         // Quien solo puede aprobar (sin permiso de editar) aprueba directo, sin guardar cambios.
         if (NALA.can('edit') && (Object.keys(changedFields()).length || inv.status === 'pending_review')) current = await save();
         if (current.critical_count > 0) { NALA.toast('No se puede aprobar: hay errores críticos.', 'err'); NALA.route(); return; }
-        const warnings = current.issues.filter(i => i.severity === 'warning');
-        let body = { version: current.version };
-        if (warnings.length) {
-          const reason = await NALA.modal({ title: 'Aprobar con advertencias', okText: 'Aprobar', okClass: 'ok',
-            body: `<div class="stack" style="gap:6px;margin-bottom:10px">${warnings.map(w => `<div class="issue warning"><span class="ico">!</span>${esc(w.message)}</div>`).join('')}</div>
-              <label class="f"><span>Comentario <span class="muted" style="font-weight:400">(confirma que revisó las advertencias contra el documento)</span></span><textarea id="why" rows="2" placeholder="Ej.: Revisado contra la factura; el ITBIS es correcto."></textarea></label>`,
-            onOk: m => { const v = m.querySelector('#why').value.trim(); if (v.length < 5) throw new Error('Escriba un comentario que confirme la revisión (mín. 5 caracteres).'); return v; } });
-          if (!reason) { NALA.route(); return; }
-          body = { ...body, accept_warnings: true, reason };
-        }
+        // Las advertencias ya no piden comentario: el servidor las deja registradas al aprobar.
+        const body = { version: current.version };
         await NALA.api('POST', `invoices/${inv.id}/approve`, body);
         NALA.toast('Comprobante aprobado', 'ok');
         if (ids[pos + 1]) navTo(1); else NALA.route();

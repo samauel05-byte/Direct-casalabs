@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA se actualiza sola:** si dejas NALA abierta y hay una versión nueva, la pestaña se recarga sola (si no tienes cambios sin guardar). Así dejan de verse pantallas viejas después de una mejora.
 - **NALA — Aprobar desde la lista con advertencias:** el botón «✓ Aprobar» del panel de edición rápida ya no se bloquea por advertencias como «lectura de baja confianza»; solo por errores críticos.
 - **NALA — edición rápida y IR-17 por archivo:** en la lista de Auditoría, el botón «✎ Editar» de cada factura abre un panel con tipo de gasto, monto e ITBIS (sin entrar al detalle). Y en un lote del 606 se puede subir directamente el Excel del IR-17 (comprobantes B11 que emite el cliente), no solo pegarlo.
 - **NALA — aprobar con advertencias sin cuadro ni comentario:** al pulsar Aprobar en una factura con advertencias (por ejemplo «lectura de baja confianza») se aprueba directo; ya no pide escribir un comentario. Los errores críticos siguen impidiendo aprobar y las advertencias quedan registradas en el historial.

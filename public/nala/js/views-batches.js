@@ -6,6 +6,33 @@
   const { esc, int, period, ms } = NALA;
   const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar';
 
+  // Ventana para subir/pegar el Excel del IR-17 / B11 (compras a informales). La usan el detalle
+  // del lote y la pantalla «Exportar»: `endpoint` y `extra` dicen dónde se crean los comprobantes.
+  NALA.openB11 = async (endpoint, extra = {}) => {
+    const ok = await NALA.modal({ title: 'Agregar comprobantes B11 / IR-17 desde Excel', okText: 'Agregar', wide: true,
+      body: `<p class="muted" style="margin-bottom:8px">Copie del Excel las filas con las columnas <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> (con o sin la fila de títulos) y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este período: ITBIS 18 % retenido al 100 % y retención de renta.</p>
+        <div class="row" style="margin-bottom:8px"><label class="btn sm">📎 Subir el Excel (.xlsx / .csv)<input id="b11-file" type="file" accept=".xlsx,.csv,.txt" hidden></label><span class="muted" id="b11-fname">o pegue las filas aquí abajo</span></div>
+        <textarea id="b11-text" rows="9" style="width:100%;font-family:monospace" placeholder="Pegue aquí las filas copiadas del Excel"></textarea>
+        <div class="row" style="margin-top:8px"><label>Retención si la fila no la trae (%) <input id="b11-rate" type="number" step="0.01" value="3" style="width:80px"></label>
+        <label><input type="checkbox" id="b11-itbis" checked> Calcular ITBIS 18 % y retenerlo al 100 %</label></div>`,
+      onOk: async m => {
+        const text = m.querySelector('#b11-text').value;
+        const file = m.querySelector('#b11-file').files[0];
+        if (!text.trim() && !file) throw new Error('Suba el Excel o pegue las filas.');
+        let upload = {};
+        if (file && !text.trim()) {
+          if (file.size > 3 * 1024 * 1024) throw new Error('El archivo es muy grande (máx. 3 MB).');
+          const bytes = new Uint8Array(await file.arrayBuffer()); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          upload = { file_base64: btoa(bin), file_name: file.name };
+        }
+        const r = await NALA.api('POST', endpoint, { ...extra, text, ...upload, retention_rate: Number(m.querySelector('#b11-rate').value), itbis: m.querySelector('#b11-itbis').checked });
+        NALA.toast(`${r.created} comprobante(s) B11 agregados${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
+        return true;
+      } });
+    return !!ok;
+  };
+
+
   // Mensaje de error de un trabajo. El aviso de «sin saldo de OpenAI» es solo para
   // administradores; los demás ven un texto genérico sin detalles de la cuenta.
   const NO_CREDITS_TAG = '[SIN_SALDO_IA]';
@@ -269,29 +296,7 @@
       if (!ok) return;
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: false }); NALA.toast(`Re-leyendo ${r.requeued} documento(s)…`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
     });
-    root.querySelector('#b11')?.addEventListener('click', async () => {
-      const ok = await NALA.modal({ title: 'Agregar comprobantes B11 / IR-17 desde Excel', okText: 'Agregar', wide: true,
-        body: `<p class="muted" style="margin-bottom:8px">Copie del Excel las filas con las columnas <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> (con o sin la fila de títulos) y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este lote: ITBIS 18 % retenido al 100 % y retención de renta.</p>
-          <div class="row" style="margin-bottom:8px"><label class="btn sm">📎 Subir el Excel (.xlsx / .csv)<input id="b11-file" type="file" accept=".xlsx,.csv,.txt" hidden></label><span class="muted" id="b11-fname">o pegue las filas aquí abajo</span></div>
-          <textarea id="b11-text" rows="9" style="width:100%;font-family:monospace" placeholder="Pegue aquí las filas copiadas del Excel"></textarea>
-          <div class="row" style="margin-top:8px"><label>Retención si la fila no la trae (%) <input id="b11-rate" type="number" step="0.01" value="3" style="width:80px"></label>
-          <label><input type="checkbox" id="b11-itbis" checked> Calcular ITBIS 18 % y retenerlo al 100 %</label></div>`,
-        onOk: async m => {
-          const text = m.querySelector('#b11-text').value;
-          const file = m.querySelector('#b11-file').files[0];
-          if (!text.trim() && !file) throw new Error('Suba el Excel o pegue las filas.');
-          let upload = {};
-          if (file && !text.trim()) {
-            if (file.size > 3 * 1024 * 1024) throw new Error('El archivo es muy grande (máx. 3 MB).');
-            const bytes = new Uint8Array(await file.arrayBuffer()); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
-            upload = { file_base64: btoa(bin), file_name: file.name };
-          }
-          const r = await NALA.api('POST', `batches/${b.id}/b11`, { text, ...upload, retention_rate: Number(m.querySelector('#b11-rate').value), itbis: m.querySelector('#b11-itbis').checked });
-          NALA.toast(`${r.created} comprobante(s) B11 agregados${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
-          return true;
-        } });
-      if (ok) NALA.route();
-    });
+    root.querySelector('#b11')?.addEventListener('click', async () => { if (await NALA.openB11(`batches/${b.id}/b11`)) NALA.route(); });
     root.querySelector('#reval')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `batches/${b.id}/revalidate`); NALA.toast('Revalidando el lote…', 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
     });

@@ -373,7 +373,7 @@
       <td>${g.last_export ? `${NALA.badge(g.last_export.status)} <span class="muted">${NALA.dateTime(g.last_export.created_at)}</span>` : '<span class="muted">—</span>'}</td>
       <td style="white-space:nowrap">${g.ready
         ? `<button class="btn sm primary" data-exp="${i}" data-type="txt" title="Descargar el TXT para la DGII">TXT</button> <button class="btn sm" data-exp="${i}" data-type="xlsx" title="Descargar el Excel">Excel</button>${g.last_export ? ` <a class="btn sm" href="#/exportar/${g.last_export.id}" title="Ver el archivo y registrar el envío a la DGII">Envío →</a>` : ''}`
-        : `<a class="btn sm" href="${auditLink(g)}">Ir a auditar</a>`}</td></tr>`;
+        : `<a class="btn sm" href="${auditLink(g)}">Ir a auditar</a>`}${g.format === '606' && NALA.can('upload') ? ` <button class="btn sm" data-b11="${i}" title="Subir el Excel del IR-17 / compras B11 de este período">+ IR-17 (Excel)</button>` : ''}</td></tr>`;
     root.innerHTML = `<div class="stack"><div class="row">${exports.length ? '<button class="btn" id="dgii-errs" title="Pega los errores que devolvió la DGII y NALA te lleva a las facturas">Errores de la DGII</button>' : ''}${NALA.can('submit') ? '<button class="btn" id="zero" title="Para períodos sin compras ni ventas">Informativo en cero</button>' : ''}<span class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas'} · ${s.period ? period(s.period) : 'Todos los períodos'}</span></div>
       <div class="card"><h2>Listos para exportar</h2>
         ${items.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th>Formato</th><th>Período</th><th class="num">Aprobados</th><th>Auditoría</th><th>Último archivo</th><th></th></tr>${items.map(readyRow).join('')}</table></div>
@@ -384,6 +384,7 @@
         ${exports.map(e => `<tr class="clickable" data-id="${e.id}"><td class="mono">${esc(e.file_name)}</td><td>${esc(NALA.clientName(e.client_id))}</td><td>${e.scope === 'period' ? 'Mes' : `${e.batch_ids.length} lote(s)`}</td><td>${NALA.badge(e.status)}</td><td class="num">${int(e.line_count)}</td><td>${NALA.dateTime(e.created_at)}</td><td>${NALA.dateTime(e.submitted_at)}</td></tr>`).join('')}</table></div></div>` : ''}</div>`;
     root.querySelector('#zero')?.addEventListener('click', () => zeroFiling());
     root.querySelector('#dgii-errs')?.addEventListener('click', () => dgiiErrorsModal(exports));
+    root.querySelectorAll('button[data-b11]').forEach(b => b.addEventListener('click', async e => { e.stopPropagation(); const g = items[Number(b.dataset.b11)]; if (await NALA.openB11('invoices/import-b11', { client_id: g.client_id, period: g.period })) NALA.route(); }));
     root.querySelectorAll('button[data-exp]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); exportNow(items[Number(b.dataset.exp)], b.dataset.type, b); }));
     root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', () => NALA.go(`#/exportar/${tr.dataset.id}`)));
   }

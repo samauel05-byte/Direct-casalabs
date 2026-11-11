@@ -18,7 +18,7 @@
   // del lote y la pantalla «Exportar»: `endpoint` y `extra` dicen dónde se crean los comprobantes.
   NALA.openB11 = async (endpoint, extra = {}, presetFile = null) => {
     const pr = NALA.modal({ title: 'Agregar comprobantes B11 / IR-17 desde Excel', okText: 'Agregar', wide: true,
-      body: `<p class="muted" style="margin-bottom:8px">Suba el Excel (si trae una hoja por mes, se usa la del período del lote: columnas <b>Cédula · NCF · Base · Retención · ITBIS</b>) o copie las filas con <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este período: ITBIS 18 % retenido al 100 % y retención de renta.</p>
+      body: `<p class="muted" style="margin-bottom:8px">Suba el Excel (si trae una hoja por mes, se usa la del período del lote: columnas <b>Cédula · NCF · Base · Retención · ITBIS</b>) o copie las filas con <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este período, <b>ya APROBADO</b> y con tipo de bien/servicio <b>09</b> (el Excel ya se revisó allá; NALA solo lo prepara para la DGII): ITBIS 18 % retenido al 100 % y retención de renta.</p>
         <div class="row" style="margin-bottom:8px"><label class="btn sm">📎 Subir el Excel (.xlsx / .csv)<input id="b11-file" type="file" accept=".xlsx,.csv,.txt" hidden></label><span class="muted" id="b11-fname">o pegue las filas aquí abajo</span></div>
         <textarea id="b11-text" rows="9" style="width:100%;font-family:monospace" placeholder="Pegue aquí las filas copiadas del Excel"></textarea>
         <div class="row" style="margin-top:8px"><label>Tipo de retención de ISR (para todas las filas) <select id="b11-tipo">${NALA.catalogOptions((NALA.state.me.catalogs || {}).tipoRetencionIsr, '03', { blank: false }).replace('value="03"', 'value="03" selected')}</select></label></div>
@@ -35,7 +35,7 @@
           upload = { file_base64: btoa(bin), file_name: file.name };
         }
         const r = await NALA.api('POST', endpoint, { ...extra, text, ...upload, isr_tipo: m.querySelector('#b11-tipo').value, retention_rate: Number(m.querySelector('#b11-rate').value), itbis: m.querySelector('#b11-itbis').checked });
-        NALA.toast(`${r.created} comprobante(s) B11 agregados${r.sheet ? ` (hoja «${r.sheet}»)` : ''}${r.already ? ` · ${r.already} ya existían (se omitieron)` : ''}${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
+        NALA.toast(`${r.created} comprobante(s) B11 agregados y aprobados${r.sheet ? ` (hoja «${r.sheet}»)` : ''}${r.already ? ` · ${r.already} ya existían (se omitieron)` : ''}${r.with_errors ? ` · ${r.with_errors} traen errores (revísalos en Auditoría: impiden exportar)` : ''}${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
         return true;
       } });
     // El archivo ya elegido (por ejemplo, un Excel soltado en «+ Archivos») y el nombre del archivo a la vista.
@@ -329,7 +329,7 @@
     root.querySelector('#open-cami')?.addEventListener('click', () => NALA.openCami(b.client_id, b.period));
     root.querySelector('#ret-bulk')?.addEventListener('click', async () => {
       const ok = await NALA.modal({ title: 'Tipo de retención de ISR (masivo)', okText: 'Aplicar',
-        body: `<p class="muted" style="margin-bottom:8px">Elija el tipo de retención que va en la columna «Tipo de Retención en ISR» del 606 y a cuáles comprobantes de este lote se aplica. Los ya aprobados no se tocan (revierta su aprobación para cambiarlos).</p>
+        body: `<p class="muted" style="margin-bottom:8px">Elija el tipo de retención que va en la columna «Tipo de Retención en ISR» del 606 y a cuáles comprobantes de este lote se aplica. Los importados del IR-17 se cambian aunque estén aprobados; las demás facturas aprobadas no se tocan (revierta su aprobación para cambiarlas).</p>
           <label class="f"><span>Tipo de retención</span><select id="rb-tipo">${NALA.catalogOptions((NALA.state.me.catalogs || {}).tipoRetencionIsr, '03', { blank: false })}</select></label>
           <label class="f" style="margin-top:8px"><span>Aplicar a</span><select id="rb-scope"><option value="b11">Los comprobantes B11 (compras a informales)</option><option value="with_isr">Los que tienen retención de renta</option><option value="all">Todos los comprobantes del lote</option></select></label>`,
         onOk: async m => {

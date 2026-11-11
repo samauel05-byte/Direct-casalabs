@@ -453,3 +453,14 @@ test('b11: hoja mensual del IR-17 (cédula, NCF, base, tasas en el encabezado) y
   assert.equal(f.isr_retenido, '402.06'); assert.equal(f.itbis, '2412.37'); assert.equal(f.isr_tipo_retencion, '02');
   assert.equal(f.fecha_comprobante, '2026-09-30');
 });
+
+test('b11: tipo de bien/servicio 09 obligado y el comprobante valida sin errores críticos', () => {
+  const b11 = require('../../lib/nala/b11');
+  const { validate } = require('../../lib/nala/validate');
+  const r = b11.parse('30/09/2026\tB1100001422\t13\t05500418123\tJUAN PEREZ\t13402.06\t402.06\t13000', { tipoBienes: '09', isrTipo: '02' });
+  const f = { ...r.rows[0].fields, tipo_bienes_servicios: '09', receptor_id: '132614666', receptor_nombre: 'ANNIBEL SRL' };
+  assert.equal(f.tipo_bienes_servicios, '09');
+  assert.equal(f.isr_tipo_retencion, '02');
+  const v = validate({ format: '606', period: '202609', fields: f, client: { rnc: '132614666', legal_name: 'ANNIBEL SRL' } });
+  assert.equal(v.issues.filter(i => i.severity === 'critical').length, 0);
+});

@@ -4,7 +4,7 @@
    (worker programado) y que esta pestaña también impulsa mientras está abierta. */
 (function () {
   const { esc, int, period, ms } = NALA;
-  const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar';
+  const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar,.xlsx,.xlsm,.csv';
 
   // Abre CAMI (606/607/IT-1) con la empresa y el período ya puestos: CAMI trae solo lo aprobado en NALA.
   NALA.camiUrl = (clientId, per) => {
@@ -16,8 +16,8 @@
 
   // Ventana para subir/pegar el Excel del IR-17 / B11 (compras a informales). La usan el detalle
   // del lote y la pantalla «Exportar»: `endpoint` y `extra` dicen dónde se crean los comprobantes.
-  NALA.openB11 = async (endpoint, extra = {}) => {
-    const ok = await NALA.modal({ title: 'Agregar comprobantes B11 / IR-17 desde Excel', okText: 'Agregar', wide: true,
+  NALA.openB11 = async (endpoint, extra = {}, presetFile = null) => {
+    const pr = NALA.modal({ title: 'Agregar comprobantes B11 / IR-17 desde Excel', okText: 'Agregar', wide: true,
       body: `<p class="muted" style="margin-bottom:8px">Suba el Excel (si trae una hoja por mes, se usa la del período del lote: columnas <b>Cédula · NCF · Base · Retención · ITBIS</b>) o copie las filas con <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este período: ITBIS 18 % retenido al 100 % y retención de renta.</p>
         <div class="row" style="margin-bottom:8px"><label class="btn sm">📎 Subir el Excel (.xlsx / .csv)<input id="b11-file" type="file" accept=".xlsx,.csv,.txt" hidden></label><span class="muted" id="b11-fname">o pegue las filas aquí abajo</span></div>
         <textarea id="b11-text" rows="9" style="width:100%;font-family:monospace" placeholder="Pegue aquí las filas copiadas del Excel"></textarea>
@@ -38,6 +38,14 @@
         NALA.toast(`${r.created} comprobante(s) B11 agregados${r.sheet ? ` (hoja «${r.sheet}»)` : ''}${r.already ? ` · ${r.already} ya existían (se omitieron)` : ''}${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
         return true;
       } });
+    // El archivo ya elegido (por ejemplo, un Excel soltado en «+ Archivos») y el nombre del archivo a la vista.
+    const fin = document.querySelector('#b11-file'); const fname = document.querySelector('#b11-fname');
+    if (fin) {
+      if (presetFile) { const dt = new DataTransfer(); dt.items.add(presetFile); fin.files = dt.files; }
+      const show = () => { if (fname) fname.textContent = fin.files[0] ? `📎 ${fin.files[0].name}` : 'o pegue las filas aquí abajo'; };
+      fin.addEventListener('change', show); show();
+    }
+    const ok = await pr;
     return !!ok;
   };
 
@@ -135,6 +143,16 @@
       root.querySelector('#go').disabled = !selected.length;
     };
     const add = list => {
+      list = Array.from(list);
+      // Un Excel/CSV no es una factura: es el IR-17 / compras B11 y se importa aparte.
+      const sheets = list.filter(f => /\.(xlsx|xlsm|csv)$/i.test(f.name));
+      if (sheets.length) {
+        list = list.filter(f => !sheets.includes(f));
+        if (batch && batch.format === '606') {
+          NALA.toast('Ese archivo es un Excel (IR-17 / compras B11): se importa como comprobantes B11, no como factura.', 'ok');
+          NALA.openB11(`batches/${batch.id}/b11`, {}, sheets[0]).then(done => { if (done) NALA.go(`#/lotes/${batch.id}`); });
+        } else NALA.toast('Un Excel no se sube como factura. Para el IR-17 / compras B11 abra el lote 606 y use «+ B11 (pegar Excel)».', 'err');
+      }
       for (const f of list) if (!selected.some(x => x.name === f.name && x.size === f.size)) selected.push(f);
       for (const f of selected) if (/\.rar$/i.test(f.name)) status[f.name] = ['RAR no es compatible: comprima en ZIP', 'crit'];
       draw();

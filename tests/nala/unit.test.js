@@ -414,3 +414,20 @@ test('b11: sin encabezado usa el orden de su Excel; deduce el monto del valor de
   assert.equal(r.rows[0].fields.isr_retenido, '1000.00');
   assert.equal(b11.parse('xx').rows.length, 0);
 });
+
+test('b11: Excel (.xlsx) subido se lee igual que pegado', async () => {
+  const ExcelJS = require('exceljs');
+  const b11 = require('../../lib/nala/b11');
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Hoja1');
+  ws.addRow(['Fecha', 'NCF', 'No.ck', 'Cedula ', 'Nombre', 'Monto', 'Retencion', 'Valor de pago ']);
+  ws.addRow([new Date(Date.UTC(2026, 8, 30)), 'B1100001422', 13, '05500418123', 'JUAN PEREZ', 13402.06, 402.06, 13000]);
+  ws.addRow([new Date(Date.UTC(2026, 8, 5)), null, 7, null, 'NULO', 100, 0, 100]);
+  const buf = await wb.xlsx.writeBuffer();
+  const text = await b11.workbookToText(Buffer.from(buf));
+  const r = b11.parse(text, { retentionRate: 3 });
+  assert.equal(r.rows.length, 1);
+  assert.equal(r.skipped.length, 1);
+  assert.equal(r.rows[0].fields.fecha_comprobante, '2026-09-30');
+  assert.equal(r.rows[0].fields.isr_retenido, '402.06');
+});

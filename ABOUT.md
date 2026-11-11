@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — el Excel del IR-17 ya no da error al subirlo como factura:** si lo sueltas en «+ Archivos» de un lote 606, NALA te abre la ventana para importarlo como comprobantes B11 con el archivo ya elegido.
 - **NALA → CAMI cuando el lote está «Completado»:** en la lista de lotes aparece «↗ CAMI», que abre CAMI con la empresa y el período ya puestos y trae solo lo aprobado en NALA. CAMI también tiene, en las pantallas 606 y 607, una barra para traer lo aprobado en NALA con el RNC y el período.
 - **NALA — IR-17 con NCF B11 y tipo de retención masivo:** el Excel del IR-17 con una hoja por mes se lee directo (usa la hoja del período y toma los NCF B11, cédulas, retención e ITBIS de cada fila), eliges el tipo de retención de ISR para todas las filas, y el botón «Tipo de retención (masivo)» del lote 606 lo cambia de una vez.
 - **NALA — subir el IR-17 después de trabajar un 606:** en «Exportar DGII 606/607», cada fila del 606 tiene el botón «+ IR-17 (Excel)». Subes (o pegas) el Excel, NALA crea los comprobantes B11 en ese mes, los apruebas y exportas de nuevo el 606 con todo junto.

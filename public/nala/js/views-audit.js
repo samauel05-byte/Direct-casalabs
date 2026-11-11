@@ -107,12 +107,12 @@
     const byId = Object.fromEntries(invoices.map(i => [i.id, i]));
     const editableInv = i => canEdit && ['pending_review', 'reviewed'].includes(i.status);
     const hasFixables = i => isIncomplete(i) || i.issues.some(x => x.code === 'DUPLICADO');
-    const showFix = i => editableInv(i) && hasFixables(i);
+    const showFix = i => editableInv(i);
     const unifiedCol = mode === 'unified' && !s.client;
     const cols = (canBulk ? 1 : 0) + 11 + (unifiedCol ? 1 : 0);
     let bulkRefresh = null;
     // Celdas que la edición en línea refresca sin recargar toda la tabla.
-    const fixBtn = i => showFix(i) ? ` <button class="btn sm fix-btn" data-fix="${i.id}" title="Corregir aquí, sin abrir el detalle">✎ Corregir</button>` : '';
+    const fixBtn = i => showFix(i) ? ` <button class="btn sm fix-btn" data-fix="${i.id}" title="Editar aquí tipo de gasto, monto e ITBIS, sin abrir el detalle">${hasFixables(i) ? '✎ Corregir' : '✎ Editar'}</button>` : '';
     const reviewCell = i => `${NALA.issueBadges(i)}${fixBtn(i)}`;
     const cpCell = i => `${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div>`;
     const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted">${n + 1}</td><td class="mono" data-c="ncf">${esc(i.ncf || '—')}</td><td data-c="cp">${cpCell(i)}</td>
@@ -156,7 +156,9 @@
     function buildEditor(td, inv) {
       const order = orderFor(inv.format);
       const sevOf = k => { const is = inv.issues.filter(x => x.field === k); return is.some(x => x.severity === 'critical') ? 'has-crit' : (is.some(x => x.severity === 'warning') ? 'has-warn' : ''); };
-      const flagged = [...new Set(inv.issues.filter(x => x.field && x.severity !== 'info').map(x => x.field))].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+      // Campos importantes siempre a la vista (tipo de gasto, montos e ITBIS) + los señalados; lo demás, en el detalle.
+      const KEY = inv.format === '606' ? ['tipo_bienes_servicios', 'monto_servicios', 'monto_bienes', 'itbis'] : ['tipo_ingreso', 'monto_facturado', 'itbis'];
+      const flagged = [...new Set([...inv.issues.filter(x => x.field && x.severity !== 'info').map(x => x.field), ...KEY.filter(k => order.includes(k))])].sort((a, b) => order.indexOf(a) - order.indexOf(b));
       const notes = inv.issues.filter(x => x.severity !== 'info');
       const dup = inv.issues.find(x => x.code === 'DUPLICADO');
       const green = !inv.critical_count && !inv.warning_count;

@@ -175,7 +175,7 @@
           ${dup && canExclude ? '<button class="btn sm danger" data-act="discard">🗑 Descartar esta</button>' : ''}
           ${dup && dup.ref && canExclude ? `<button class="btn sm danger" data-act="discard-other" data-other="${esc(dup.ref)}">🗑 Descartar la otra</button>` : ''}
           ${!dup && hasFields ? '<button class="btn sm primary" data-act="save">Guardar</button>' : ''}
-          ${!dup && canApprove ? `<button class="btn sm ok" data-act="approve" ${green ? '' : 'disabled'} title="${green ? 'Aprobar este comprobante' : 'Primero corrija lo señalado'}">✓ Aprobar</button>` : ''}
+          ${!dup && canApprove ? `<button class="btn sm ok" data-act="approve" ${inv.critical_count ? 'disabled' : ''} title="${inv.critical_count ? 'Primero corrija los errores' : (green ? 'Aprobar este comprobante' : 'Aprobar (las advertencias quedan registradas)')}">✓ Aprobar</button>` : ''}
           <a class="btn sm" href="${detailLink}">Abrir detalle ▸</a>
           <span class="spacer" style="flex:1"></span>
           <button class="btn sm" data-act="close">Cerrar</button></div></div>`;

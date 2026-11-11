@@ -290,4 +290,29 @@
     route();
   }
   document.addEventListener('DOMContentLoaded', boot);
+
+  // ── Actualización automática ─────────────────────────────────────────────
+  // NALA vive en una pestaña que suele quedar abierta días: tras un despliegue seguía
+  // con el código viejo. Se compara la «huella» (ETag) de los scripts con la que había
+  // al abrir; si cambió y no hay cambios sin guardar, se recarga sola. Con cambios sin
+  // guardar solo avisa.
+  const SCRIPTS = ['/nala/js/app.js', '/nala/js/views-audit.js', '/nala/js/views-batches.js', '/nala/js/views-export.js'];
+  let stamp = null; let warned = false;
+  const fingerprint = async () => {
+    try {
+      const tags = await Promise.all(SCRIPTS.map(u => fetch(u, { method: 'HEAD', cache: 'no-store' }).then(r => r.headers.get('etag') || r.headers.get('last-modified') || '')));
+      return tags.join('|');
+    } catch { return null; }
+  };
+  const checkVersion = async () => {
+    const now = await fingerprint();
+    if (!now || !now.replace(/\|/g, '')) return;
+    if (stamp === null) { stamp = now; return; }
+    if (now === stamp) return;
+    if (NALA.dirty) { if (!warned) { warned = true; NALA.toast('Hay una versión nueva de NALA. Guarde sus cambios y recargue la página (Ctrl+F5).', 'ok'); } return; }
+    location.reload();
+  };
+  setTimeout(checkVersion, 3000);
+  setInterval(checkVersion, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
 })();

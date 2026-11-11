@@ -431,3 +431,25 @@ test('b11: Excel (.xlsx) subido se lee igual que pegado', async () => {
   assert.equal(r.rows[0].fields.fecha_comprobante, '2026-09-30');
   assert.equal(r.rows[0].fields.isr_retenido, '402.06');
 });
+
+test('b11: hoja mensual del IR-17 (cédula, NCF, base, tasas en el encabezado) y hoja por período', async () => {
+  const ExcelJS = require('exceljs');
+  const b11 = require('../../lib/nala/b11');
+  const wb = new ExcelJS.Workbook();
+  wb.addWorksheet('Hoja1').addRow(['Fecha', 'NCF', 'No.ck', 'Cedula', 'Nombre', 'Monto']);
+  const ws = wb.addWorksheet('SEPTIEMBRE 2026');
+  for (let i = 0; i < 4; i++) ws.addRow(['ANNIBEL']);
+  ws.addRow([null, 'CEDULA/PASS', 'NCF', 'Base', 0.03, 0.18, 'TOTAL', 'A pagar']);
+  ws.addRow([null, '05500418123', 'B1100001422', 13402.06, 402.0618, 2412.3708, 15814.4308, 12999.9982]);
+  ws.addRow([null, '40214390318', 'B1100001423', 8247.42, 247.4226, 1484.5356, 9731.9556, 7999.9974]);
+  ws.addRow([null, null, null, 21649.48, 649.4844, 3896.9064, 25546.3864, 20999.9956]); // fila de totales
+  const buf = Buffer.from(await wb.xlsx.writeBuffer());
+  const text = await b11.workbookToText(buf, { period: '202609' });
+  assert.equal(b11.workbookToText.lastSheet, 'SEPTIEMBRE 2026');
+  const r = b11.parse(text, { period: '202609', isrTipo: '02' });
+  assert.equal(r.rows.length, 2);
+  const f = r.rows[0].fields;
+  assert.equal(f.ncf, 'B1100001422'); assert.equal(f.emisor_id, '05500418123');
+  assert.equal(f.isr_retenido, '402.06'); assert.equal(f.itbis, '2412.37'); assert.equal(f.isr_tipo_retencion, '02');
+  assert.equal(f.fecha_comprobante, '2026-09-30');
+});

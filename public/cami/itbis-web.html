@@ -2523,6 +2523,49 @@ document.addEventListener('DOMContentLoaded',()=>{
   const b=$('btn-nala'); if(b) b.onclick=()=>loadFromNala(true);
 });
 
+// ── Traer de NALA desde las pantallas 606 y 607 ────────────────────────────────
+// Un lote «Completado» en NALA se abre aquí con «↗ CAMI» (?rnc=&periodo=&razon=): se rellenan
+// el RNC y el período y se trae solo lo aprobado. También queda una barra en las pantallas 606
+// y 607 (con lo último usado) para traerlo sin pasar por la pestaña del IT-1.
+(function(){
+  const LS='cami_nala_last';
+  const rd=()=>{try{return JSON.parse(localStorage.getItem(LS)||'{}');}catch(e){return {};}};
+  const wr=o=>{try{localStorage.setItem(LS,JSON.stringify(o));}catch(e){}};
+  async function traer(fmt,rnc,per,razon){
+    $('in-rnc').value=rnc; $('in-periodo').value=per; if(razon&&!$('in-razon').value) $('in-razon').value=razon;
+    wr({rnc,periodo:per,razon:razon||$('in-razon').value||''});
+    await loadFromNala(true);
+    const t=$('nala-status-txt'); if(fmt&&!STATE[fmt]&&t) showToast(t.textContent,'warn');
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    const q=new URLSearchParams(location.search), last=rd();
+    const fromLink=/^\d{5,}$/.test((q.get('rnc')||'').replace(/\D/g,''));
+    const rnc=fromLink?q.get('rnc').replace(/\D/g,''):(last.rnc||'');
+    const pq=q.get('periodo')||''; const per=/^\d{6}$/.test(pq)?pq.slice(0,4)+'-'+pq.slice(4):(last.periodo||'');
+    const razon=q.get('razon')||last.razon||'';
+    if(rnc&&!$('in-rnc').value) $('in-rnc').value=rnc;
+    if(per&&!$('in-periodo').value) $('in-periodo').value=per;
+    if(razon&&!$('in-razon').value) $('in-razon').value=razon;
+    for(const fmt of ['606','607']){
+      const stage=$('up-'+fmt); if(!stage) continue;
+      const bar=document.createElement('div');
+      bar.style.cssText='display:flex;gap:10px;align-items:flex-end;justify-content:center;flex-wrap:wrap;margin:18px auto 0;max-width:680px;padding:14px;border:1px solid rgba(120,120,120,.3);border-radius:12px;background:rgba(255,255,255,.7)';
+      bar.innerHTML='<div style="width:100%;text-align:center;font-weight:700">O trae lo aprobado en NALA</div>'
+        +'<label style="display:flex;flex-direction:column;gap:4px;font-size:12px">RNC / Cédula<input class="field-inp" id="nl-rnc-'+fmt+'" autocomplete="off" placeholder="131000000" style="min-width:150px"></label>'
+        +'<label style="display:flex;flex-direction:column;gap:4px;font-size:12px">Período<input class="field-inp" id="nl-per-'+fmt+'" type="month"></label>'
+        +'<button class="btn btn-primary" id="nl-go-'+fmt+'" type="button">Traer de NALA</button>';
+      stage.appendChild(bar);
+      $('nl-rnc-'+fmt).value=$('in-rnc').value||''; $('nl-per-'+fmt).value=$('in-periodo').value||'';
+      $('nl-go-'+fmt).onclick=()=>{
+        const r=($('nl-rnc-'+fmt).value||'').replace(/\D/g,''), p=$('nl-per-'+fmt).value;
+        if(!r||!p){ showToast('Indica el RNC y el período.','warn'); return; }
+        traer(fmt,r,p,'');
+      };
+    }
+    if(fromLink&&per) setTimeout(()=>traer('606',rnc,per,razon),400);
+  });
+})();
+
 async function handleFile(file, mod) {
   const ext=fileExtension(file),kind=fileKind(file);
   if (!kind){showToast(`Formato ${ext?'.'+ext:'sin extensión'} no soportado. Use PDF, CSV, XLSX, XLS, XLSM o XLSB.`,'err');return;}

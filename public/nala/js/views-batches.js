@@ -6,13 +6,22 @@
   const { esc, int, period, ms } = NALA;
   const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar';
 
+  // Abre CAMI (606/607/IT-1) con la empresa y el período ya puestos: CAMI trae solo lo aprobado en NALA.
+  NALA.camiUrl = (clientId, per) => {
+    const c = (NALA.state.clients || []).find(x => x.id === clientId) || {};
+    const q = new URLSearchParams({ rnc: String(c.rnc || c.cedula || '').replace(/\D/g, ''), periodo: String(per || ''), razon: c.legal_name || '' });
+    return `/cami/itbis-web.html?${q}`;
+  };
+  NALA.openCami = (clientId, per) => window.open(NALA.camiUrl(clientId, per), 'serp-cami');
+
   // Ventana para subir/pegar el Excel del IR-17 / B11 (compras a informales). La usan el detalle
   // del lote y la pantalla «Exportar»: `endpoint` y `extra` dicen dónde se crean los comprobantes.
   NALA.openB11 = async (endpoint, extra = {}) => {
     const ok = await NALA.modal({ title: 'Agregar comprobantes B11 / IR-17 desde Excel', okText: 'Agregar', wide: true,
-      body: `<p class="muted" style="margin-bottom:8px">Copie del Excel las filas con las columnas <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> (con o sin la fila de títulos) y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este período: ITBIS 18 % retenido al 100 % y retención de renta.</p>
+      body: `<p class="muted" style="margin-bottom:8px">Suba el Excel (si trae una hoja por mes, se usa la del período del lote: columnas <b>Cédula · NCF · Base · Retención · ITBIS</b>) o copie las filas con <b>Fecha · NCF · No.ck · Cédula · Nombre · Monto · Retención · Valor de pago</b> y péguelas aquí. Cada fila se crea como comprobante B11 (compra a informal) del 606 de este período: ITBIS 18 % retenido al 100 % y retención de renta.</p>
         <div class="row" style="margin-bottom:8px"><label class="btn sm">📎 Subir el Excel (.xlsx / .csv)<input id="b11-file" type="file" accept=".xlsx,.csv,.txt" hidden></label><span class="muted" id="b11-fname">o pegue las filas aquí abajo</span></div>
         <textarea id="b11-text" rows="9" style="width:100%;font-family:monospace" placeholder="Pegue aquí las filas copiadas del Excel"></textarea>
+        <div class="row" style="margin-top:8px"><label>Tipo de retención de ISR (para todas las filas) <select id="b11-tipo">${NALA.catalogOptions((NALA.state.me.catalogs || {}).tipoRetencionIsr, '03', { blank: false }).replace('value="03"', 'value="03" selected')}</select></label></div>
         <div class="row" style="margin-top:8px"><label>Retención si la fila no la trae (%) <input id="b11-rate" type="number" step="0.01" value="3" style="width:80px"></label>
         <label><input type="checkbox" id="b11-itbis" checked> Calcular ITBIS 18 % y retenerlo al 100 %</label></div>`,
       onOk: async m => {
@@ -25,8 +34,8 @@
           const bytes = new Uint8Array(await file.arrayBuffer()); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
           upload = { file_base64: btoa(bin), file_name: file.name };
         }
-        const r = await NALA.api('POST', endpoint, { ...extra, text, ...upload, retention_rate: Number(m.querySelector('#b11-rate').value), itbis: m.querySelector('#b11-itbis').checked });
-        NALA.toast(`${r.created} comprobante(s) B11 agregados${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
+        const r = await NALA.api('POST', endpoint, { ...extra, text, ...upload, isr_tipo: m.querySelector('#b11-tipo').value, retention_rate: Number(m.querySelector('#b11-rate').value), itbis: m.querySelector('#b11-itbis').checked });
+        NALA.toast(`${r.created} comprobante(s) B11 agregados${r.sheet ? ` (hoja «${r.sheet}»)` : ''}${r.already ? ` · ${r.already} ya existían (se omitieron)` : ''}${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
         return true;
       } });
     return !!ok;
@@ -196,14 +205,15 @@
       ${NALA.can('upload') && !s.client ? '<div class="issue warning"><span class="ico">ℹ️</span><span><b>Vista consolidada (todas las empresas).</b> Para subir facturas, elija una <b>empresa activa</b> en el selector de arriba.</span></div>' : ''}
       ${batches.length ? `<div class="table-wrap"><table><tr><th>Lote</th><th>Empresa</th>${owners ? '<th>Le toca a</th>' : ''}<th>Período</th><th>Formato</th><th>Estado</th><th class="num">Docs</th><th class="num">Comprob.</th><th class="num">Pend.</th><th class="num">Errores</th><th class="num">Aprob.</th><th>Creado</th>${(NALA.can('reprocess') || NALA.can('upload')) ? '<th></th>' : ''}</tr>
         ${batches.map(b => `<tr class="clickable" data-id="${b.id}"><td><b>${esc(b.name)}</b></td><td>${esc(NALA.clientName(b.client_id))}</td>${ownerCell(b.client_id)}<td>${period(b.period)}</td><td>${b.format}</td><td>${NALA.badge(b.status)}${b.summary?.jobs_pending ? ` <span class="muted">${int(b.summary.jobs_pending)} trabajos</span>` : ''}</td>
-          <td class="num">${int(b.summary?.documents)}</td><td class="num">${int(b.summary?.invoices)}</td><td class="num">${int(b.summary?.pending)}</td><td class="num">${b.summary?.with_errors ? `<span class="badge crit">${int(b.summary.with_errors)}</span>` : '0'}</td><td class="num">${int(b.summary?.approved)}</td><td>${NALA.dateTime(b.created_at)}</td>${(NALA.can('reprocess') || NALA.can('upload')) ? `<td class="chk">${NALA.can('upload') ? `<button class="btn sm" data-edit="${b.id}" data-name="${esc(b.name)}" title="Editar nombre">✏️</button> ` : ''}${NALA.can('reprocess') ? `<button class="btn sm danger" data-del="${b.id}" data-name="${esc(b.name)}" title="Eliminar lote">🗑</button>` : ''}</td>` : ''}</tr>`).join('')}</table></div>`
+          <td class="num">${int(b.summary?.documents)}</td><td class="num">${int(b.summary?.invoices)}</td><td class="num">${int(b.summary?.pending)}</td><td class="num">${b.summary?.with_errors ? `<span class="badge crit">${int(b.summary.with_errors)}</span>` : '0'}</td><td class="num">${int(b.summary?.approved)}</td><td>${NALA.dateTime(b.created_at)}</td>${(NALA.can('reprocess') || NALA.can('upload') || b.status === 'completed') ? `<td class="chk">${b.status === 'completed' ? `<button class="btn sm" data-cami="${b.id}" title="Abrir en CAMI (606/607 e IT-1 con lo aprobado)">↗ CAMI</button> ` : ''}${NALA.can('upload') ? `<button class="btn sm" data-edit="${b.id}" data-name="${esc(b.name)}" title="Editar nombre">✏️</button> ` : ''}${NALA.can('reprocess') ? `<button class="btn sm danger" data-del="${b.id}" data-name="${esc(b.name)}" title="Eliminar lote">🗑</button>` : ''}</td>` : ''}</tr>`).join('')}</table></div>`
         : '<div class="card empty">No hay lotes con estos filtros.</div>'}</div>`;
     root.querySelector('#new')?.addEventListener('click', () => {
       if (!s.client) { NALA.toast('Elija primero la empresa activa (arriba) para crear un lote.', 'err'); document.getElementById('scope-client')?.focus(); return; }
       NALA.go('#/lotes?nuevo=1');
     });
     root.querySelector('#all').addEventListener('click', () => NALA.go(params.all ? '#/lotes' : '#/lotes?all=1'));
-    root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('[data-del]') || e.target.closest('[data-edit]')) return; NALA.go(`#/lotes/${tr.dataset.id}`); }));
+    root.querySelectorAll('tr[data-id]').forEach(tr => tr.addEventListener('click', e => { if (e.target.closest('[data-del]') || e.target.closest('[data-edit]') || e.target.closest('[data-cami]')) return; NALA.go(`#/lotes/${tr.dataset.id}`); }));
+    root.querySelectorAll('[data-cami]').forEach(btn => btn.addEventListener('click', e => { e.stopPropagation(); const b = batches.find(x => x.id === btn.dataset.cami); if (b) NALA.openCami(b.client_id, b.period); }));
     root.querySelectorAll('[data-edit]').forEach(btn => btn.addEventListener('click', async e => {
       e.stopPropagation();
       const name = await NALA.modal({ title: 'Editar nombre del lote', okText: 'Guardar',
@@ -259,7 +269,9 @@
       <div class="card"><h2>${esc(b.name)} ${NALA.badge(b.status)}<span class="spacer"></span>
         <button class="btn primary" data-href="#/auditoria?batch=${b.id}">🧾 Auditar lote</button>
         <button class="btn sm" id="refresh" title="Actualizar">↻ Actualizar</button>
+        ${b.status === 'completed' ? '<button class="btn sm" id="open-cami" title="Abrir en CAMI (606/607 e IT-1 con lo aprobado)">↗ Abrir en CAMI</button>' : ''}
         ${NALA.can('upload') ? `<button class="btn sm" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
+        ${NALA.can('edit') && b.format === '606' ? '<button class="btn sm" id="ret-bulk" title="Cambia de una vez el tipo de retención de ISR de los comprobantes de este lote">Tipo de retención (masivo)</button>' : ''}
         ${NALA.can('upload') && b.format === '606' ? '<button class="btn sm" id="b11" title="Compras a personas informales (B11): copie del Excel y pegue aquí">+ B11 (pegar Excel)</button>' : ''}
         ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn sm" id="reproc">Reprocesar fallidos</button>' : ''}
         ${NALA.can('reprocess') ? '<button class="btn sm" id="reproc-all" title="Vuelve a LEER todas las facturas con la IA. Conserva las correcciones hechas a mano y no toca las aprobadas ni las excluidas.">Reprocesar</button>' : ''}
@@ -295,6 +307,19 @@
           <ul style="margin:6px 0 0 16px"><li>Conserva las <b>correcciones hechas a mano</b>.</li><li><b>No toca</b> las aprobadas ni las excluidas.</li><li>Tiene costo de IA y puede tardar.</li></ul>` });
       if (!ok) return;
       try { const r = await NALA.api('POST', `batches/${b.id}/reprocess`, { failed_only: false }); NALA.toast(`Re-leyendo ${r.requeued} documento(s)…`, 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }
+    });
+    root.querySelector('#open-cami')?.addEventListener('click', () => NALA.openCami(b.client_id, b.period));
+    root.querySelector('#ret-bulk')?.addEventListener('click', async () => {
+      const ok = await NALA.modal({ title: 'Tipo de retención de ISR (masivo)', okText: 'Aplicar',
+        body: `<p class="muted" style="margin-bottom:8px">Elija el tipo de retención que va en la columna «Tipo de Retención en ISR» del 606 y a cuáles comprobantes de este lote se aplica. Los ya aprobados no se tocan (revierta su aprobación para cambiarlos).</p>
+          <label class="f"><span>Tipo de retención</span><select id="rb-tipo">${NALA.catalogOptions((NALA.state.me.catalogs || {}).tipoRetencionIsr, '03', { blank: false })}</select></label>
+          <label class="f" style="margin-top:8px"><span>Aplicar a</span><select id="rb-scope"><option value="b11">Los comprobantes B11 (compras a informales)</option><option value="with_isr">Los que tienen retención de renta</option><option value="all">Todos los comprobantes del lote</option></select></label>`,
+        onOk: async m => {
+          const r = await NALA.api('POST', `batches/${b.id}/retention`, { tipo: m.querySelector('#rb-tipo').value, scope: m.querySelector('#rb-scope').value });
+          NALA.toast(`${r.changed} cambiados${r.same ? ` · ${r.same} ya lo tenían` : ''}${r.approved_skipped ? ` · ${r.approved_skipped} aprobados sin tocar` : ''}${r.failed ? ` · ${r.failed} fallaron` : ''}.`, r.failed ? 'err' : 'ok');
+          return true;
+        } });
+      if (ok) NALA.route();
     });
     root.querySelector('#b11')?.addEventListener('click', async () => { if (await NALA.openB11(`batches/${b.id}/b11`)) NALA.route(); });
     root.querySelector('#reval')?.addEventListener('click', async () => {

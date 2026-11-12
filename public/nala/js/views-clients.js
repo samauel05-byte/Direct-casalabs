@@ -193,6 +193,16 @@
           const s = r.structure; const o = r.official;
           const rows = o?.status === 'ok' && o.found ? Object.entries(o.data).map(([k, val]) => `<tr><th style="position:static">${esc(k.replace(/_/g, ' '))}</th><td>${esc(val)}</td></tr>`).join('') : '';
           const known = (NALA.state.clients || []).find(c => c.rnc === s.digits || c.cedula === s.digits);
+          // La empresa ya existe en NALA aunque no sea de quien consulta: se dice de quién es y se puede pasar/agregar sin borrar nada.
+          const rg = r.registered;
+          const people = rg && NALA.can('team_manage') ? ((await NALA.api('GET', 'team').catch(() => ({ members: [] }))).members || []).filter(m => m.all_clients === false) : [];
+          const assignCard = rg ? `<div class="card" style="margin-top:12px"><h2>Esta empresa ya está en NALA</h2>
+            <p><b>${esc(rg.legal_name)}</b> · la trabaja: ${rg.assigned_to.length ? rg.assigned_to.map(a => `<span class="badge info">${esc(a.username)}</span>`).join(' ') : '<span class="muted">quienes ven todas las empresas</span>'}${rg.status === 'inactive' ? ' <span class="badge">Inactiva</span>' : ''}</p>
+            <p class="muted" style="margin:6px 0">Cambiar quién la trabaja <b>no borra nada</b>: los lotes, comprobantes, exportaciones y archivos se quedan como están. Solo cambia quién la ve y la trabaja.</p>
+            <div class="row" style="flex-wrap:wrap;gap:8px">
+              ${rg.limited && !rg.mine ? '<button class="btn primary" id="rtake">Pasármela a mí</button><button class="btn" id="rtake-add" title="La queda trabajando también la otra persona">Agregármela (sin quitársela a nadie)</button>' : (rg.limited ? '<span class="badge ok">Ya la trabajas tú</span>' : '')}
+              ${people.length ? `<select id="rto">${people.map(m => `<option value="${m.user_id}">${esc(m.username)}</option>`).join('')}</select><button class="btn" id="rmove">Pasar a esta persona</button><button class="btn" id="rshare">Agregar también a esta persona</button>` : ''}
+            </div></div>` : '';
           const reg = r.registry; const of = o?.status === 'ok' && o.found ? o.data : null;
           const since = reg?.found && reg.fecha_constitucion ? age(reg.fecha_constitucion) : null;
           const estado = of?.estado || reg?.estado;
@@ -213,9 +223,10 @@
                 : o.status === 'unavailable' ? `<div class="issue warning"><span class="ico">!</span><div>${esc(o.message)}${o.stale ? `<br>Último dato guardado (${NALA.dateTime(o.stale.fetched_at)}): ${o.stale.found ? esc(o.stale.data?.nombre) : 'no inscrito'}` : ''}<br>NALA no marca el RNC como verificado sin respuesta oficial.</div></div>`
                 : o.found ? `<div class="table-wrap"><table>${rows}</table></div>` : `<div class="issue critical"><span class="ico">✕</span>${esc(o.data?.message || 'No inscrito')}</div>`}
               ${o?.fetched_at ? `<p class="muted" style="margin-top:8px">Fuente: <a href="${esc(o.source_url)}" target="_blank" rel="noopener">${esc(o.source)}</a> · ${NALA.dateTime(o.fetched_at)}${o.cached ? ' · resultado guardado (máx. 24 h)' : ''}</p>` : ''}
-              ${o?.found && !known && NALA.can('clients_manage') ? `<button class="btn primary" id="radd" style="margin-top:8px">Registrar como empresa cliente</button>` : ''}
+              ${o?.found && !known && !r.registered && NALA.can('clients_manage') ? `<button class="btn primary" id="radd" style="margin-top:8px">Registrar como empresa cliente</button>` : ''}
               ${known ? `<p style="margin-top:8px"><span class="badge ok">✓ Registrada</span> Ya es una empresa cliente: <b>${esc(known.legal_name)}</b>. <button class="btn sm" id="rgo">Ver en Empresas clientes</button> <button class="btn sm primary" id="ropen">Abrir su panel</button></p>` : ''}
             </div>
+            ${assignCard}
             <div class="card" style="margin-top:12px"><h2>4 · Antigüedad (archivo oficial de RNC)</h2>
               ${!reg ? '<span class="muted">No aplica.</span>' : reg.status === 'unavailable' ? `<div class="issue warning"><span class="ico">!</span>${esc(reg.message)}</div>`
                 : !reg.found ? '<span class="muted">No aparece en el archivo de RNC publicado por la DGII.</span>'
@@ -239,6 +250,14 @@
             }
           });
           out.querySelector('#rgo')?.addEventListener('click', () => NALA.go('#/clientes'));
+          const doAssign = async (payload, label) => {
+            if (!confirm(`${label}\n\nNo se borra nada: solo cambia quién trabaja esta empresa.`)) return;
+            try { await NALA.api('POST', `clients/${rg.id}/assign`, payload); await NALA.loadClients(); NALA.toast('Listo: cambió quién trabaja la empresa. No se borró nada.', 'ok'); run(false); } catch (e) { NALA.fail(e); }
+          };
+          out.querySelector('#rtake')?.addEventListener('click', () => doAssign({ mode: 'move' }, `¿Pasar «${rg.legal_name}» a ti? Se la quitará a quien la trabaja hoy.`));
+          out.querySelector('#rtake-add')?.addEventListener('click', () => doAssign({ mode: 'add' }, `¿Agregarte «${rg.legal_name}»? La seguirá trabajando también quien la tiene hoy.`));
+          out.querySelector('#rmove')?.addEventListener('click', () => { const sel = out.querySelector('#rto'); doAssign({ mode: 'move', to_user_id: sel.value }, `¿Pasar «${rg.legal_name}» a ${sel.selectedOptions[0].textContent}? Se la quitará a quien la trabaja hoy.`); });
+          out.querySelector('#rshare')?.addEventListener('click', () => { const sel = out.querySelector('#rto'); doAssign({ mode: 'add', to_user_id: sel.value }, `¿Agregar «${rg.legal_name}» también a ${sel.selectedOptions[0].textContent}?`); });
           out.querySelector('#ropen')?.addEventListener('click', () => { if (known) { NALA.setScope({ client: known.id }); NALA.go('#/empresa'); } });
         } catch (e) { out.innerHTML = `<div class="card empty">⚠️ ${esc(e.message)}</div>`; }
       };

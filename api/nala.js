@@ -62,6 +62,7 @@ const ROUTES = [
   ['GET', /^exports\/([^/]+)$/, (ctx, q, b, m) => exportsApi.detail(ctx, m[1])],
   ['GET', /^exports\/([^/]+)\/download$/, (ctx, q, b, m) => exportsApi.download(ctx, m[1], q)],
   ['POST', /^exports\/([^/]+)\/status$/, (ctx, q, b, m) => exportsApi.setStatus(ctx, m[1], b)],
+  ['POST', /^clients\/([^/]+)\/assign$/, (ctx, q, b, m) => core.assignClient(ctx, m[1], b)],
   ['GET', /^team$/, ctx => core.team(ctx)],
   ['PUT', /^team\/([^/]+)$/, (ctx, q, b, m) => core.updateMember(ctx, m[1], b)],
   ['GET', /^templates$/, ctx => templates.list(ctx)],

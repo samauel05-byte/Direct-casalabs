@@ -201,6 +201,7 @@
             <p class="muted" style="margin:6px 0">Cambiar quién la trabaja <b>no borra nada</b>: los lotes, comprobantes, exportaciones y archivos se quedan como están. Solo cambia quién la ve y la trabaja.</p>
             <div class="row" style="flex-wrap:wrap;gap:8px">
               ${rg.limited && !rg.mine ? '<button class="btn primary" id="rtake">Pasármela a mí</button><button class="btn" id="rtake-add" title="La queda trabajando también la otra persona">Agregármela (sin quitársela a nadie)</button>' : (rg.limited ? '<span class="badge ok">Ya la trabajas tú</span>' : '')}
+              ${!rg.limited && !people.length ? '<span class="muted">Tú ves todas las empresas, por eso no hay botón «Pasármela a mí». Para pasarla a otra persona, esa persona debe estar en «Equipo y oficiales» con «empresas asignadas» (no «todas») y NALA activado.</span>' : ''}
               ${people.length ? `<select id="rto">${people.map(m => `<option value="${m.user_id}">${esc(m.username)}</option>`).join('')}</select><button class="btn" id="rmove">Pasar a esta persona</button><button class="btn" id="rshare">Agregar también a esta persona</button>` : ''}
             </div></div>` : '';
           const reg = r.registry; const of = o?.status === 'ok' && o.found ? o.data : null;

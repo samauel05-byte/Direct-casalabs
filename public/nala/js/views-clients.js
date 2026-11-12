@@ -224,7 +224,7 @@
                 : o.status === 'unavailable' ? `<div class="issue warning"><span class="ico">!</span><div>${esc(o.message)}${o.stale ? `<br>Último dato guardado (${NALA.dateTime(o.stale.fetched_at)}): ${o.stale.found ? esc(o.stale.data?.nombre) : 'no inscrito'}` : ''}<br>NALA no marca el RNC como verificado sin respuesta oficial.</div></div>`
                 : o.found ? `<div class="table-wrap"><table>${rows}</table></div>` : `<div class="issue critical"><span class="ico">✕</span>${esc(o.data?.message || 'No inscrito')}</div>`}
               ${o?.fetched_at ? `<p class="muted" style="margin-top:8px">Fuente: <a href="${esc(o.source_url)}" target="_blank" rel="noopener">${esc(o.source)}</a> · ${NALA.dateTime(o.fetched_at)}${o.cached ? ' · resultado guardado (máx. 24 h)' : ''}</p>` : ''}
-              ${o?.found && !known && !r.registered && NALA.can('clients_manage') ? `<button class="btn primary" id="radd" style="margin-top:8px">Registrar como empresa cliente</button>` : ''}
+              ${(o?.found || reg?.found) && s.structureValid && !known && !r.registered && (NALA.can('clients_manage') || NALA.can('rnc')) ? `<button class="btn primary" id="radd" style="margin-top:8px">Registrar como empresa cliente (que trabaja con nosotros)</button>` : ''}
               ${known ? `<p style="margin-top:8px"><span class="badge ok">✓ Registrada</span> Ya es una empresa cliente: <b>${esc(known.legal_name)}</b>. <button class="btn sm" id="rgo">Ver en Empresas clientes</button> <button class="btn sm primary" id="ropen">Abrir su panel</button></p>` : ''}
             </div>
             ${assignCard}
@@ -241,7 +241,7 @@
           out.querySelector('#radd')?.addEventListener('click', async ev => {
             const btn = ev.target; btn.disabled = true; const prev = btn.textContent; btn.textContent = 'Registrando…';
             try {
-              await NALA.api('POST', 'clients', { legal_name: o.data.nombre, [s.kind === 'rnc' ? 'rnc' : 'cedula']: s.digits });
+              await NALA.api('POST', 'clients', { from_rnc: true, legal_name: (o?.data?.nombre || reg?.nombre), [s.kind === 'rnc' ? 'rnc' : 'cedula']: s.digits });
               await NALA.loadClients();
               NALA.toast('Registrada como empresa cliente', 'ok');
               run(false); // re-dibuja: ahora aparece el aviso "✓ Registrada" con los atajos

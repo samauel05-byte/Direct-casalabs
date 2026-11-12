@@ -2484,6 +2484,8 @@ async function camiFetch(url,retried){
   return j;
 }
 let NALA_TIMER=null,NALA_BUSY=false;
+// NCF → id del comprobante en NALA (para abrirlo con un clic y validarlo contra el documento).
+const NALA_LINKS={};
 function nalaStatus(txt,cls){const el=$('nala-status-txt');if(el){el.textContent=txt;el.style.color=cls==='ok'?'var(--green,#15924a)':cls==='warn'?'var(--amber,#c2710c)':'';}}
 function nalaRowsFor(entry){return entry.rows.map(r=>{const o={};entry.headers.forEach(h=>{o[h]=r[h]==null?'':r[h];});return o;});}
 async function loadFromNala(force){
@@ -2500,6 +2502,7 @@ async function loadFromNala(force){
       if(!e.aprobados){ parts.push(`${fmt}: sin comprobantes aprobados`); continue; }
       if(STATE[fmt]&&!STATE[fmt].fromNala&&!force){ parts.push(`${fmt}: ya cargaste un archivo (no se reemplazó)`); continue; }
       const rows=nalaRowsFor(e);
+      (e.links||[]).forEach(l=>{ NALA_LINKS[String(l.ncf||'').toUpperCase().replace(/[^A-Z0-9]/g,'')]=l.id; });
       const data=fmt==='606'?process606(rows):process607(rows); data.fromNala=true; STATE[fmt]=data;
       const name=`NALA · ${j.client.legal_name} · ${e.rows.length} comprobante${e.rows.length===1?'':'s'} aprobado${e.rows.length===1?'':'s'}`;
       if(fmt==='606')render606(data,name); else render607(data,name);
@@ -2522,6 +2525,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   ['in-rnc','in-periodo'].forEach(id=>{const el=$(id); if(el){el.addEventListener('change',scheduleNala); el.addEventListener('blur',scheduleNala);}});
   const b=$('btn-nala'); if(b) b.onclick=()=>loadFromNala(true);
 });
+
+// ── Clic en un NCF → abre ese comprobante en NALA ──────────────────────────────
+// Funciona en cualquier tabla de CAMI cuyo NCF venga de NALA (sin tocar cada pantalla).
+(function(){
+  const st=document.createElement('style');
+  st.textContent='td.nala-ncf{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}td.nala-ncf:hover{color:#4f46e5;text-decoration:underline}';
+  document.head.appendChild(st);
+  const keyOf=td=>String(td.textContent||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const find=t=>{ const td=t&&t.closest?t.closest('td'):null; if(!td||td.children.length>1) return null; const k=keyOf(td); return k&&NALA_LINKS[k]?{td,id:NALA_LINKS[k]}:null; };
+  document.addEventListener('mouseover',e=>{ const f=find(e.target); if(f&&!f.td.classList.contains('nala-ncf')){ f.td.classList.add('nala-ncf'); f.td.title='Abrir este comprobante en NALA para validarlo'; } });
+  document.addEventListener('click',e=>{ const f=find(e.target); if(!f) return; e.preventDefault(); window.open('/nala/index.html#/auditoria/'+f.id,'serp-nala'); });
+})();
 
 // ── Traer de NALA desde las pantallas 606 y 607 ────────────────────────────────
 // Un lote «Completado» en NALA se abre aquí con «↗ CAMI» (?rnc=&periodo=&razon=): se rellenan

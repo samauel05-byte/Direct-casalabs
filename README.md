@@ -112,6 +112,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — edición rápida desde la lista de Auditoría:** el botón **«✎ Editar»/«✎ Corregir»** aparece en toda factura editable (no solo en las que tienen observaciones) y abre el panel en línea con los campos importantes siempre visibles —606: tipo de bien/servicio (tipo de gasto), monto en servicios, monto en bienes e ITBIS; 607: tipo de ingreso, monto facturado e ITBIS— más los campos señalados; lo demás se edita en «Abrir detalle». **IR-17/B11 por archivo:** el botón «+ B11» del lote 606 también acepta subir el Excel (`.xlsx`, `.csv` o `.txt`; `POST batches/:id/b11` con `file_base64`/`file_name`, máx. 4 MB), que se lee con `b11.workbookToText` (primera hoja visible, primeras 12 columnas) igual que si se pegara.
 
+**NALA — `ITBIS_RETENIDO_EXCEDE` pasa de `critical` a `warning`** (lib/nala/validate.js): ya no bloquea aprobar/exportar; se acepta como advertencia en la exportación.
+
 **NALA — tema oscuro, exportar y retenciones 607:** `.shade-bar` usa `var(--surface)`/`var(--text)` (antes `--card`, inexistente → blanca en oscuro). `ROLE_PERMISSIONS` en `lib/nala/context.js`: `auditor` y `lectura` incluyen `export`. `FORMA_PAGO_607_DIFERENCIA` (lib/nala/validate.js): si hay `itbis_retenido`/`isr_retenido`, se compara contra total − retenciones (cuadra → sin aviso; no cuadra → `warning`); sin retenciones sigue siendo `critical`.
 
 **NALA — ITBIS y propina libres:** se eliminaron las advertencias `ITBIS_TASA` (ITBIS > 18 % del monto) y `PROPINA_DIFERENTE` (propina ≠ 10 %) de `lib/nala/validate.js`. Ya no se avisa ni se bloquea por esos montos; sigue la conciliación del total (`DIFERENCIA_TOTAL`) y las demás reglas de ITBIS (retenido/costo no pueden exceder el facturado).

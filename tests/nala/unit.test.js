@@ -464,3 +464,21 @@ test('b11: tipo de bien/servicio 09 obligado y el comprobante valida sin errores
   const v = validate({ format: '606', period: '202609', fields: f, client: { rnc: '132614666', legal_name: 'ANNIBEL SRL' } });
   assert.equal(v.issues.filter(i => i.severity === 'critical').length, 0);
 });
+
+test('ventas607: Excel del POS (NCF, RNC, Nombre, Fecha aaaammdd, Importe, ITBIS, Total)', () => {
+  const v = require('../../lib/nala/ventas607');
+  const t = 'NCF\tRNC\tNombre\tNumDoc\tFecha\tImporte\tITBIS\tTotalTicket\n        B0100001115\t133651726\tNOVOA CARPINTERIA\t01/099398\t20261002\t1080\t194.4\t1274.4\n        B0100001118\t22301270108\tangel garcia\t01/099517\t20261005\t2880\t518.4\t3398.4';
+  const r = v.parse(t, { formaPago: '02' });
+  assert.equal(r.rows.length, 2); assert.deepEqual(r.errors, []);
+  const f = r.rows[0].fields;
+  assert.equal(f.ncf, 'B0100001115'); assert.equal(f.fecha_comprobante, '2026-10-02'); assert.equal(f.tipo_id, '1');
+  assert.equal(f.monto_facturado, '1080.00'); assert.equal(f.itbis, '194.40'); assert.equal(f.total, '1274.40'); assert.equal(f.pago_cheque, '1274.40');
+  assert.equal(r.rows[1].fields.tipo_id, '2');
+});
+
+test('ventas607: reporte con RNC entre paréntesis y tipo de cobro', () => {
+  const v = require('../../lib/nala/ventas607');
+  const t = 'Comprobante Fiscal\tFecha\tVendido a\tVentas Brutas\tVentas Brutas Sin Impuestos\tImpuesto\tTipo de Cobro\nB0100000846\t31-10-2026 10:30 am\tDEBEPESA SRL (131-31015-1)\tRD$16,461.00\tRD$13,950.00\tRD$2,511.00\tTarjeta de Crédito';
+  const f = v.parse(t).rows[0].fields;
+  assert.equal(f.receptor_id, '131310151'); assert.equal(f.receptor_nombre, 'DEBEPESA SRL'); assert.equal(f.monto_facturado, '13950.00'); assert.equal(f.pago_tarjeta, '16461.00');
+});

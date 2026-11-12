@@ -4,7 +4,7 @@
    (worker programado) y que esta pestaña también impulsa mientras está abierta. */
 (function () {
   const { esc, int, period, ms } = NALA;
-  const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar,.xlsx,.xlsm,.csv';
+  const ACCEPT = '.jpg,.jpeg,.png,.pdf,.zip,.rar,.xlsx,.xlsm,.xls,.csv';
 
   // Abre CAMI (606/607/IT-1) con la empresa y el período ya puestos: CAMI trae solo lo aprobado en NALA.
   NALA.camiUrl = (clientId, per) => {
@@ -49,6 +49,36 @@
     return !!ok;
   };
 
+
+  // Ventana para subir el Excel de ventas del 607 (reporte del POS / sistema de facturación del cliente).
+  NALA.openVentas607 = async (endpoint, presetFile = null) => {
+    const pr = NALA.modal({ title: 'Agregar ventas al 607 desde Excel', okText: 'Agregar', wide: true,
+      body: `<p class="muted" style="margin-bottom:8px">Suba el Excel (.xls, .xlsx o .csv) de ventas con columnas <b>NCF · RNC/Cédula · Nombre · Fecha · Importe (sin ITBIS) · ITBIS · Total</b> (y, si la trae, <b>Tipo de cobro</b>). Cada fila se crea como venta del 607, <b>pendiente de revisión</b>. Los NCF que ya están en el 607 de esta empresa no se duplican.</p>
+        <div class="row" style="margin-bottom:8px"><label class="btn sm">📎 Subir el Excel<input id="v-file" type="file" accept=".xls,.xlsx,.xlsm,.csv,.txt" hidden></label><span class="muted" id="v-fname">o pegue las filas aquí abajo</span></div>
+        <textarea id="v-text" rows="7" style="width:100%;font-family:monospace" placeholder="Pegue aquí las filas copiadas del Excel (con el encabezado)"></textarea>
+        <div class="row" style="margin-top:8px"><label>Tipo de ingreso <select id="v-tipo">${NALA.catalogOptions((NALA.state.me.catalogs || {}).tipoIngreso, '01', { blank: false })}</select></label>
+        <label>Forma de pago si el Excel no la trae <select id="v-pago"><option value="01">Efectivo</option><option value="02">Cheque / transferencia / depósito</option><option value="03">Tarjeta</option><option value="04">Venta a crédito</option></select></label></div>`,
+      onOk: async m => {
+        const text = m.querySelector('#v-text').value; const file = m.querySelector('#v-file').files[0];
+        if (!text.trim() && !file) throw new Error('Suba el Excel o pegue las filas.');
+        let upload = {};
+        if (file && !text.trim()) {
+          if (file.size > 3 * 1024 * 1024) throw new Error('El archivo es muy grande (máx. 3 MB).');
+          const bytes = new Uint8Array(await file.arrayBuffer()); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+          upload = { file_base64: btoa(bin), file_name: file.name };
+        }
+        const r = await NALA.api('POST', endpoint, { text, ...upload, tipo_ingreso: m.querySelector('#v-tipo').value, forma_pago: m.querySelector('#v-pago').value });
+        NALA.toast(`${r.created} venta(s) agregadas al 607${r.already ? ` · ${r.already} ya existían (se omitieron)` : ''}${r.with_errors ? ` · ${r.with_errors} traen errores (revísalas en Auditoría)` : ''}${r.errors?.length ? ` · ${r.errors.length} filas con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
+        return true;
+      } });
+    const fin = document.querySelector('#v-file'); const fname = document.querySelector('#v-fname');
+    if (fin) {
+      if (presetFile) { const dt = new DataTransfer(); dt.items.add(presetFile); fin.files = dt.files; }
+      const show = () => { if (fname) fname.textContent = fin.files[0] ? `📎 ${fin.files[0].name}` : 'o pegue las filas aquí abajo'; };
+      fin.addEventListener('change', show); show();
+    }
+    return !!(await pr);
+  };
 
   // Mensaje de error de un trabajo. El aviso de «sin saldo de OpenAI» es solo para
   // administradores; los demás ven un texto genérico sin detalles de la cuenta.
@@ -145,12 +175,15 @@
     const add = list => {
       list = Array.from(list);
       // Un Excel/CSV no es una factura: es el IR-17 / compras B11 y se importa aparte.
-      const sheets = list.filter(f => /\.(xlsx|xlsm|csv)$/i.test(f.name));
+      const sheets = list.filter(f => /\.(xlsx|xlsm|xls|csv)$/i.test(f.name));
       if (sheets.length) {
         list = list.filter(f => !sheets.includes(f));
         if (batch && batch.format === '606') {
           NALA.toast('Ese archivo es un Excel (IR-17 / compras B11): se importa como comprobantes B11, no como factura.', 'ok');
           NALA.openB11(`batches/${batch.id}/b11`, {}, sheets[0]).then(done => { if (done) NALA.go(`#/lotes/${batch.id}`); });
+        } else if (batch && batch.format === '607') {
+          NALA.toast('Ese archivo es un Excel de ventas: se importa como ventas del 607, no como factura.', 'ok');
+          NALA.openVentas607(`batches/${batch.id}/ventas607`, sheets[0]).then(done => { if (done) NALA.go(`#/lotes/${batch.id}`); });
         } else NALA.toast('Un Excel no se sube como factura. Para el IR-17 / compras B11 abra el lote 606 y use «+ B11 (pegar Excel)».', 'err');
       }
       for (const f of list) if (!selected.some(x => x.name === f.name && x.size === f.size)) selected.push(f);
@@ -290,6 +323,7 @@
         ${b.status === 'completed' ? '<button class="btn sm" id="open-cami" title="Abrir en CAMI (606/607 e IT-1 con lo aprobado)">↗ Abrir en CAMI</button>' : ''}
         ${NALA.can('upload') ? `<button class="btn sm" data-href="#/lotes/${b.id}?agregar=1">+ Archivos</button>` : ''}
         ${NALA.can('edit') && b.format === '606' ? '<button class="btn sm" id="ret-bulk" title="Cambia de una vez el tipo de retención de ISR de los comprobantes de este lote">Tipo de retención (masivo)</button>' : ''}
+        ${NALA.can('upload') && b.format === '607' ? '<button class="btn sm" id="v607" title="Ventas desde el Excel del POS o sistema de facturación del cliente">+ Ventas (Excel)</button>' : ''}
         ${NALA.can('upload') && b.format === '606' ? '<button class="btn sm" id="b11" title="Compras a personas informales (B11): copie del Excel y pegue aquí">+ B11 (pegar Excel)</button>' : ''}
         ${NALA.can('reprocess') && (st.documents_failed || st.jobs_failed) ? '<button class="btn sm" id="reproc">Reprocesar fallidos</button>' : ''}
         ${NALA.can('reprocess') ? '<button class="btn sm" id="reproc-all" title="Vuelve a LEER todas las facturas con la IA. Conserva las correcciones hechas a mano y no toca las aprobadas ni las excluidas.">Reprocesar</button>' : ''}
@@ -339,6 +373,7 @@
         } });
       if (ok) NALA.route();
     });
+    root.querySelector('#v607')?.addEventListener('click', async () => { if (await NALA.openVentas607(`batches/${b.id}/ventas607`)) NALA.route(); });
     root.querySelector('#b11')?.addEventListener('click', async () => { if (await NALA.openB11(`batches/${b.id}/b11`)) NALA.route(); });
     root.querySelector('#reval')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `batches/${b.id}/revalidate`); NALA.toast('Revalidando el lote…', 'ok'); NALA.pump(); NALA.route(); } catch (e) { NALA.fail(e); }

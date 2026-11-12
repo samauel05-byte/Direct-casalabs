@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — Consulta RNC: si la empresa ya la trabaja otra persona:** al consultar un RNC que ya es empresa de NALA, dice quién la trabaja (por ejemplo Ori) y quien la quiera (por ejemplo Elizabeth) puede pasársela a sí misma o agregársela con un botón. No se borra nada: lotes, facturas y exportaciones se quedan igual. Ya no ofrece registrarla de nuevo.
 - **NALA — sombrear facturas y sumar solo lo sombreado:** en Auditoría haces clic en las filas para sombrearlas (Shift para varias) y una barra te da la suma de subtotal, ITBIS y total de lo sombreado. Se quitaron las sumas automáticas de montos de los paneles. El NCF abre la factura.
 - **NALA — 606 y 607 a un clic:** en Auditoría, pestañas «606 · Compras», «607 · Ventas» y «606 y 607» para la misma empresa y período.
 - **CAMI ↔ NALA — validar con un clic:** en CAMI, clic en el NCF de un comprobante que viene de NALA y se abre esa factura en NALA para validarla contra el documento.

@@ -66,8 +66,8 @@
         <rect x="${cx - slot / 2}" y="${padT}" width="${slot}" height="${plotH}" fill="transparent"/>
         <text class="axis" x="${cx}" y="${H - 10}" text-anchor="middle">${d.p.slice(4)}/${d.p.slice(2, 4)}</text></g>`;
     }).join('');
-    const table = `<div class="table-wrap" style="display:none;margin-top:8px"><table><tr><th>Período</th><th class="num">Aprobadas</th><th class="num">Pendientes</th><th class="num">Total aprobado (DOP)</th></tr>
-      ${data.map(d => `<tr><td>${period(d.p)}</td><td class="num">${int(d.approved)}</td><td class="num">${int(d.pending)}</td><td class="num">${money(d.total)}</td></tr>`).join('')}</table></div>`;
+    const table = `<div class="table-wrap" style="display:none;margin-top:8px"><table><tr><th>Período</th><th class="num">Aprobadas</th><th class="num">Pendientes</th></tr>
+      ${data.map(d => `<tr><td>${period(d.p)}</td><td class="num">${int(d.approved)}</td><td class="num">${int(d.pending)}</td></tr>`).join('')}</table></div>`;
     return { html: `<div class="legend"><span><i style="background:var(--series-1)"></i>Aprobadas</span><span><i style="background:var(--series-2)"></i>Pendientes de aprobar</span>
       <span style="margin-left:auto"><button class="btn sm" data-toggle-table>Ver tabla</button></span></div>
       <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Comprobantes aprobados y pendientes por período">${grid}${bars}</svg><div class="tip"></div></div>${table}`, data };
@@ -79,7 +79,7 @@
     chart.querySelectorAll('g[data-i]').forEach(g => {
       g.addEventListener('mousemove', e => {
         const d = data[Number(g.dataset.i)];
-        tip.innerHTML = `<b>${period(d.p)}</b><br>Aprobadas: ${int(d.approved)}<br>Pendientes: ${int(d.pending)}<br>Total aprobado: RD$ ${money(d.total)}`;
+        tip.innerHTML = `<b>${period(d.p)}</b><br>Aprobadas: ${int(d.approved)}<br>Pendientes: ${int(d.pending)}`;
         const r = chart.getBoundingClientRect();
         tip.style.display = 'block'; tip.style.left = `${Math.min(e.clientX - r.left + 12, r.width - 170)}px`; tip.style.top = `${e.clientY - r.top - 10}px`;
       });
@@ -122,13 +122,12 @@
           ${kpi('Con errores críticos', `<span style="color:var(--crit)">${int(st.with_errors)}</span>`, `${int(st.duplicates)} duplicados`, `${auditBase}&has=errors`, 'crit')}
           ${kpi('Con advertencias', int(st.with_warnings), `${int(st.foreign_currency)} en moneda extranjera`, `${auditBase}&has=warnings`, 'warn')}
           ${kpi('Aprobados', `<span style="color:var(--ok)">${int(st.approved)}</span>`, 'listos para exportar', `${auditBase}&status=approved`, 'ok')}
-          ${kpi('Total aprobado (DOP)', money(st.approved_total_dop), `ITBIS ${money(st.approved_itbis_dop)}`, '', 'accent')}
           ${kpi('Lotes', int(st.batches), `${int(st.batches_active)} en proceso · ${int(st.batches_failed)} fallidos`, '#/lotes')}
           ${kpi('Exportaciones', int(st.exports), `${int(st.exports_submitted)} enviadas · ${int(st.exports_accepted)} aceptadas`, '#/exportar')}
         </div>
         <div class="card"><h2>Comprobantes por período (últimos 12 meses)</h2>${chart.html}</div>
-        ${!s.client ? `<div class="card"><h2>Empresas del período</h2>${byClient.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th class="num">Comprobantes</th><th class="num">Pendientes</th><th class="num">Con errores</th><th class="num">Aprobados</th><th class="num">Total aprobado</th></tr>
-          ${byClient.map(c => `<tr class="clickable" data-client="${c.client_id}"><td>${esc(NALA.clientName(c.client_id))}</td><td class="num">${int(c.invoices)}</td><td class="num">${int(c.pending)}</td><td class="num">${c.with_errors ? `<span class="badge crit">${int(c.with_errors)}</span>` : '0'}</td><td class="num">${int(c.approved)}</td><td class="num">${money(c.approved_total_dop)}</td></tr>`).join('')}</table></div>` : '<div class="empty">Sin comprobantes en este período.</div>'}</div>` : ''}
+        ${!s.client ? `<div class="card"><h2>Empresas del período</h2>${byClient.length ? `<div class="table-wrap"><table><tr><th>Empresa</th><th class="num">Comprobantes</th><th class="num">Pendientes</th><th class="num">Con errores</th><th class="num">Aprobados</th></tr>
+          ${byClient.map(c => `<tr class="clickable" data-client="${c.client_id}"><td>${esc(NALA.clientName(c.client_id))}</td><td class="num">${int(c.invoices)}</td><td class="num">${int(c.pending)}</td><td class="num">${c.with_errors ? `<span class="badge crit">${int(c.with_errors)}</span>` : '0'}</td><td class="num">${int(c.approved)}</td></tr>`).join('')}</table></div>` : '<div class="empty">Sin comprobantes en este período.</div>'}</div>` : ''}
       </div>`;
       wireChart(root, chart.data); wireLinks(root);
       root.querySelectorAll('[data-client]').forEach(tr => tr.addEventListener('click', () => { NALA.setScope({ client: tr.dataset.client }); NALA.go('#/empresa'); }));
@@ -161,7 +160,7 @@
         <div class="grid kpis">
           ${kpi('Lotes', int(st.batches), `${int(st.batches_active)} activos · ${int(st.batches_review)} en revisión`)}
           ${kpi('Pendientes', int(st.pending), '', `${auditBase}&status=pending_review,reviewed`)}
-          ${kpi('Aprobadas', int(st.approved), `RD$ ${money(st.approved_total_dop)}`, `${auditBase}&status=approved`)}
+          ${kpi('Aprobadas', int(st.approved), 'listas para exportar', `${auditBase}&status=approved`)}
           ${kpi('Observaciones', `${int(st.with_errors)} / ${int(st.with_warnings)}`, 'errores / advertencias', `${auditBase}&has=errors`)}
           ${kpi('Exportaciones', int(st.exports), `${int(st.exports_generated)} generadas · ${int(st.exports_submitted)} enviadas · ${int(st.exports_accepted)} aceptadas`)}
         </div>

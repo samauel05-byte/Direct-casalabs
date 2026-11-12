@@ -34,6 +34,9 @@
 
 ## Estado y novedades recientes
 
+- **NALA — sombrear facturas y sumar solo lo sombreado:** en Auditoría haces clic en las filas para sombrearlas (Shift para varias) y una barra te da la suma de subtotal, ITBIS y total de lo sombreado. Se quitaron las sumas automáticas de montos de los paneles. El NCF abre la factura.
+- **NALA — 606 y 607 a un clic:** en Auditoría, pestañas «606 · Compras», «607 · Ventas» y «606 y 607» para la misma empresa y período.
+- **CAMI ↔ NALA — validar con un clic:** en CAMI, clic en el NCF de un comprobante que viene de NALA y se abre esa factura en NALA para validarla contra el documento.
 - **NALA — el IR-17 del Excel entra aprobado y con tipo 09:** los comprobantes B11 que se jalan del Excel del IR-17 quedan directamente APROBADOS y con tipo de bien/servicio 09 (el Excel ya se revisó allá), listos para exportar el 606 y verse en CAMI. El tipo de retención se puede cambiar de forma masiva aunque ya estén aprobados.
 - **NALA — el Excel del IR-17 ya no da error al subirlo como factura:** si lo sueltas en «+ Archivos» de un lote 606, NALA te abre la ventana para importarlo como comprobantes B11 con el archivo ya elegido.
 - **NALA → CAMI cuando el lote está «Completado»:** en la lista de lotes aparece «↗ CAMI», que abre CAMI con la empresa y el período ya puestos y trae solo lo aprobado en NALA. CAMI también tiene, en las pantallas 606 y 607, una barra para traer lo aprobado en NALA con el RNC y el período.

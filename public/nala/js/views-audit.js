@@ -115,7 +115,7 @@
     const fixBtn = i => showFix(i) ? ` <button class="btn sm fix-btn" data-fix="${i.id}" title="Editar aquí tipo de gasto, monto e ITBIS, sin abrir el detalle">${hasFixables(i) ? '✎ Corregir' : '✎ Editar'}</button>` : '';
     const reviewCell = i => `${NALA.issueBadges(i)}${fixBtn(i)}`;
     const cpCell = i => `${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div>`;
-    const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted">${n + 1}</td><td class="mono" data-c="ncf">${esc(i.ncf || '—')}</td><td data-c="cp">${cpCell(i)}</td>
+    const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted">${n + 1}</td><td class="mono" data-c="ncf"><a class="ncf-link" href="#/auditoria/${i.id}?${new URLSearchParams(params)}" title="Abrir la factura para validarla">${esc(i.ncf || '—')}</a></td><td data-c="cp">${cpCell(i)}</td>
       <td data-c="date">${esc(i.invoice_date || '—')}</td>${unifiedCol ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>DOP</td><td class="num" data-c="subtotal">${money(i.subtotal_dop)}</td><td class="num" data-c="itbis">${money(i.itbis_dop)}</td><td class="num" data-c="total">${money(i.total_dop)}</td><td data-c="status">${NALA.badge(i.status)}</td><td data-c="review">${reviewCell(i)}</td></tr>
       <tr class="inline-edit" data-edit="${i.id}" hidden><td colspan="${cols}"></td></tr>`;
     root.innerHTML = `<div class="stack">
@@ -124,12 +124,15 @@
         ${batchInfo && !batchList.batches.some(b => b.id === params.batch) ? `<option selected value="${params.batch}">${esc(batchInfo.batch.name)}</option>` : ''}</select></label>
         ${batchInfo ? `<span class="muted">${esc(batchInfo.batch.client_name)} · ${batchInfo.batch.format} · ${period(batchInfo.batch.period)} · ${NALA.badge(batchInfo.batch.status)}</span>` : ''}</div>`
         : `<div class="muted">${s.client ? esc(NALA.clientName(s.client)) : 'Todas las empresas (consolidado)'} · ${period(params.period ?? s.period)} · ${(params.format ?? s.format) || '606 y 607'} — cambie la empresa activa, el período o el formato arriba.</div>`}
+      ${(() => { const cur = mode === 'batch' ? (batchInfo?.batch?.format || '') : ((params.format ?? s.format) || ''); const btn = (f, label) => `<button class="${cur === f ? 'active' : ''}" data-fmt="${f}">${label}</button>`;
+        return `<div class="tabs" id="fmt-tabs" title="Ver 606 y 607 de la misma empresa y período">${btn('606', '606 · Compras')}${btn('607', '607 · Ventas')}${btn('', '606 y 607')}</div>`; })()}
       <div class="row">
         <label class="f"><span>Estado</span><select id="f-status"><option value="">Todos (sin excluidos)</option><option value="pending_review,reviewed" ${params.status === 'pending_review,reviewed' ? 'selected' : ''}>Pendientes</option><option value="approved" ${params.status === 'approved' ? 'selected' : ''}>Aprobados</option><option value="excluded" ${params.status === 'excluded' ? 'selected' : ''}>Excluidos</option></select></label>
         <label class="f"><span>Observaciones</span><select id="f-has"><option value="">Todas</option><option value="errors" ${params.has === 'errors' ? 'selected' : ''}>Con errores críticos</option><option value="warnings" ${params.has === 'warnings' ? 'selected' : ''}>Con advertencias</option><option value="duplicates" ${params.has === 'duplicates' ? 'selected' : ''}>Duplicados</option><option value="foreign" ${params.has === 'foreign' ? 'selected' : ''}>Moneda extranjera</option></select></label>
         <label class="f" style="flex:1;min-width:200px"><span>Buscar</span><input id="f-q" value="${esc(params.q || '')}" placeholder="NCF, RNC o nombre"></label>
         <span class="muted">${int(total)} comprobante(s)</span></div>
-      ${invoices.some(showFix) ? '<div class="muted" style="font-size:12px">💡 Pulse <b>✎ Corregir</b> para arreglar lo señalado sin salir de la lista. Abra el detalle sólo si necesita ver el documento.</div>' : ''}
+      ${invoices.some(showFix) ? '<div class="muted" style="font-size:12px">💡 Pulse <b>✎ Corregir</b> / <b>✎ Editar</b> para arreglar sin salir de la lista. Haga clic en una fila para <b>sombrearla</b> (Shift para varias) y ver su suma; abra la factura con su <b>NCF</b>.</div>' : '<div class="muted" style="font-size:12px">💡 Haga clic en una fila para sombrearla (Shift para varias) y ver su suma; abra la factura con su NCF.</div>'}
+      <div id="shade-bar" class="shade-bar" hidden></div>
       ${canBulk && approvable.length ? `<div class="row" id="bulkbar" style="align-items:center;gap:12px">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer" title="Marca todas las que tienen cotejo verde (sin errores ni avisos)"><input type="checkbox" id="sel-all"> Todas las de cotejo verde (${approvable.length})</label>
         <span class="spacer" style="flex:1"></span>
@@ -143,9 +146,39 @@
     root.querySelector('#f-status').addEventListener('change', e => set('status', e.target.value));
     root.querySelector('#f-has').addEventListener('change', e => set('has', e.target.value));
     root.querySelector('#f-q').addEventListener('change', e => set('q', e.target.value.trim()));
+    // ── Sombrear facturas y ver la suma de las sombreadas ─────────────────────
+    // Clic en una fila = sombrearla / quitar el sombreado (Shift: rango). Los montos NO se suman
+    // solos: solo se suman las sombreadas. La factura se abre con su NCF.
+    if (!NALA.cache.shade || NALA.cache.shade.qs !== qs) NALA.cache.shade = { qs, ids: new Set() };
+    const shade = NALA.cache.shade.ids;
+    let lastShaded = null;
+    const rowsEls = () => Array.from(root.querySelectorAll('tr.clickable[data-id]'));
+    const paintShade = () => {
+      rowsEls().forEach(tr => tr.classList.toggle('shaded', shade.has(tr.dataset.id)));
+      const bar = root.querySelector('#shade-bar');
+      const picked = invoices.filter(i => shade.has(i.id));
+      if (!picked.length) { bar.hidden = true; bar.innerHTML = ''; return; }
+      const fmts = [...new Set(picked.map(i => i.format))].sort();
+      const part = f => { const L = picked.filter(i => i.format === f); return `${fmts.length > 1 ? `<b>${f}</b> (${L.length}): ` : ''}Subtotal <b>${fmtC(sumC(L.map(i => i.subtotal_dop)))}</b> · ITBIS <b>${fmtC(sumC(L.map(i => i.itbis_dop)))}</b> · Total <b>${fmtC(sumC(L.map(i => i.total_dop)))}</b>`; };
+      bar.innerHTML = `<span><b>${picked.length}</b> sombrada(s)</span><span>${fmts.map(part).join(' &nbsp;|&nbsp; ')}</span><span class="spacer" style="flex:1"></span><button class="btn sm" id="shade-clear">Quitar sombreado</button>`;
+      bar.hidden = false;
+      bar.querySelector('#shade-clear').addEventListener('click', () => { shade.clear(); paintShade(); });
+    };
     root.querySelectorAll('tr.clickable[data-id]').forEach(tr => tr.addEventListener('click', e => {
-      if (e.target.closest('.chk') || e.target.closest('.fix-btn') || e.target.closest('[data-act]')) return;
-      NALA.go(`#/auditoria/${tr.dataset.id}?${new URLSearchParams(params)}`);
+      if (e.target.closest('.chk') || e.target.closest('.fix-btn') || e.target.closest('[data-act]') || e.target.closest('a') || e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+      const id = tr.dataset.id; const list = rowsEls().map(x => x.dataset.id);
+      if (e.shiftKey && lastShaded && list.includes(lastShaded)) {
+        const [a, b] = [list.indexOf(lastShaded), list.indexOf(id)].sort((x, y) => x - y);
+        list.slice(a, b + 1).forEach(x => shade.add(x));
+      } else if (shade.has(id)) shade.delete(id); else shade.add(id);
+      lastShaded = id; window.getSelection()?.removeAllRanges(); paintShade();
+    }));
+    paintShade();
+    // 606 / 607 de la misma empresa y período, sin salir de Auditoría.
+    root.querySelectorAll('#fmt-tabs [data-fmt]').forEach(b => b.addEventListener('click', () => {
+      const bi = batchInfo?.batch; const q = { client: (bi ? bi.client_id : (params.client ?? s.client)) || '', period: (bi ? bi.period : (params.period ?? s.period)) || '', format: b.dataset.fmt };
+      for (const k of ['status', 'has', 'q']) if (params[k]) q[k] = params[k];
+      NALA.go(`#/auditoria?${new URLSearchParams(Object.entries(q).filter(([, v]) => v))}`);
     }));
 
     // ── Edición en línea: corregir lo señalado sin abrir el detalle ─────────
@@ -200,7 +233,7 @@
       const tr = root.querySelector(`tr.clickable[data-id="${upd.id}"]`);
       if (tr) {
         const set2 = (c, html) => { const el = tr.querySelector(`[data-c="${c}"]`); if (el) el.innerHTML = html; };
-        set2('ncf', esc(upd.ncf || '—')); set2('cp', cpCell(upd)); set2('date', esc(upd.invoice_date || '—'));
+        set2('ncf', `<a class="ncf-link" href="#/auditoria/${upd.id}?${new URLSearchParams(params)}" title="Abrir la factura para validarla">${esc(upd.ncf || '—')}</a>`); set2('cp', cpCell(upd)); set2('date', esc(upd.invoice_date || '—'));
         set2('total', money(upd.total_dop)); set2('status', NALA.badge(upd.status)); set2('review', reviewCell(upd));
         const chk = tr.querySelector('[data-c="chk"]');
         if (chk) { chk.innerHTML = isGreen(upd) && bulkRefresh ? `<input type="checkbox" class="row-chk" data-cid="${upd.id}">` : '';

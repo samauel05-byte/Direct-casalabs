@@ -197,3 +197,11 @@ tr.inline-edit > td { background: var(--surface-2); padding: 0; border-top: 0; }
 .legend { display: flex; gap: 14px; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
 .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 iframe.assistant { width: 100%; height: calc(100vh - 110px); border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+
+/* Auditoría: filas sombreadas, enlace del NCF y barra con la suma de lo sombreado */
+tr.shaded > td { background: color-mix(in srgb, var(--accent, #7c3aed) 16%, transparent); }
+tr.shaded > td:first-child { box-shadow: inset 3px 0 0 var(--accent, #7c3aed); }
+a.ncf-link { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; font-weight: 600; }
+a.ncf-link:hover { color: var(--accent, #7c3aed); text-decoration: underline; }
+.shade-bar { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; padding: 10px 14px; border: 1px solid var(--accent, #7c3aed); border-radius: 10px; background: var(--card, #fff); box-shadow: 0 4px 14px rgba(0,0,0,.18); }
+.shade-bar[hidden] { display: none; }

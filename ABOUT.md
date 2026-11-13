@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — al cambiar de página en el visor, cambia también la factura de la derecha**: en la pantalla de revisión, las flechas ◀ ▶ del visor del PDF movían solo la imagen y el formulario se quedaba con la factura anterior. Ahora, al llegar a la página de otra factura del mismo archivo, el formulario se abre con esa factura (si la página no tiene factura en la lista, avisa).
 - **NALA — subir el 607 (o el IR-17) directo en «Nuevo lote»**: ya no hace falta crear antes un lote 606. En «Nuevo lote», con formato 607, el botón **«📊 Subir Excel de ventas (607)»** crea el lote del período y empresa elegidos y carga las ventas desde el Excel/CSV (tipo de ingreso y forma de pago). Con 606, el mismo botón carga el Excel del IR-17/B11.
 - **NALA — un lote muestra todas sus páginas, también las excluidas**: dentro de un lote la lista ahora incluye las facturas excluidas (marcadas «Excluida»), así la columna «Pág.» sigue la secuencia real del archivo (1, 2, 3, 4…) sin saltos. El filtro «Estado» permite volver a ver solo pendientes/aprobadas/excluidas.
 - **NALA — «Pág.» en la lista de un lote de un solo PDF (ya no parece que salta)**: en un lote como «FACTURAS SECONVA» (un PDF de 51 páginas), la primera fila de la lista decía «1» pero abría la página 3, porque las páginas 1, 2 y 4 estaban excluidas. Ahora la columna se llama **«Pág.»** y muestra la **página real del archivo**, y un aviso dice qué páginas no están en la lista (excluidas o filtradas). Al abrir una factura, el contador indica también su página del archivo.

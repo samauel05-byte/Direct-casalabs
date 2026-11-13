@@ -91,7 +91,7 @@
       params.batch ? NALA.api('GET', `batches/${params.batch}`) : Promise.resolve(null),
       NALA.api('GET', `batches?${new URLSearchParams(Object.entries({ client_id: s.client, period: s.period, format: s.format }).filter(([, v]) => v))}`),
     ]);
-    NALA.cache.auditList = { qs, ids: invoices.map(i => i.id), incomplete: invoices.filter(isIncomplete).map(i => i.id) };
+    NALA.cache.auditList = { qs, ids: invoices.map(i => i.id), pages: invoices.map(i => ({ id: i.id, doc: i.document_id, from: i.page_from, to: i.page_to || i.page_from })), incomplete: invoices.filter(isIncomplete).map(i => i.id) };
     const set = (k, v) => { const p = { ...params, [k]: v }; if (!v) delete p[k]; NALA.go(`#/auditoria?${new URLSearchParams(p)}`); };
     // Aprobación masiva: sólo las de "cotejo verde" (sin errores ni avisos) que
     // aún estén pendientes de aprobar. El resto no se puede marcar.
@@ -328,7 +328,7 @@
   }
 
   // ── Visor del original ──────────────────────────────────────────────────
-  async function mountViewer(el, documentId, startPage) {
+  async function mountViewer(el, documentId, startPage, onPage) {
     if (!documentId) { el.innerHTML = '<div class="empty">Sin documento original.</div>'; return; }
     let info;
     try { info = await NALA.api('GET', `documents/${documentId}/url`); } catch (e) { el.innerHTML = `<div class="empty">⚠️ ${esc(e.message)}</div>`; return; }
@@ -497,7 +497,7 @@
       if (a === 'fit') st.fit = true;
       if (a === 'rot') st.rot = (st.rot + 90) % 360;
       if (a === 'ocr') { if (!textPanel.hidden) { textPanel.hidden = true; removeOverlay(); return; } readText(); return; }
-      draw().then(() => { if (!textPanel.hidden && ['prev', 'next', 'rot'].includes(a)) readText(); }).catch(err => NALA.fail(err));
+      draw().then(() => { if (['prev', 'next'].includes(a) && onPage) onPage(st.page); if (!textPanel.hidden && ['prev', 'next', 'rot'].includes(a)) readText(); }).catch(err => NALA.fail(err));
     });
     if (typeof pdfjsLib !== 'undefined') pdfjsLib.GlobalWorkerOptions.workerSrc = '/cami/vendor/pdf.worker.min.js';
     await draw().catch(err => { canvasBox.innerHTML = `<div class="empty">No se pudo mostrar el documento: ${esc(err.message)}</div>`; });
@@ -515,7 +515,7 @@
     NALA.dirty = false;
     // Neighbors from the list the user came from.
     let cached = NALA.cache.auditList?.qs === listQuery(params) ? NALA.cache.auditList : null;
-    if (!cached) { const r = await NALA.api('GET', `invoices?${listQuery(params)}`); cached = { qs: listQuery(params), ids: r.invoices.map(i => i.id), incomplete: r.invoices.filter(isIncomplete).map(i => i.id) }; NALA.cache.auditList = cached; }
+    if (!cached) { const r = await NALA.api('GET', `invoices?${listQuery(params)}`); cached = { qs: listQuery(params), ids: r.invoices.map(i => i.id), pages: r.invoices.map(i => ({ id: i.id, doc: i.document_id, from: i.page_from, to: i.page_to || i.page_from })), incomplete: r.invoices.filter(isIncomplete).map(i => i.id) }; NALA.cache.auditList = cached; }
     const ids = cached.ids;
     const incompleteSet = new Set(cached.incomplete || []);
     const pos = ids.indexOf(inv.id);
@@ -605,7 +605,14 @@
             ${inv.status === 'excluded' && NALA.can('exclude') ? '<button class="btn" id="restore">Restaurar</button>' : ''}
           </div></div></div></div>`;
 
-    mountViewer(root.querySelector('#viewer'), inv.document_id, inv.page_from);
+    // Al cambiar de página en el visor, el formulario de la derecha pasa a la factura de esa página.
+    const onViewerPage = pg => {
+      if (inv.page_from && pg >= inv.page_from && pg <= (inv.page_to || inv.page_from)) return;
+      const hit = (cached.pages || []).find(x => x.doc === inv.document_id && x.id !== inv.id && x.from && pg >= x.from && pg <= x.to);
+      if (hit) NALA.go(`#/auditoria/${hit.id}?${new URLSearchParams(params)}`);
+      else NALA.toast && NALA.toast(`La página ${pg} no tiene una factura en esta lista (puede estar excluida o filtrada).`);
+    };
+    mountViewer(root.querySelector('#viewer'), inv.document_id, inv.page_from, onViewerPage);
     root.querySelectorAll('[data-href]').forEach(el => el.addEventListener('click', () => NALA.go(el.dataset.href)));
     root.querySelector('#prev').addEventListener('click', () => navTo(-1));
     root.querySelector('#next').addEventListener('click', () => navTo(1));

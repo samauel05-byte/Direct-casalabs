@@ -35,6 +35,7 @@
           upload = { file_base64: btoa(bin), file_name: file.name };
         }
         const r = await NALA.api('POST', endpoint, { ...extra, text, ...upload, isr_tipo: m.querySelector('#b11-tipo').value, retention_rate: Number(m.querySelector('#b11-rate').value), itbis: m.querySelector('#b11-itbis').checked });
+        NALA.lastImport = r;
         NALA.toast(`${r.created} comprobante(s) B11 agregados y aprobados${r.sheet ? ` (hoja «${r.sheet}»)` : ''}${r.already ? ` · ${r.already} ya existían (se omitieron)` : ''}${r.with_errors ? ` · ${r.with_errors} traen errores (revísalos en Auditoría: impiden exportar)` : ''}${r.skipped?.length ? ` · ${r.skipped.length} omitidos (anulados)` : ''}${r.errors?.length ? ` · ${r.errors.length} con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
         return true;
       } });
@@ -51,7 +52,7 @@
 
 
   // Ventana para subir el Excel de ventas del 607 (reporte del POS / sistema de facturación del cliente).
-  NALA.openVentas607 = async (endpoint, presetFile = null) => {
+  NALA.openVentas607 = async (endpoint, presetFile = null, extra = {}) => {
     const pr = NALA.modal({ title: 'Agregar ventas al 607 desde Excel', okText: 'Agregar', wide: true,
       body: `<p class="muted" style="margin-bottom:8px">Suba el Excel (.xls, .xlsx o .csv) de ventas con columnas <b>NCF · RNC/Cédula · Nombre · Fecha · Importe (sin ITBIS) · ITBIS · Total</b> (y, si la trae, <b>Tipo de cobro</b>). Cada fila se crea como venta del 607, <b>pendiente de revisión</b>. Los NCF que ya están en el 607 de esta empresa no se duplican.</p>
         <div class="row" style="margin-bottom:8px"><label class="btn sm">📎 Subir el Excel<input id="v-file" type="file" accept=".xls,.xlsx,.xlsm,.csv,.txt" hidden></label><span class="muted" id="v-fname">o pegue las filas aquí abajo</span></div>
@@ -67,7 +68,8 @@
           const bytes = new Uint8Array(await file.arrayBuffer()); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
           upload = { file_base64: btoa(bin), file_name: file.name };
         }
-        const r = await NALA.api('POST', endpoint, { text, ...upload, tipo_ingreso: m.querySelector('#v-tipo').value, forma_pago: m.querySelector('#v-pago').value });
+        const r = await NALA.api('POST', endpoint, { ...extra, text, ...upload, tipo_ingreso: m.querySelector('#v-tipo').value, forma_pago: m.querySelector('#v-pago').value });
+        NALA.lastImport = r;
         NALA.toast(`${r.created} venta(s) agregadas al 607${r.already ? ` · ${r.already} ya existían (se omitieron)` : ''}${r.with_errors ? ` · ${r.with_errors} traen errores (revísalas en Auditoría)` : ''}${r.errors?.length ? ` · ${r.errors.length} filas con error (líneas ${r.errors.map(e => e.line).join(', ')})` : ''}.`, r.errors?.length ? 'err' : 'ok');
         return true;
       } });
@@ -162,6 +164,7 @@
         <label class="f" style="flex:2;min-width:200px"><span>Nombre del lote</span><input id="b-name" maxlength="120" placeholder="Ej. Compras agosto — caja chica"></label></div>`}
       <div class="drop" id="drop" tabindex="0">📎 Arrastre aquí facturas <b>JPG, PNG, PDF o ZIP</b>, o haga clic para elegirlas.<br><small>PDF de varias páginas y varias facturas por página se separan automáticamente. RAR no es compatible: use ZIP.</small></div>
       <input type="file" id="files" multiple accept="${ACCEPT}" hidden>
+      ${batch ? '' : `<div class="row" style="gap:10px"><button class="btn" id="xl" type="button">📊 <span id="xl-txt">Subir Excel de ventas (607)</span></button><span class="muted" id="xl-hint">El Excel se carga directo como ventas del 607 de la empresa y el mes de arriba (sin tener que abrir un lote 606).</span></div><input type="file" id="xl-file" accept=".xlsx,.xlsm,.xls,.csv" hidden>`}
       <div id="flist"></div>
       <div class="row"><button class="btn primary" id="go" disabled>${batch ? 'Subir y procesar' : 'Crear lote, subir y procesar'}</button><button class="btn" id="cancel">Cancelar</button></div></div>`;
     let selected = [];
@@ -184,13 +187,31 @@
         } else if (batch && batch.format === '607') {
           NALA.toast('Ese archivo es un Excel de ventas: se importa como ventas del 607, no como factura.', 'ok');
           NALA.openVentas607(`batches/${batch.id}/ventas607`, sheets[0]).then(done => { if (done) NALA.go(`#/lotes/${batch.id}`); });
-        } else NALA.toast('Un Excel no se sube como factura. Para el IR-17 / compras B11 abra el lote 606 y use «+ B11 (pegar Excel)».', 'err');
+        } else if (!batch) {
+          // «Nuevo lote» sin lote creado: el Excel va directo al 607 (ventas) o al 606 (IR-17 / B11) de la empresa y el mes elegidos arriba.
+          const clientId = root.querySelector('#b-client')?.value; const period = `${root.querySelector('#b-year')?.value}${root.querySelector('#b-month')?.value}`;
+          const fmt = root.querySelector('#b-format')?.value;
+          if (!clientId) NALA.toast('Elija primero la empresa (arriba) y vuelva a subir el Excel.', 'err');
+          else {
+            NALA.lastImport = null;
+            const run = fmt === '607' ? NALA.openVentas607('invoices/import-ventas607', sheets[0], { client_id: clientId, period }) : NALA.openB11('invoices/import-b11', { client_id: clientId, period }, sheets[0]);
+            run.then(done => { if (done && NALA.lastImport?.batch_id) NALA.go(`#/lotes/${NALA.lastImport.batch_id}`); });
+          }
+        }
       }
       for (const f of list) if (!selected.some(x => x.name === f.name && x.size === f.size)) selected.push(f);
       for (const f of selected) if (/\.rar$/i.test(f.name)) status[f.name] = ['RAR no es compatible: comprima en ZIP', 'crit'];
       draw();
     };
     const drop = root.querySelector('#drop'); const input = root.querySelector('#files');
+    // Botón del Excel (solo en «Nuevo lote»): el texto sigue al formato elegido (607 ventas / 606 IR-17-B11).
+    const xl = root.querySelector('#xl');
+    if (xl) {
+      const label = () => { const f = root.querySelector('#b-format').value; root.querySelector('#xl-txt').textContent = f === '607' ? 'Subir Excel de ventas (607)' : 'Subir Excel del IR-17 / compras B11 (606)'; root.querySelector('#xl-hint').textContent = f === '607' ? 'El Excel se carga directo como ventas del 607 de la empresa y el mes de arriba (sin tener que abrir un lote 606).' : 'El Excel del IR-17 / compras a informales se carga directo al 606 de la empresa y el mes de arriba.'; };
+      root.querySelector('#b-format').addEventListener('change', label); label();
+      xl.addEventListener('click', () => root.querySelector('#xl-file').click());
+      root.querySelector('#xl-file').addEventListener('change', e => { if (e.target.files.length) add(e.target.files); e.target.value = ''; });
+    }
     drop.addEventListener('click', () => input.click());
     drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') input.click(); });
     drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });

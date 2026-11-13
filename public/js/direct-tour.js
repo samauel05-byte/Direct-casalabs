@@ -97,7 +97,8 @@
     { target: ['#nav [data-nav="plantillas"]', '#menu-btn'], title: 'Plantillas y pendientes', html: '<p>Descarga la plantilla de carga de cada modalidad y mira <b>qué falta que Contabilidad entregue</b>. Al cargar un archivo puedes asociar tus columnas a las de Direct.</p>' },
     { target: ['#scope-client', '#filters-btn'], title: 'Filtro por empresa', html: '<p>Filtra las listas por empresa. En el celular está detrás de «⚙ Filtros».</p>' },
     { target: ['#nav [data-nav="config"]', '#nav [data-nav="equipo"]'], title: 'Administración', html: '<p>Contabilidad ajusta aquí los estados del flujo, la regla de cuadre y los documentos de cada modalidad; el administrador asigna roles y empresas en «Equipo y permisos».</p>' },
-    end('Flujo de cada informe: crear → cargar datos → revisar pendientes → en revisión → aprobado → cerrado. Todo queda en el historial.'),
+    { title: 'Estados financieros del informe', html: '<p>Dentro de cada informe, la pestaña <b>«Estados financieros»</b> tiene la <b>Situación Financiera</b>, los <b>Resultados</b> y el <b>Flujo de Efectivo</b>, mes por mes.</p><ol class="dt-list"><li><b>Cargar Excel de estados</b>: una hoja por estado, con los meses en columnas. Direct reconoce cada línea por su nombre.</li><li>Direct <b>calcula los totales</b> y avisa si el balance no cuadra. Las cifras de cada línea son las que entrega Contabilidad.</li><li><b>Ver paquete / PDF</b>: portada, informe del contador y los tres estados (anual y mensual), listos para imprimir.</li></ol>' },
+    end('Flujo de cada informe: crear → cargar los estados → revisar pendientes → en revisión → aprobado → cerrado. Todo queda en el historial.'),
   ];
 
   TOURS.ir2 = () => [

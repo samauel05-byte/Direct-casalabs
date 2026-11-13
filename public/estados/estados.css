@@ -26,3 +26,52 @@
   .main, .content { overflow: visible; height: auto; padding: 0; }
   .card { box-shadow: none; break-inside: avoid; }
 }
+
+/* Estados (cifras) y paquete para imprimir */
+.ef-grid table { font-size: 12px; }
+.ef-grid td.num, .ef-grid th.num { min-width: 108px; }
+.ef-grid td:first-child, .ef-grid th:first-child { min-width: 230px; position: sticky; left: 0; background: var(--surface); z-index: 1; white-space: nowrap; }
+.ef-grid tr.ef-head td { font-weight: 700; text-decoration: underline; background: var(--surface-2); }
+.ef-grid tr.ef-subhead td { font-weight: 700; }
+.ef-grid tr.strong td { font-weight: 700; border-top: 1px solid var(--border); }
+.ef-grid tr.grand td { border-top: 2px solid var(--text); }
+.ef-in { width: 104px; text-align: right; padding: 3px 5px !important; font-variant-numeric: tabular-nums; min-height: 28px !important; }
+.ef-in.bad { border-color: var(--crit); background: var(--crit-bg); }
+/* Paquete: hojas tipo informe */
+.pkg { display: flex; flex-direction: column; gap: 18px; align-items: center; }
+.pkg-page { background: #fff; color: #111; width: min(820px, 100%); min-height: 1000px; padding: 56px 64px; box-shadow: var(--shadow); position: relative; font-family: Arial, Helvetica, sans-serif; font-size: 13px; }
+.pkg-land { width: min(1160px, 100%); min-height: 760px; padding: 36px 40px; }
+.pkg-logo { display: block; max-height: 150px; max-width: 320px; margin: 0 auto 28px; }
+.pkg-logo-txt { text-align: center; font-weight: 700; font-size: 20px; margin-bottom: 28px; letter-spacing: 2px; }
+.pkg-cover { text-align: center; padding-top: 120px; }
+.pkg-cover-co { margin-top: 90px; font-size: 24px; line-height: 1.7; }
+.pkg-cover-title { margin-top: 150px; font-family: Georgia, 'Times New Roman', serif; font-size: 26px; line-height: 1.7; text-transform: uppercase; }
+.pkg-informe { font-family: Georgia, 'Times New Roman', serif; font-size: 14px; line-height: 1.9; }
+.pkg-informe h2 { text-align: center; font-size: 17px; margin: 30px 0 28px; }
+.pkg-informe-txt p { text-align: justify; margin-bottom: 18px; }
+.pkg-sign { margin-top: 30px; line-height: 1.5; } .pkg-sign p { margin: 2px 0; }
+.pkg-addr { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; font-family: Arial, sans-serif; font-size: 11px; font-weight: 600; }
+.pkg-h { text-align: center; line-height: 1.5; margin-bottom: 26px; font-size: 14px; border-bottom: 2px solid #111; padding-bottom: 12px; }
+.pkg-t { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pkg-t td { padding: 1px 6px; border: 0; background: none; color: #111; white-space: nowrap; }
+.pkg-t td.num { text-align: right; }
+.pkg-t th { background: none; color: #111; font-size: 11px; position: static; text-align: right; padding: 2px 4px; border-bottom: 1px solid #111; }
+.pkg-t tr.pk-head td { font-weight: 700; text-decoration: underline; padding-top: 12px; }
+.pkg-t tr.pk-subhead td { font-weight: 700; padding-top: 6px; }
+.pkg-t tr.strong td { font-weight: 700; }
+.pkg-t tr.strong td.num { border-top: 1px solid #111; }
+.pkg-t tr.grand td.num { border-top: 1px solid #111; border-bottom: 3px double #111; }
+.pkg-t.monthly { font-size: 10px; } .pkg-t.monthly td { padding: 1px 3px; } .pkg-t.monthly td:first-child { white-space: normal; max-width: 210px; }
+.pkg-foot { position: absolute; left: 0; right: 0; bottom: 26px; text-align: center; font-style: italic; font-weight: 700; font-size: 16px; color: #2a3b5c; }
+.pkg-prelim .pkg-page::after { content: 'PRELIMINAR'; position: absolute; top: 42%; left: 50%; transform: translate(-50%, -50%) rotate(-28deg); font-size: 110px; font-weight: 800; color: rgba(185, 28, 28, .10); letter-spacing: 8px; pointer-events: none; }
+@page { size: letter portrait; margin: 10mm; }
+@page land { size: letter landscape; margin: 8mm; }
+@media print {
+  .pkg { display: block; }
+  .pkg-page { box-shadow: none; width: 100%; min-height: 0; height: 250mm; padding: 14mm 16mm; page-break-after: always; break-after: page; overflow: hidden; }
+  .pkg-land { page: land; height: 180mm; padding: 8mm 10mm; }
+  .pkg-cover { padding-top: 40mm; }
+  .pkg-foot { bottom: 8mm; } .pkg-addr { bottom: 12mm; }
+  .pkg-prelim .pkg-page::after { color: rgba(185, 28, 28, .14); }
+}
+[hidden] { display: none !important; }

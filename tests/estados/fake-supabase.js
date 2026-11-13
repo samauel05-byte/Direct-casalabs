@@ -48,7 +48,7 @@ class Query {
 }
 
 function createFake() {
-  const db = { tables: {}, users: {}, uploads: [], defaults: { fin_reports: { version: 1, prepared_on: '2026-11-13' }, fin_entries: { active: true }, fin_assumptions: { active: true, pending: false }, fin_adjustments: { active: true }, fin_imports: { status: 'applied' } },
+  const db = { tables: {}, users: {}, uploads: [], defaults: { fin_reports: { version: 1, prepared_on: '2026-11-13', package: {}, custom_lines: [] }, fin_entries: { active: true }, fin_assumptions: { active: true, pending: false }, fin_adjustments: { active: true }, fin_imports: { status: 'applied' } },
     unique: { fin_versions: ['report_id', 'version'] } };
   return {
     db,

@@ -77,7 +77,7 @@
   function listQuery(params) {
     const s = NALA.state;
     const p = { batch_id: params.batch || '', client_id: params.batch ? '' : (params.client ?? s.client), period: params.batch ? '' : (params.period ?? s.period), format: params.batch ? '' : (params.format ?? s.format),
-      status: params.status || '', has: params.has || '', q: params.q || '' };
+      status: params.status || (params.batch ? 'pending_review,reviewed,approved,excluded' : ''), has: params.has || '', q: params.q || '' };
     return new URLSearchParams(Object.entries(p).filter(([, v]) => v)).toString();
   }
 
@@ -132,7 +132,7 @@
       ${(() => { const cur = mode === 'batch' ? (batchInfo?.batch?.format || '') : ((params.format ?? s.format) || ''); const btn = (f, label) => `<button class="${cur === f ? 'active' : ''}" data-fmt="${f}">${label}</button>`;
         return `<div class="tabs" id="fmt-tabs" title="Ver 606 y 607 de la misma empresa y período">${btn('606', '606 · Compras')}${btn('607', '607 · Ventas')}${btn('', '606 y 607')}</div>`; })()}
       <div class="row">
-        <label class="f"><span>Estado</span><select id="f-status"><option value="">Todos (sin excluidos)</option><option value="pending_review,reviewed" ${params.status === 'pending_review,reviewed' ? 'selected' : ''}>Pendientes</option><option value="approved" ${params.status === 'approved' ? 'selected' : ''}>Aprobados</option><option value="excluded" ${params.status === 'excluded' ? 'selected' : ''}>Excluidos</option></select></label>
+        <label class="f"><span>Estado</span><select id="f-status"><option value="">${params.batch ? 'Todos (con excluidos)' : 'Todos (sin excluidos)'}</option><option value="pending_review,reviewed" ${params.status === 'pending_review,reviewed' ? 'selected' : ''}>Pendientes</option><option value="approved" ${params.status === 'approved' ? 'selected' : ''}>Aprobados</option><option value="excluded" ${params.status === 'excluded' ? 'selected' : ''}>Excluidos</option></select></label>
         <label class="f"><span>Observaciones</span><select id="f-has"><option value="">Todas</option><option value="errors" ${params.has === 'errors' ? 'selected' : ''}>Con errores críticos</option><option value="warnings" ${params.has === 'warnings' ? 'selected' : ''}>Con advertencias</option><option value="duplicates" ${params.has === 'duplicates' ? 'selected' : ''}>Duplicados</option><option value="foreign" ${params.has === 'foreign' ? 'selected' : ''}>Moneda extranjera</option></select></label>
         <label class="f" style="flex:1;min-width:200px"><span>Buscar</span><input id="f-q" value="${esc(params.q || '')}" placeholder="NCF, RNC o nombre"></label>
         <span class="muted">${int(total)} comprobante(s)</span></div>

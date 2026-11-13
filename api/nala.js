@@ -49,6 +49,7 @@ const ROUTES = [
   ['POST', /^invoices\/([^/]+)\/revert$/, (ctx, q, b, m) => invoices.revert(ctx, m[1], b)],
   ['POST', /^invoices\/import-b11$/, (ctx, q, b) => invoices.importB11ForPeriod(ctx, b)],
   ['POST', /^batches\/([^/]+)\/retention$/, (ctx, q, b, m) => invoices.setRetention(ctx, m[1], b)],
+  ['POST', /^invoices\/import-ventas607$/, (ctx, q, b) => invoices.importVentas607ForPeriod(ctx, b)],
   ['POST', /^batches\/([^/]+)\/ventas607$/, (ctx, q, b, m) => invoices.importVentas607(ctx, m[1], b)],
   ['POST', /^batches\/([^/]+)\/b11$/, (ctx, q, b, m) => invoices.importB11(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/relocate$/, (ctx, q, b, m) => invoices.relocate(ctx, m[1], b)],

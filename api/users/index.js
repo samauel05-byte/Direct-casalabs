@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
-        .select('id, role, access_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_clientes, portals_direct, companies_direct, created_at')
+        .select('id, role, access_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_clientes, portals_direct, companies_direct, created_at')
         .eq('tenant_id', session.tenantId)
         .order('created_at');
 
@@ -69,6 +69,7 @@ module.exports = async (req, res) => {
         access_nomina: p.access_nomina === true,
         access_ir2: p.access_ir2,
         access_estimacion: p.access_estimacion,
+        access_estados: p.access_estados === true,
         access_clientes: p.access_clientes !== false,
         portals_direct: p.portals_direct,
         companies_direct: Array.isArray(p.companies_direct) ? p.companies_direct : null,
@@ -79,7 +80,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -107,6 +108,7 @@ module.exports = async (req, res) => {
         access_nomina: access_nomina || false,
         access_ir2: access_ir2 || false,
         access_estimacion: access_estimacion || false,
+        access_estados: access_estados === true,
         // Client records are isolated by the tenant, not by a module checkbox.
         access_clientes: true,
         portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],

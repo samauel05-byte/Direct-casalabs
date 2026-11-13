@@ -40,6 +40,7 @@ module.exports = async (req, res) => {
         access_nomina: true,
         access_ir2: true,
         access_estimacion: true,
+        access_estados: true,
         access_clientes: true,
         portals_direct: ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],
         user_key_salt: userSalt || null,

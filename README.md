@@ -199,6 +199,31 @@ Los nombres de empresa de la **bóveda de credenciales** (lista de empresas de u
 
 ---
 
+## Estados Financieros (Proyectados · Interinos · Del año)
+
+Módulo de Contabilidad (`public/estados/`, API en `api/estados.js` → `lib/estados/`), integrado a Direct con el mismo login, el mismo menú de accesos y las mismas empresas (`direct_clients`). Se abre en su propia pestaña, como NALA/Nómina, y reutiliza `nala.css` (tema claro/oscuro y móvil).
+
+**Modalidades (no son una lista genérica de reportes):**
+- **Proyectados**: escenario (nombre libre; «Base» solo viene sugerido), período futuro, moneda, supuestos y valores estimados (`fin_assumptions`: tipo, concepto, descripción, período, cuenta, valor, fuente, pendiente). **No calcula nada**: no hay fórmulas definidas por Contabilidad; se muestra lo que el usuario cargó con la etiqueta PROYECTADO. Un supuesto «pendiente», un valor sin cifra o sin descripción dejan el informe incompleto.
+- **Interinos**: fecha de inicio y de corte, período fiscal, registros contables reales (`fin_entries`), ajustes manuales (`fin_adjustments`). Muestra «la información llega hasta» y marca como incompleto: sin datos, datos que no llegan a la fecha de corte, clasificación parcial, descuadre o documentos obligatorios pendientes.
+- **Del año**: año fiscal, inicio/cierre, registros, ajustes y asientos de cierre. Estado inicial «pendiente de cierre».
+
+**Tablas** (`supabase/migrations/202611130001_estados_financieros.sql`, RLS cerrada, solo servidor): `fin_config`, `fin_members`, `fin_member_clients`, `fin_reports`, `fin_entries`, `fin_assumptions`, `fin_adjustments`, `fin_imports`, `fin_mappings`, `fin_versions`, `fin_events`; columna nueva `direct_profiles.access_estados`. Nada se borra: lo retirado queda `active=false`; cada modificación crea una fila en `fin_versions` (instantánea) y una en `fin_events`; el control de concurrencia usa `fin_reports.version`.
+
+**Acceso y permisos:** el administrador de Direct ve todo. A los demás se les activa «Estados Financieros» en Usuarios (`access_estados`) y reciben un rol del módulo (`fin_members.fin_role`: `lectura`, `preparador`, `revisor`, `aprobador`, `contador`) más ajustes por permiso y alcance por empresa (`all_clients` / `fin_member_clients`), desde la pantalla «Equipo y permisos» (solo admin). Permisos: `view`, `proyectados_edit`, `interinos_load`, `anual_prepare`, `review`, `approve`, `close_reopen`, `templates_manage`, `team_manage`. Quien tiene acceso sin rol entra como solo lectura. Todo se valida en el servidor (`lib/estados/context.js`); una empresa no asignada responde 404.
+
+**Flujo de estados** (`lib/estados/rules.js`): borrador / pendiente de cierre → en revisión → observado → aprobado → cerrado; «pendiente de legalización» existe pero está **apagado** hasta que Contabilidad lo confirme (Configuración); no se asume ningún organismo ni procedimiento. Aprobar/cerrar exige cero pendientes bloqueantes (`422` con la lista). Aprobado/cerrado bloquea el contenido; reabrir exige motivo y conserva en `fin_events` quién había aprobado/cerrado.
+
+**Carga de datos (Excel .xlsx / CSV):** `POST reports/:id/import/preview` (lee el archivo, sugiere la asociación de columnas por encabezado o aplica la guardada en `fin_mappings`, valida y devuelve errores con fila/campo/explicación) y `…/import/confirm` (re-valida, no guarda nada si hay un solo error, guarda en bloques, registra el archivo con su SHA-256 en `fin_imports`, lo sube al almacenamiento privado si responde, crea versión y evento). `POST imports/:id/revert` (con motivo) deja las filas inactivas. Se validan fechas (y que caigan dentro del período), importes (punto decimal; coma decimal y negativos se rechazan), cuenta obligatoria, débito/crédito, moneda, período, RNC de la empresa, duplicados (en el archivo y contra lo ya cargado) y el cuadre débitos = créditos según `balance_rule` (por asiento / global / ninguna; **provisional** hasta confirmarla). `.xls` antiguo no se admite (guardar como .xlsx).
+
+**Plantillas:** `GET templates/:modalidad` genera un Excel solo con encabezados (sin cifras) y una hoja de instrucciones con columnas «por confirmar con Contabilidad» y lo que falta entregar (`PENDING_FROM_ACCOUNTING`).
+
+**Exportación:** `GET reports/:id/export` (Excel con encabezado completo: modalidad, empresa, período, moneda, estado, fecha de generación, responsables, origen, pendientes, resumen/registros/ajustes/historial) y «Imprimir / PDF» del navegador. Si el informe no está aprobado o tiene pendientes, el archivo y la pantalla dicen «DOCUMENTO PRELIMINAR» y el nombre termina en `_PRELIMINAR`.
+
+**Comparaciones** (`GET reports/:id/compare`): apagadas por defecto (`compare_enabled`); solo misma empresa y moneda, con datos en ambos lados; real vs real por movimiento neto de cada cuenta, o proyectado vs real por código de cuenta de cada valor estimado.
+
+**Pruebas:** `npm run test:estados` (21: validación de importes/columnas/cuadre, permisos, flujo, y un flujo completo contra una base en memoria `tests/estados/fake-supabase.js` que no sustituye las restricciones reales de Postgres; esas se comprobaron aparte aplicando la migración).
+
 ## Asistente de IA en los módulos (separado de NALA)
 
 Además de la IA de NALA (que **no se toca** y mantiene su propia configuración de
@@ -247,7 +272,7 @@ compatible) en Vercel; sin la llave, el asistente responde que no está configur
 
 El admin puede:
 - Crear y desactivar usuarios
-- Asignar acceso a módulos (Direct / CAMI / NALA / Nómina / IR-2 / Estimación Fiscal)
+- Asignar acceso a módulos (Direct / CAMI / NALA / Nómina / IR-2 / Estimación Fiscal / Estados Financieros)
 - Asignar portales individuales a cada usuario
 - **Asignar empresas (clientes) concretas a cada usuario**: un empleado ve solo las empresas que se le asignan (vacío = todas)
 - Restablecer la contraseña de cualquier usuario
@@ -439,7 +464,7 @@ npm run test:licenses # licencias y alta de firmas (stack local)
 
 ## Migraciones requeridas
 
-Aplica las migraciones de `supabase/migrations/` en orden. Entre otras: crean el tenant inicial `Save` y asocian los datos actuales, activan la sesión única por usuario, crean las tablas de NALA y los eventos de Direct (historial de entradas y permisos por empresa).
+Aplica las migraciones de `supabase/migrations/` en orden (la más reciente, `202611130001_estados_financieros`, crea las tablas `fin_*` y `direct_profiles.access_estados`). Entre otras: crean el tenant inicial `Save` y asocian los datos actuales, activan la sesión única por usuario, crean las tablas de NALA y los eventos de Direct (historial de entradas y permisos por empresa).
 
 ---
 

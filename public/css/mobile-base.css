@@ -21,7 +21,17 @@ button, a, label, select, summary, [role="button"], [onclick] {
 /* Medios nunca empujan el ancho de la página */
 img, svg, video, canvas { max-width: 100%; height: auto; }
 
-/* En celular, los campos a 16px para que el navegador NO haga zoom al enfocar */
+/* En celular, los campos a 16px para que el navegador NO haga zoom al enfocar.
+   `!important`: cada módulo declara su propio tamaño de letra (13px, 11px…) después de este archivo y
+   lo anulaba, así que en iPhone la pantalla se agrandaba sola al tocar cualquier campo. */
 @media (max-width: 640px) {
-  input, select, textarea { font-size: 16px; }
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea { font-size: 16px !important; }
+  /* Zonas de toque cómodas (≥ 36px) en botones y campos de uso frecuente. */
+  .btn, button.btn, button.pri, select, input[type="text"], input[type="search"], input[type="number"], input[type="date"], input[type="month"], input[type="password"], input[type="email"], input[type="tel"] { min-height: 36px; }
+  /* Nada se sale de la pantalla: textos largos se parten y las tablas con su propio contenedor se desplazan. */
+  .modal, .modal-body, .card { max-width: 100%; }
+  .table-wrap, .tbl-wrap, .tw { -webkit-overflow-scrolling: touch; }
+}
+@media (max-width: 640px) and (hover: none) {
+  .tab, .nav button { min-height: 40px; }
 }

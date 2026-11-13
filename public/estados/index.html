@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<script>
+/* Tema antes del primer pintado: el mismo que eligió el usuario en Direct. */
+(function(){var p='light';try{p=localStorage.getItem('direct_theme')||'light'}catch(e){}
+var t=p==='light'||p==='dark'?p:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+document.documentElement.setAttribute('data-theme',t);})();
+</script>
+<link rel="stylesheet" href="/css/mobile-base.css">
+<title>Estados Financieros</title>
+<link rel="stylesheet" href="/nala/css/nala.css">
+<link rel="stylesheet" href="/estados/estados.css">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style></head>
+<body>
+<aside class="side" aria-label="Módulos de Estados Financieros">
+  <div class="brand">
+    <div class="logo">EF</div>
+    <div><b>Estados Financieros</b><small>Proyectados · Interinos · Del año</small></div>
+  </div>
+  <button class="btn sm" style="margin:10px 14px 2px;width:calc(100% - 28px);justify-content:flex-start" title="Volver a Accesos" onclick="EF.goBack()">‹ Volver a Accesos</button>
+  <nav class="nav" id="nav"></nav>
+  <div class="side-foot"><button class="btn sm" id="theme-btn" style="width:100%;margin-bottom:8px" onclick="(function(){var d=document.documentElement,n=d.getAttribute('data-theme')==='dark'?'light':'dark';d.setAttribute('data-theme',n);try{localStorage.setItem('direct_theme',n)}catch(e){}document.getElementById('theme-btn').textContent=n==='dark'?'☀ Fondo blanco':'🌙 Fondo oscuro'})()">🌙 Fondo oscuro</button><div id="who"></div><div style="margin-top:6px">Estados Financieros · CaSa Labs</div></div>
+</aside>
+<div class="main">
+  <header class="topbar">
+    <button class="btn sm menu-btn" id="menu-btn" aria-label="Menú">☰</button>
+    <h1 id="title">Estados Financieros</h1>
+    <span class="spacer" style="flex:1"></span>
+    <label class="f" title="Filtra las listas por empresa"><span>Empresa</span><select id="scope-client" style="max-width:280px"></select></label>
+  </header>
+  <main class="content" id="content"><div class="empty">Cargando…</div></main>
+</div>
+<div id="toasts" aria-live="polite"></div>
+<script src="/estados/js/app.js"></script>
+<script src="/estados/js/views.js"></script>
+<script src="/estados/js/report.js"></script>
+<script src="/estados/js/import.js"></script>
+<script src="/estados/js/admin.js"></script>
+<script>(function(){var b=document.getElementById('theme-btn');if(b&&document.documentElement.getAttribute('data-theme')==='dark')b.textContent='☀ Fondo blanco';})();</script>
+</body>
+</html>

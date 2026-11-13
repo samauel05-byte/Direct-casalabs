@@ -256,7 +256,7 @@
       ${rec.map(e => `<tr><td class="dx-mono dx-sm">${esc(fmtWhen(e.at))}</td><td>${esc(e.usuario)}</td><td>${esc(instName(e.portal))}</td><td><span class="dx-chip ${evCls[e.event] || ''}">${esc(evLbl[e.event] || e.event)}</span></td></tr>`).join('')}</table></div>` : '';
 
     // ── Inteligencia (Etapa 2) ──
-    const TOOL_LABELS = { nala: 'NALA', cami: 'CAMI', ir2: 'IR-2', 'dgii-modulos': 'Estimación Fiscal', clients: 'Clientes' };
+    const TOOL_LABELS = { nala: 'NALA', cami: 'CAMI', ir2: 'IR-2', 'dgii-modulos': 'Estimación Fiscal', estados: 'Estados Financieros', clients: 'Clientes' };
     const lab = k => TOOL_LABELS[k] || instName(k);
 
     // Módulos: uso de cada herramienta + aviso de los que nadie usa.

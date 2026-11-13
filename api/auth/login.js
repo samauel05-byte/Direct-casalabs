@@ -18,6 +18,7 @@ function profileResponse(profile, defaultPortals, extra = {}) {
     access_nomina: profile.access_nomina === true,
     access_ir2: profile.access_ir2 === true,
     access_estimacion: profile.access_estimacion === true,
+    access_estados: profile.access_estados === true,
     access_clientes: profile.access_clientes !== false,
     portals: profile.portals_direct || defaultPortals,
     userSalt: profile.user_key_salt,

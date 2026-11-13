@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — editar el nombre del proveedor desde la lista**: el botón «✎ Editar/Corregir» de la lista ahora incluye siempre el **nombre del proveedor** (606) o del cliente (607), junto a tipo de gasto, montos e ITBIS; antes solo se podía cambiar abriendo el detalle de la factura.
 - **NALA — botón «🗑 Eliminar» en la lista de cualquier lote**: cada factura de la lista (en cualquier lote y también en la vista por empresa) tiene su botón para eliminarla del lote sin abrir el detalle. Pide un motivo, deja la factura fuera de reportes e indicadores y queda en el historial; las eliminadas muestran **«Restaurar»** para volver a incluirlas. Las aprobadas solo las puede eliminar quien tenga permiso de revertir.
 - **NALA — al cambiar de página en el visor, cambia también la factura de la derecha**: en la pantalla de revisión, las flechas ◀ ▶ del visor del PDF movían solo la imagen y el formulario se quedaba con la factura anterior. Ahora, al llegar a la página de otra factura del mismo archivo, el formulario se abre con esa factura (si la página no tiene factura en la lista, avisa).
 - **NALA — subir el 607 (o el IR-17) directo en «Nuevo lote»**: ya no hace falta crear antes un lote 606. En «Nuevo lote», con formato 607, el botón **«📊 Subir Excel de ventas (607)»** crea el lote del período y empresa elegidos y carga las ventas desde el Excel/CSV (tipo de ingreso y forma de pago). Con 606, el mismo botón carga el Excel del IR-17/B11.

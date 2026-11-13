@@ -112,6 +112,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — edición rápida desde la lista de Auditoría:** el botón **«✎ Editar»/«✎ Corregir»** aparece en toda factura editable (no solo en las que tienen observaciones) y abre el panel en línea con los campos importantes siempre visibles —606: tipo de bien/servicio (tipo de gasto), monto en servicios, monto en bienes e ITBIS; 607: tipo de ingreso, monto facturado e ITBIS— más los campos señalados; lo demás se edita en «Abrir detalle». **IR-17/B11 por archivo:** el botón «+ B11» del lote 606 también acepta subir el Excel (`.xlsx`, `.csv` o `.txt`; `POST batches/:id/b11` con `file_base64`/`file_name`, máx. 4 MB), que se lee con `b11.workbookToText` (primera hoja visible, primeras 12 columnas) igual que si se pegara.
 
+**NALA — edición en línea:** `buildEditor` (`views-audit.js`) muestra siempre `emisor_nombre` (606) / `receptor_nombre` (607) además de los campos señalados y los de tipo/montos/ITBIS.
+
 **NALA — eliminar desde la lista:** `delBtn` en `reviewCell` (`views-audit.js`) añade «🗑 Eliminar» (`POST invoices/:id/exclude` con motivo; aprobadas requieren `revert`) o «Restaurar» (`POST invoices/:id/restore`) por fila, con un único manejador delegado (`root._rowAct`). Es exclusión reversible (los eventos de auditoría referencian la factura con `on delete restrict`), no borrado físico.
 
 **NALA — visor ↔ formulario:** `mountViewer(el, documentId, startPage, onPage)` llama a `onPage(página)` al usar ◀ ▶; el espacio de trabajo busca en `NALA.cache.auditList.pages` (`{id, doc, from, to}`) la factura del mismo documento que cubre esa página y navega a ella.

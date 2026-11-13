@@ -14,9 +14,6 @@
 var t=p==='light'||p==='dark'?p:(matchMedia('(prefers-color-scheme: dark)').matches?'dark':((new Date().getHours()>=19||new Date().getHours()<7)?'dark':'light'));
 document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-theme-pref',p);})();
 </script>
-<link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
-<link rel="icon" type="image/png" href="/img/favicon.png">
-<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-title" content="Direct">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -363,7 +360,12 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
   .p-name{font-size:12px}
 }
 </style>
-<link rel="stylesheet" href="/js/direct-extras.css"><link rel="stylesheet" href="/css/direct-tour.css"></head>
+<link rel="stylesheet" href="/js/direct-extras.css"><link rel="stylesheet" href="/css/direct-tour.css"><link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/img/favicon-48.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+</head>
 <body>
 
 <!-- Loading -->

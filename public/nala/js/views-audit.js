@@ -113,7 +113,9 @@
     let bulkRefresh = null;
     // Celdas que la edición en línea refresca sin recargar toda la tabla.
     const fixBtn = i => showFix(i) ? ` <button class="btn sm fix-btn" data-fix="${i.id}" title="Editar aquí tipo de gasto, monto e ITBIS, sin abrir el detalle">${hasFixables(i) ? '✎ Corregir' : '✎ Editar'}</button>` : '';
-    const reviewCell = i => `${NALA.issueBadges(i)}${fixBtn(i)}`;
+    const delBtn = i => i.status === 'excluded' ? (canExclude ? ` <button class="btn sm" data-restore-row="${i.id}" title="Volver a incluir esta factura en el lote">Restaurar</button>` : '')
+      : (canExclude && (i.status !== 'approved' || NALA.can('revert')) ? ` <button class="btn sm danger" data-del="${i.id}" title="Eliminar esta factura del lote">🗑 Eliminar</button>` : '');
+    const reviewCell = i => `${NALA.issueBadges(i)}${fixBtn(i)}${delBtn(i)}`;
     const cpCell = i => `${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div>`;
     // En un lote de UN archivo (PDF), la primera columna muestra la PÁGINA del archivo, no un contador: así «1» abre la página 1 y
     // se ve qué páginas no están en la lista (excluidas o filtradas). Antes el contador no coincidía con la página y parecía un salto.
@@ -146,6 +148,23 @@
       ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th title="${byPage ? 'Página del archivo' : 'Número en la lista'}">${byPage ? 'Pág.' : '#'}</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${unifiedCol ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Subtotal</th><th class="num">ITBIS</th><th class="num">Total</th><th>Estado</th><th>Revisión</th></tr>
         ${invoices.map((i, n) => rowHtml(i, n)).join('')}</table></div>`
         : '<div class="card empty">No hay comprobantes con estos filtros.</div>'}</div>`;
+    // Eliminar (excluir, con motivo y reversible) o restaurar una factura directamente desde la lista.
+    if (root._rowAct) root.removeEventListener('click', root._rowAct);
+    root._rowAct = async e => {
+      const del = e.target.closest('[data-del]'); const res = e.target.closest('[data-restore-row]');
+      if (!del && !res) return;
+      e.stopPropagation();
+      const id = (del || res).dataset.del || (del || res).dataset.restoreRow; const i = byId[id]; if (!i) return;
+      try {
+        if (del) {
+          const reason = await NALA.askReason(i.status === 'approved' ? 'Eliminar comprobante aprobado' : 'Eliminar comprobante del lote', { extra: `<p class="muted" style="margin-bottom:8px">${esc(i.ncf || 'Sin NCF')} · ${esc(i.counterpart_name || '—')}. ${i.status === 'approved' ? 'Se quita la aprobación y deja de reportarse. ' : ''}No se reporta ni se cuenta en los indicadores; queda en el historial y puede restaurarse.</p>` });
+          if (!reason) return;
+          await NALA.api('POST', `invoices/${id}/exclude`, { reason }); NALA.toast('Factura eliminada del lote', 'ok');
+        } else { await NALA.api('POST', `invoices/${id}/restore`, {}); NALA.toast('Factura restaurada', 'ok'); }
+        NALA.route();
+      } catch (err) { NALA.fail(err); }
+    };
+    root.addEventListener('click', root._rowAct);
     root.querySelector('#t-batch').addEventListener('click', () => NALA.go(`#/auditoria?batch=${batchList.batches[0]?.id || ''}`));
     root.querySelector('#t-uni').addEventListener('click', () => NALA.go('#/auditoria'));
     root.querySelector('#pick-batch')?.addEventListener('change', e => set('batch', e.target.value));

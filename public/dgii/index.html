@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="stylesheet" href="/css/mobile-base.css">
+<link rel="stylesheet" href="/css/direct-tour.css">
 <title>Estimación Fiscal</title>
 <style>
 :root{
@@ -1075,5 +1076,7 @@ function receiveCapturedEnvios(text){
 </script>
 <script src="/js/ai-assistant.js"></script>
 <script>try{AIAssistant.mount({module:"contable",title:"Asistente fiscal",suggestions:["Explícame los datos que tengo en pantalla", "¿Qué gastos son deducibles?", "¿Qué es la estimación fiscal?"]});}catch(e){}</script>
+<script src="/js/direct-tour.js"></script>
+<script>(function(){var l=document.querySelector('.hdr-l');if(l)l.append(DirectTour.button('dgii'));DirectTour.auto('dgii',{ready:'.tabs .tab'});})();</script>
 </body>
 </html>

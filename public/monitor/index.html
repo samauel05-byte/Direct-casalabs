@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="stylesheet" href="/css/mobile-base.css">
+<link rel="stylesheet" href="/css/direct-tour.css">
 <title>Monitor DGII</title>
 <style>
 :root{
@@ -402,5 +403,7 @@ window.addEventListener('message',e=>{
 });
 try{ const h=serpHost(); if(h) h.postMessage({action:'monitor-ready'},location.origin); }catch(e){}
 </script>
+<script src="/js/direct-tour.js"></script>
+<script>(function(){var h=document.querySelector('.hdr h1');if(h)h.after(DirectTour.button('monitor'));DirectTour.auto('monitor',{ready:'#tabs .tab'});})();</script>
 </body>
 </html>

@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Nómina</title>
 <link rel="stylesheet" href="/css/mobile-base.css">
+<link rel="stylesheet" href="/css/direct-tour.css">
 <style>
   :root{
     --bg:#0a1120; --panel:#101b30; --panel2:#0c1526; --elev:#16233c;
@@ -1096,5 +1097,7 @@
 </script>
 <script src="/js/ai-assistant.js"></script>
 <script>try{AIAssistant.mount({module:"nomina",title:"Asistente de Nómina",suggestions:["Resume la nómina que tengo abierta", "¿Cómo se calcula el ISR de un empleado?", "¿Qué aportes van a la TSS?"]});}catch(e){}</script>
+<script src="/js/direct-tour.js"></script>
+<script>(function(){var s=document.querySelector('header.top .spacer');if(s)s.before(DirectTour.button('nomina'));DirectTour.auto('nomina',{ready:'#tabs [data-tab]'});})();</script>
 </body>
 </html>

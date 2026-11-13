@@ -13,6 +13,7 @@ document.documentElement.setAttribute('data-theme',t);})();
 <title>Estados Financieros</title>
 <link rel="stylesheet" href="/nala/css/nala.css">
 <link rel="stylesheet" href="/estados/estados.css">
+<link rel="stylesheet" href="/css/direct-tour.css">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>:root{--font-body:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--font-head:'Josefin Sans','Poppins',system-ui,sans-serif}body,input,select,textarea,button,.btn{font-family:var(--font-body)}h1,h2,h3,h4,h5,.title,.ttl,.brand,.auth-ttl{font-family:var(--font-head)}</style></head>
 <body>
 <aside class="side" aria-label="Módulos de Estados Financieros">
@@ -41,5 +42,7 @@ document.documentElement.setAttribute('data-theme',t);})();
 <script src="/estados/js/import.js"></script>
 <script src="/estados/js/admin.js"></script>
 <script>(function(){var b=document.getElementById('theme-btn');if(b&&document.documentElement.getAttribute('data-theme')==='dark')b.textContent='☀ Fondo blanco';})();</script>
+<script src="/js/direct-tour.js"></script>
+<script>(function(){var h=document.getElementById('title');if(h)h.after(DirectTour.button('estados'));DirectTour.auto('estados',{ready:['#content .mod-card','#content .card']});})();</script>
 </body>
 </html>

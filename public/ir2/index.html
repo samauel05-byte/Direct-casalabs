@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="stylesheet" href="/css/mobile-base.css">
+<link rel="stylesheet" href="/css/direct-tour.css">
 <title>IR-2 · Declaración de Renta Personas Jurídicas</title>
 <style>
 :root{
@@ -932,5 +933,7 @@ async function descargarFormIR2(){
 <script>try{ SERP_EMPRESAS.attach('e-nombre','e-rnc'); }catch(e){}</script>
 <script src="/js/ai-assistant.js"></script>
 <script>try{AIAssistant.mount({module:"contable",title:"Asistente IR-2",suggestions:["Explícame lo que veo en esta pantalla", "¿Qué anexos lleva el IR-2?", "¿Cuándo se presenta el IR-2?"]});}catch(e){}</script>
+<script src="/js/direct-tour.js"></script>
+<script>(function(){var r=document.querySelector('.hdr-right');if(r)r.prepend(DirectTour.button('ir2'));DirectTour.auto('ir2',{ready:'#tabs .tab'});})();</script>
 </body>
 </html>

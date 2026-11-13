@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Conciliación bancaria</title>
 <link rel="stylesheet" href="/css/mobile-base.css">
+<link rel="stylesheet" href="/css/direct-tour.css">
 <style>
 :root{--bg:#f6f2ea;--card:#fffdf9;--card2:#f1ebe0;--line:rgba(60,44,26,.14);--fg:#1e1810;--muted:#6a5c4b;--acc:#0a5fd4;--accink:#fff;--ok:#15924a;--warn:#c2710c;--bad:#dc2626;--okbg:#e7f6ec;--warnbg:#fff4e0;--badbg:#fdeaea}
 :root[data-theme="dark"]{--bg:#0f141b;--card:#171e28;--card2:#1e2733;--line:rgba(255,255,255,.12);--fg:#e8edf3;--muted:#9aa8b8;--acc:#4c8dff;--accink:#fff;--ok:#4ade80;--warn:#fbbf24;--bad:#f87171;--okbg:rgba(74,222,128,.12);--warnbg:rgba(251,191,36,.12);--badbg:rgba(248,113,113,.12)}
@@ -35,7 +36,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
 <script src="/serp-host.js"></script>
 </head>
 <body>
-<header><button class="btn sm" onclick="serpBack()" title="Volver a Accesos">‹ Volver</button><h1>🏦 Conciliación bancaria</h1><span class="spacer"></span><span class="note">Todo se procesa en su navegador; los archivos no se suben a ningún servidor.</span></header>
+<header><button class="btn sm" onclick="serpBack()" title="Volver a Accesos">‹ Volver</button><h1>🏦 Conciliación bancaria</h1><span id="tour-slot"></span><span class="spacer"></span><span class="note">Todo se procesa en su navegador; los archivos no se suben a ningún servidor.</span></header>
 <main>
 <div class="card" id="c-files"><h2>1. Cargue los dos archivos</h2><p class="hint">Extracto del banco y libro auxiliar (o Excel de movimientos) del mismo período. Acepta Excel (.xlsx, .xls) y CSV.</p>
 <div class="two">
@@ -163,5 +164,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
   }
 })();
 </script>
+<script src="/js/direct-tour.js"></script>
+<script>(function(){var s=document.getElementById('tour-slot');if(s)s.append(DirectTour.button('conciliacion'));DirectTour.auto('conciliacion',{ready:'#drop-bank'});})();</script>
 </body>
 </html>

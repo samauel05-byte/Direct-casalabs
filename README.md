@@ -263,6 +263,10 @@ compatible) en Vercel; sin la llave, el asistente responde que no está configur
 
 ---
 
+## Tutorial de bienvenida (primera vez en Direct)
+
+`public/js/direct-tour.js` (+ estilos `.dt-*` en `public/js/direct-extras.css`, enlazado en `public/index.html`). Al mostrar los Accesos por primera vez (`showPortals()` → `DirectTour.maybeStart()`) arranca un recorrido guiado con foco sobre cada elemento (buscador, portales, herramientas contables según los módulos que la persona realmente tiene, tema claro/oscuro, asistente ✨, estado de conexión, botón de Usuarios solo para administradores, cerrar sesión). Se arma dinámicamente (omite lo que no se ve) y en celular la hoja va abajo, o arriba si el elemento resaltado queda en la mitad inferior. Se muestra **una sola vez por persona y por equipo** (`localStorage` `direct_tour_v1:<usuario>`, al terminar u omitir); el botón **«?»** de la cabecera (`#btn-tour`) lo repite cuando se quiera. Atajos: ← → y Esc. Registra un evento de uso `feature/tour`. En ≤640px la cabecera compacta sus botones (`.hdr-right`) para que, con los de administrador, no se salgan de la pantalla.
+
 ## Roles de usuario
 
 | Rol | Permisos |

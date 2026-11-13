@@ -34,6 +34,8 @@
 
 ## Estado y novedades recientes
 
+- **NALA — el nombre del proveedor se puede corregir siempre**: aunque la factura esté **aprobada** o **excluida** (o el formulario esté bloqueado), el campo del nombre del proveedor (606) / cliente (607) sigue editable con su botón **«Guardar nombre»**. No cambia el estado de la factura ni el TXT de la DGII (ahí solo va el RNC) y queda en el historial. También se puede cambiar desde «✎ Corregir» en la lista.
+- **NALA — el visor del PDF ya no se queda en «Cargando documento…»**: si el PDF no abre por partes en 15 s, reintenta descargándolo completo y, si tampoco se puede, muestra un mensaje con «Abrir original».
 - **NALA — editar el nombre del proveedor desde la lista**: el botón «✎ Editar/Corregir» de la lista ahora incluye siempre el **nombre del proveedor** (606) o del cliente (607), junto a tipo de gasto, montos e ITBIS; antes solo se podía cambiar abriendo el detalle de la factura.
 - **NALA — botón «🗑 Eliminar» en la lista de cualquier lote**: cada factura de la lista (en cualquier lote y también en la vista por empresa) tiene su botón para eliminarla del lote sin abrir el detalle. Pide un motivo, deja la factura fuera de reportes e indicadores y queda en el historial; las eliminadas muestran **«Restaurar»** para volver a incluirlas. Las aprobadas solo las puede eliminar quien tenga permiso de revertir.
 - **NALA — al cambiar de página en el visor, cambia también la factura de la derecha**: en la pantalla de revisión, las flechas ◀ ▶ del visor del PDF movían solo la imagen y el formulario se quedaba con la factura anterior. Ahora, al llegar a la página de otra factura del mismo archivo, el formulario se abre con esa factura (si la página no tiene factura en la lista, avisa).

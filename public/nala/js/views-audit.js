@@ -402,7 +402,16 @@
           const key = `${documentId}:${doc.sha256 || ''}`;
           if (NALA.cache.viewerPdf?.key !== key) {
             if (!canvasBox.querySelector('canvas')) canvasBox.innerHTML = '<div class="muted" style="padding:16px">Cargando documento…</div>';
-            NALA.cache.viewerPdf = { key, pdf: await pdfjsLib.getDocument({ url: info.url, disableAutoFetch: true, rangeChunkSize: 262144 }).promise };
+            // Por rangos (rápido); si el servidor no los atiende o tarda demasiado, se reintenta descargando el archivo completo.
+            const open = opts => { const task = pdfjsLib.getDocument({ url: info.url, ...opts }); return Promise.race([task.promise, new Promise((_, rej) => setTimeout(() => { try { task.destroy(); } catch (e) { /* nada */ } rej(new Error('tiempo de espera agotado')); }, opts.timeout || 20000))]); };
+            let pdfDoc;
+            try { pdfDoc = await open({ disableAutoFetch: true, rangeChunkSize: 262144, timeout: 15000 }); }
+            catch (e1) {
+              canvasBox.innerHTML = '<div class="muted" style="padding:16px">Cargando documento completo… (puede tardar con archivos grandes)</div>';
+              try { pdfDoc = await open({ disableRange: true, disableStream: true, timeout: 90000 }); }
+              catch (e2) { throw new Error('No se pudo abrir el PDF (' + (e2.message || e1.message) + '). Usa «Abrir original» o reintenta.'); }
+            }
+            NALA.cache.viewerPdf = { key, pdf: pdfDoc };
           }
           st.pdf = NALA.cache.viewerPdf.pdf; st.pages = st.pdf.numPages;
         }
@@ -553,7 +562,12 @@
     const issuesByField = {};
     for (const i of inv.issues) if (i.field) (issuesByField[i.field] ||= []).push(i);
 
-    const input = key => fieldInput(key, defs, values, cat, editable);
+    // El nombre de la contraparte se puede corregir siempre (aunque la factura esté aprobada o excluida) con su propio botón.
+    const cpKey = inv.format === '606' ? 'emisor_nombre' : 'receptor_nombre';
+    const cpAlone = !editable && NALA.can('edit') && !d.lock.locked_by_other;
+    const input = key => (key === cpKey && cpAlone)
+      ? `<span class="row" style="gap:6px;flex-wrap:nowrap">${fieldInput(key, defs, values, cat, true)}<button type="button" class="btn sm primary" id="rename-cp" title="Guardar solo el nombre; no cambia el estado de la factura">Guardar nombre</button></span>`
+      : fieldInput(key, defs, values, cat, editable);
     const fieldLabel = key => {
       const sev = (issuesByField[key] || []).some(i => i.severity === 'critical') ? 'has-crit' : ((issuesByField[key] || []).some(i => i.severity === 'warning') ? 'has-warn' : '');
       const changed = (values[key] ?? null) !== (inv.fields[key] ?? null) ? 'changed' : '';
@@ -662,6 +676,7 @@
     const bindFields = () => {
       root.querySelectorAll('#fieldsbox [data-k]').forEach(el => el.addEventListener('change', () => {
         const k = el.dataset.k;
+        if (cpAlone) return; // solo el nombre es editable aquí: se guarda con su propio botón
         if (defs[k]?.type === 'amount') {
           const fv = formulaValue(el.value);
           if (fv === 'ERR') { NALA.toast('Fórmula inválida: use sólo números y + - * / ( ).', 'err'); el.value = values[k] ?? ''; return; }
@@ -746,6 +761,11 @@
     // "✎ Editar" en una factura aprobada: la reabre (revierte la aprobación) de un
     // clic y la deja editable, sin pedir motivo a mano. Si ya está en una
     // exportación enviada/aceptada, el servidor lo impide y se avisa.
+    root.querySelector('#rename-cp')?.addEventListener('click', async () => {
+      const el = root.querySelector(`[data-k="${cpKey}"]`); const name = (el?.value || '').trim();
+      if (name.length < 2) { NALA.toast('Escribe el nombre del proveedor', 'err'); return; }
+      try { await NALA.api('POST', `invoices/${inv.id}/counterpart-name`, { name, version: inv.version }); NALA.toast('Nombre guardado', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
+    });
     root.querySelector('#edit-approved')?.addEventListener('click', async () => {
       try { await NALA.api('POST', `invoices/${inv.id}/revert`, { reason: 'Reabierta para editar' }); NALA.toast('Factura reabierta para editar', 'ok'); NALA.route(); } catch (e) { handleConflict(e); }
     });

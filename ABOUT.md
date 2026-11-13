@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — botón «🗑 Eliminar» en la lista de cualquier lote**: cada factura de la lista (en cualquier lote y también en la vista por empresa) tiene su botón para eliminarla del lote sin abrir el detalle. Pide un motivo, deja la factura fuera de reportes e indicadores y queda en el historial; las eliminadas muestran **«Restaurar»** para volver a incluirlas. Las aprobadas solo las puede eliminar quien tenga permiso de revertir.
 - **NALA — al cambiar de página en el visor, cambia también la factura de la derecha**: en la pantalla de revisión, las flechas ◀ ▶ del visor del PDF movían solo la imagen y el formulario se quedaba con la factura anterior. Ahora, al llegar a la página de otra factura del mismo archivo, el formulario se abre con esa factura (si la página no tiene factura en la lista, avisa).
 - **NALA — subir el 607 (o el IR-17) directo en «Nuevo lote»**: ya no hace falta crear antes un lote 606. En «Nuevo lote», con formato 607, el botón **«📊 Subir Excel de ventas (607)»** crea el lote del período y empresa elegidos y carga las ventas desde el Excel/CSV (tipo de ingreso y forma de pago). Con 606, el mismo botón carga el Excel del IR-17/B11.
 - **NALA — un lote muestra todas sus páginas, también las excluidas**: dentro de un lote la lista ahora incluye las facturas excluidas (marcadas «Excluida»), así la columna «Pág.» sigue la secuencia real del archivo (1, 2, 3, 4…) sin saltos. El filtro «Estado» permite volver a ver solo pendientes/aprobadas/excluidas.

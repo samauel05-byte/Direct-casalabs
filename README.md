@@ -263,9 +263,15 @@ compatible) en Vercel; sin la llave, el asistente responde que no está configur
 
 ---
 
-## Tutorial de bienvenida (primera vez en Direct)
+## Tutoriales guiados (Direct y cada módulo)
 
-`public/js/direct-tour.js` (+ estilos `.dt-*` en `public/js/direct-extras.css`, enlazado en `public/index.html`). Al mostrar los Accesos por primera vez (`showPortals()` → `DirectTour.maybeStart()`) arranca un recorrido guiado con foco sobre cada elemento (buscador, portales, herramientas contables según los módulos que la persona realmente tiene, tema claro/oscuro, asistente ✨, estado de conexión, botón de Usuarios solo para administradores, cerrar sesión). Se arma dinámicamente (omite lo que no se ve) y en celular la hoja va abajo, o arriba si el elemento resaltado queda en la mitad inferior. Se muestra **una sola vez por persona y por equipo** (`localStorage` `direct_tour_v1:<usuario>`, al terminar u omitir); el botón **«?»** de la cabecera (`#btn-tour`) lo repite cuando se quiera. Atajos: ← → y Esc. Registra un evento de uso `feature/tour`. En ≤640px la cabecera compacta sus botones (`.hdr-right`) para que, con los de administrador, no se salgan de la pantalla.
+`public/js/direct-tour.js` (+ `public/css/direct-tour.css`) es un motor de recorridos con foco sobre cada elemento. Define **un tutorial por pantalla** en `TOURS`: `home` (Accesos), `nala`, `cami`, `nomina`, `estados`, `ir2`, `dgii` (Estimación Fiscal), `conciliacion`, `monitor` y `clients`. Cada módulo lo carga (`<script src="/js/direct-tour.js">`), inserta su botón **«?»** en la cabecera (`DirectTour.button(id)`) y llama `DirectTour.auto(id, {ready})`, que espera a que la pantalla cargue y arranca **solo la primera vez** que esa persona la abre.
+
+- **Una vez por persona y por equipo y por tutorial:** `localStorage` `direct_tour_v1:<usuario>[:<id>]` (el de Accesos conserva la clave sin sufijo). En las pestañas de módulos el usuario sale de `sessionStorage.dsession` (copiada al abrir la pestaña) o de `window.opener.currentUser`. Se repite con «?». Atajos: ← → y Esc. Registra `feature/tour:<id>` en la analítica de uso.
+- **Pasos dinámicos:** cada paso apunta a uno o varios selectores (`target: [a, b]`: el primero visible gana, p. ej. el menú lateral o el botón ☰ en celular); los que no existen o están ocultos (por permisos o módulos no activados) se omiten solos. El de Accesos lista solo los módulos que la persona tiene.
+- **Aspecto:** paleta clara u oscura según el fondo de cada página (`data-dt`), hoja inferior en celular (arriba si lo resaltado queda en la mitad de abajo), cuerpo con scroll y botones siempre visibles.
+- En ≤640px la cabecera de Accesos compacta sus botones (`.hdr-right`) para que, con los de administrador, no se salgan de la pantalla.
+- Para agregar o cambiar un tutorial basta editar su función en `TOURS` (títulos, HTML y selectores).
 
 ## Roles de usuario
 

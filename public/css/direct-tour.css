@@ -1,0 +1,25 @@
+/* Tutoriales guiados (public/js/direct-tour.js). Paleta propia, clara u oscura según la página (data-dt), para verse bien en
+   cualquier módulo sin depender de sus variables. */
+.dt-root{--dt-bg:#0f1e38;--dt-fg:#e8eefc;--dt-fg2:#b7c7e6;--dt-fg3:#8ba3c9;--dt-line:#24406e;--dt-acc:#0060e0;--dt-acc2:#3d8bff;position:fixed;inset:0;z-index:2147483300}
+.dt-root[data-dt="light"]{--dt-bg:#fffdf9;--dt-fg:#1e1810;--dt-fg2:#4b4033;--dt-fg3:#7a6c5a;--dt-line:#e2d8c8;--dt-acc:#2563eb;--dt-acc2:#2563eb}
+.dt-shade{position:absolute;inset:0}
+.dt-spot{position:fixed;border-radius:14px;box-shadow:0 0 0 9999px rgba(3,10,25,.72),0 0 0 2px var(--dt-acc2);pointer-events:none;transition:all .22s ease;display:none}
+.dt-card{display:flex;flex-direction:column;position:fixed;background:var(--dt-bg);color:var(--dt-fg);border:1px solid var(--dt-line);border-radius:16px;padding:16px 18px;box-shadow:0 18px 50px rgba(0,0,0,.45);max-height:calc(100vh - 24px);font-family:inherit}
+.dt-card h3{font-size:16px;margin:2px 0 8px;color:var(--dt-fg)}
+.dt-step{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--dt-fg3)}
+.dt-body{overflow:auto;min-height:0;font-size:13.5px;line-height:1.5;color:var(--dt-fg2)}
+.dt-body p{margin:6px 0}
+.dt-body b{color:var(--dt-fg)}
+.dt-note{font-size:12px;color:var(--dt-fg3)}
+.dt-list{margin:6px 0 6px 18px;padding:0}.dt-list li{margin:4px 0}
+.dt-dots{display:flex;gap:5px;justify-content:center;margin:12px 0 4px;flex-wrap:wrap}
+.dt-dots i{width:6px;height:6px;border-radius:50%;background:var(--dt-line)}.dt-dots i.on{background:var(--dt-acc2);width:16px;border-radius:4px}
+.dt-actions{display:flex;align-items:center;gap:8px;margin-top:10px;flex-shrink:0}
+.dt-btn{border:1px solid var(--dt-line);background:transparent;color:var(--dt-fg);border-radius:10px;padding:9px 14px;font:inherit;font-weight:600;cursor:pointer;min-height:38px}
+.dt-primary{background:var(--dt-acc);border-color:var(--dt-acc);color:#fff}
+.dt-skip{background:none;border:none;color:var(--dt-fg3);font:inherit;cursor:pointer;padding:8px 2px}
+.dt-card.dt-sheet{left:0!important;right:0;top:auto!important;bottom:0;width:100%!important;transform:none!important;border-radius:18px 18px 0 0;padding-bottom:max(16px,env(safe-area-inset-bottom));max-height:62vh}
+.dt-card.dt-sheet.dt-top{top:0!important;bottom:auto;border-radius:0 0 18px 18px;padding-top:max(14px,env(safe-area-inset-top))}
+/* Botón «?» de la cabecera de cada módulo */
+.dt-help{width:32px;height:32px;min-width:32px;border-radius:50%;border:1px solid currentColor;background:transparent;color:inherit;font:700 14px/1 inherit;cursor:pointer;opacity:.8;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.dt-help:hover{opacity:1}

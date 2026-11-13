@@ -363,7 +363,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
   .p-name{font-size:12px}
 }
 </style>
-<link rel="stylesheet" href="/js/direct-extras.css"></head>
+<link rel="stylesheet" href="/js/direct-extras.css"><link rel="stylesheet" href="/css/direct-tour.css"></head>
 <body>
 
 <!-- Loading -->
@@ -375,7 +375,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 
 <!-- Clientes multiempresa -->
 <div id="view-clients" class="layer" hidden>
-  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div><div class="hdr-right"><button class="back-btn" style="margin:0" onclick="showPortals()">Portales</button><button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
+  <header class="hdr"><div class="hdr-brand"><img src="/img/direct-logo.png" alt="Direct" class="brand-logo" style="height:38px"></div><div class="hdr-right"><button class="icon-btn" title="Ver el tutorial de Clientes" aria-label="Ver el tutorial de Clientes" onclick="DirectTour.start('clients')" style="font-weight:800;font-size:14px">?</button><button class="back-btn" style="margin:0" onclick="showPortals()">Portales</button><button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button></div></header>
   <main class="main">
     <div class="client-hero"><div><h1>Clientes</h1><p id="clients-subtitle">Gestiona los clientes de tu empresa.</p></div><div class="client-count"><strong id="clients-count">0</strong><span>clientes</span></div></div>
     <div class="client-toolbar" id="clients-toolbar" hidden><label class="client-upload">Importar Excel<input id="clients-file" type="file" accept=".xlsx,.xls,.csv" onchange="importClientsFile(this.files[0])"></label></div>
@@ -1474,6 +1474,7 @@ function openClients() {
     card.append(name,id,details); list.appendChild(card);
   }
   show('view-clients');
+  window.DirectTour?.auto('clients',{ready:'#clients-count'});
 }
 
 function normalizedHeader(value){ return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').replace(/(^_|_$)/g,''); }

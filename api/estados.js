@@ -22,6 +22,11 @@ const ROUTES = [
   ['GET', /^reports\/([^/]+)\/compare$/, (ctx, q, b, m) => api.compare(ctx, m[1], q)],
   ['GET', /^reports\/([^/]+)\/export$/, (ctx, q, b, m) => api.exportReport(ctx, m[1])],
 
+  ['GET', /^reports\/([^/]+)\/statements$/, (ctx, q, b, m) => api.getStatements(ctx, m[1])],
+  ['PUT', /^reports\/([^/]+)\/statements$/, (ctx, q, b, m) => api.putStatements(ctx, m[1], b)],
+  ['POST', /^reports\/([^/]+)\/statements\/import$/, (ctx, q, b, m) => api.importStatements(ctx, m[1], b)],
+  ['GET', /^reports\/([^/]+)\/package$/, (ctx, q, b, m) => api.getPackage(ctx, m[1])],
+  ['PUT', /^reports\/([^/]+)\/package$/, (ctx, q, b, m) => api.updatePackage(ctx, m[1], b)],
   ['POST', /^reports\/([^/]+)\/assumptions$/, (ctx, q, b, m) => api.createAssumption(ctx, m[1], b)],
   ['PATCH', /^assumptions\/([^/]+)$/, (ctx, q, b, m) => api.updateAssumption(ctx, m[1], b)],
   ['DELETE', /^assumptions\/([^/]+)$/, (ctx, q, b, m) => api.deleteAssumption(ctx, m[1])],

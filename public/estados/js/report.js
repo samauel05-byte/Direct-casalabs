@@ -10,7 +10,7 @@
   EF.views.r = {
     title: 'Informe',
     async render(root, { arg, params }) {
-      let tab = params.tab || 'datos';
+      let tab = params.tab || 'estados';
       const load = async () => {
         const d = await EF.api('GET', `reports/${arg}`);
         draw(d);
@@ -19,8 +19,8 @@
         const r = d.report; const m = EF.mod(r.modality); const c = d.completeness;
         document.getElementById('title').textContent = `${m.singular} · ${r.title}`;
         const approved = ['aprobado', 'cerrado', 'pendiente_legalizacion'].includes(r.status);
-        const tabs = [['datos', r.modality === 'proyectado' ? 'Supuestos y valores' : 'Cuentas y registros'], ...(r.modality !== 'proyectado' ? [['ajustes', 'Ajustes y cierre']] : []), ['docs', 'Documentos'], ['import', 'Importaciones'], ['hist', 'Historial']];
-        if (!tabs.some(t => t[0] === tab)) tab = 'datos';
+        const tabs = [['estados', 'Estados financieros'], ['datos', r.modality === 'proyectado' ? 'Supuestos y valores' : 'Cuentas y registros'], ...(r.modality !== 'proyectado' ? [['ajustes', 'Ajustes y cierre']] : []), ['docs', 'Documentos'], ['import', 'Importaciones'], ['hist', 'Historial']];
+        if (!tabs.some(t => t[0] === tab)) tab = 'estados';
         root.innerHTML = `<div class="stack">
           <div class="banner ${approved && c.complete ? 'final' : 'prelim'}">${approved && c.complete ? `Documento ${esc(d.status_label.toLowerCase())}` : `DOCUMENTO PRELIMINAR — ${!approved ? `NO APROBADO (${esc(d.status_label)})` : 'INCOMPLETO'}${!c.complete ? ' · tiene información pendiente' : ''}`}</div>
           <div class="card"><h2>${esc(r.title)} ${EF.modTag(r.modality)} ${EF.statusBadge(r.status)}<span class="spacer"></span>
@@ -68,7 +68,7 @@
 
       const drawTab = d => {
         const body = root.querySelector('#tabbody'); const r = d.report;
-        ({ datos: () => (r.modality === 'proyectado' ? assumptionsTab(body, d) : accountsTab(body, d)), ajustes: () => adjustmentsTab(body, d), docs: () => docsTab(body, d), import: () => importsTab(body, d), hist: () => historyTab(body, d) }[tab])();
+        ({ estados: () => EF.statementsTab(body, d, load).catch(e => { body.innerHTML = `<div class="card empty">⚠️ ${esc(e.message)}</div>`; }), datos: () => (r.modality === 'proyectado' ? assumptionsTab(body, d) : accountsTab(body, d)), ajustes: () => adjustmentsTab(body, d), docs: () => docsTab(body, d), import: () => importsTab(body, d), hist: () => historyTab(body, d) }[tab])();
       };
 
       // ── Proyectados: supuestos y valores estimados ──

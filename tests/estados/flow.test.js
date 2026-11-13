@@ -200,3 +200,80 @@ test('del año: año fiscal, ajustes de cierre y estado inicial «pendiente de c
   assert.equal(d.adjustments.length, 1); assert.ok(!d.completeness.items.some(i => i.code === 'SIN_AJUSTES_CIERRE'));
   assert.deepEqual(d.transitions.map(t => t.to), ['en_revision']);
 });
+
+// ── Estados (Situación Financiera / Resultados / Flujo) ───────────────────────────────────────────
+const JANV = {
+  er: { serv_trabajos: { 1: '68123.27' }, financieros: { 1: '319.68' }, serv_prof: { 1: '5,000.00' } },
+  esf: { efectivo: { 1: '0.06' }, cxc: { 1: '265788.19' }, capital: { 1: '100000' }, acumulados: { 1: '239231.20' } },
+  efe: { res_anteriores: { 1: '239231.20' }, cc_cxc_accionistas: { 1: '-265788.19' }, fin_aportes: { 1: '100000' }, ef_inicio: { 1: '0' } },
+};
+let pk;
+test('estados: crear proyectado, digitar enero y ver los totales del modelo', async () => {
+  pk = (await api.createReport(prep, { modality: 'proyectado', client_id: C1, title: 'Proyectados 2026', scenario: 'Base', period_start: '2026-01-01', period_end: '2026-01-31' })).report;
+  await rejects(api.putStatements(ro, pk.id, { values: JANV }), 403);
+  await rejects(api.putStatements(prep, pk.id, { values: { er: { t_egresos: { 1: '5' } } } }), 400, /calcula Direct/);
+  await rejects(api.putStatements(prep, pk.id, { values: { er: { financieros: { 1: '1.234,5' } } } }), 400, /coma decimal/);
+  await rejects(api.putStatements(prep, pk.id, { values: { esf: { efectivo: { 0: '5' } } } }), 400, /anual/);
+  const saved = await api.putStatements(prep, pk.id, { values: JANV });
+  assert.equal(saved.saved, 11);
+  const st = await api.getStatements(prep, pk.id);
+  assert.equal(st.computed.er.t_egresos[1], 73442.95); assert.equal(st.computed.esf.t_pp[1], 265788.25); assert.equal(st.computed.efe.ef_final[1], 0.06);
+  assert.equal(st.checks.filter(c => c.severity === 'blocking').length, 0);
+  const d = await api.reportDetail(prep, pk.id);
+  assert.ok(!d.completeness.items.some(i => i.code === 'SIN_SUPUESTOS'), 'las cifras de los estados cuentan como información cargada');
+  const ver = (await api.getVersion(prep, pk.id, d.report.version)).version;
+  assert.equal(ver.snapshot.statements.er.financieros['1'], 319.68, 'la versión guarda las cifras de los estados');
+});
+
+test('estados: un balance que no cuadra impide aprobar', async () => {
+  await api.putStatements(prep, pk.id, { values: { esf: { capital: { 1: '90000' } } } });
+  const d = await api.reportDetail(prep, pk.id);
+  assert.ok(d.completeness.items.some(i => i.code === 'BALANCE_DESCUADRADO' && i.severity === 'blocking'));
+  await api.transition(prep, pk.id, { to: 'en_revision' });
+  await rejects(api.transition(apr, pk.id, { to: 'aprobado' }), 422, /pendientes/);
+  await api.putStatements(prep, pk.id, { values: { esf: { capital: { 1: '100000' } } } });
+  assert.equal((await api.reportDetail(prep, pk.id)).completeness.blocking, 0);
+});
+
+async function sheets(spec) {
+  const wb = new ExcelJS.Workbook();
+  for (const [name, rows] of Object.entries(spec)) { const ws = wb.addWorksheet(name); rows.forEach(r => ws.addRow(r)); }
+  return Buffer.from(await wb.xlsx.writeBuffer()).toString('base64');
+}
+test('estados: importar el Excel del modelo (una hoja por estado) reconoce líneas, avisa de lo no reconocido y de totales distintos', async () => {
+  const rep = (await api.createReport(prep, { modality: 'proyectado', client_id: C1, title: 'Proyectados Excel', scenario: 'Base', period_start: '2026-01-01', period_end: '2026-02-28' })).report;
+  const file = await sheets({
+    'Estado de Resultados': [['ESTADOS FINANCIEROS PROYECTADOS'], ['', 'ENERO', 'FEBRERO', 'TOTAL'], ['Ingresos por Ventas', '', 2143034.8, 2143034.8], ['Mano de Obra', '', 366462.59],
+      ['Gastos por Servicios Trabajos y Suministros', 68123.27, 54103.86], ['Gastos Financieros', 319.68, 1444.65], ['Gastos Por Servicios Profesionales', 5000, 5000], ['Total de Gastos Generales y Adm', 73442.95, 99999.99], ['Gasto raro no existente', 10, 20]],
+    'Estado de Situación Financiera': [['', 'ENERO', 'FEBRERO'], ['Efectivo en Caja', 0.06, 78635], ['Capital Social', 100000, 100000]],
+  });
+  const prev = await api.importStatements(prep, rep.id, { file_base64: file, file_name: 'modelo.xlsx' });
+  assert.equal(prev.can_confirm, false, 'hay una fila sin reconocer'); assert.equal(prev.unmatched.length, 1); assert.equal(prev.unmatched[0].label, 'Gasto raro no existente');
+  assert.equal(prev.sheets.length, 2);
+  const diff = prev.total_diffs.find(x => x.line === 't_egresos' && x.month === 2); assert.ok(diff && !diff.rounding, 'el total de febrero del archivo no coincide con la suma de sus líneas');
+  assert.equal(prev.total_diffs.find(x => x.line === 't_egresos' && x.month === 1), undefined, 'enero sí coincide');
+  await rejects(api.importStatements(prep, rep.id, { file_base64: file, file_name: 'modelo.xlsx', confirm: true }), 422, /sin reconocer/);
+  const ok = await api.importStatements(prep, rep.id, { file_base64: file, file_name: 'modelo.xlsx', confirm: true, allow_unmatched: true });
+  assert.ok(ok.saved >= 9); assert.equal(fake.db.tables.fin_imports.filter(i => i.kind === 'statements').length, 1);
+  const st = await api.getStatements(prep, rep.id);
+  assert.equal(st.computed.er.t_ingresos[2], 2143034.8); assert.equal(st.computed.er.t_egresos[1], 73442.95); assert.equal(st.computed.esf.efectivo[0], 78635, 'anual del balance = último mes');
+  assert.equal(st.computed.er.t_ingresos[0], 2143034.8, 'anual de resultados = suma de meses');
+  await rejects(api.importStatements(prep, rep.id, { file_base64: Buffer.from('a,b\n1,2').toString('base64'), file_name: 'x.csv' }), 400, /qué estado/);
+});
+
+test('estados: líneas propias, paquete (portada, informe, estados) y Excel con los estados', async () => {
+  await api.putStatements(prep, pk.id, { custom_lines: [{ statement: 'esf', key: 'c_inventario', label: 'Inventario', parent: 't_act_cte' }], values: { esf: { c_inventario: { 1: '10' }, capital: { 1: '100010' } } } });
+  await rejects(api.putStatements(prep, pk.id, { custom_lines: [{ statement: 'esf', key: 'c_x1y2', label: 'X', parent: 't_act' }] }), 400, /sección/);
+  assert.equal((await api.getStatements(prep, pk.id)).computed.esf.t_act_cte[1], 265798.25);
+  await api.putConfig(ctd, { config: { firm: { name: 'SAVE CONSULTORES SRL', address: 'Cruce de Verón', signer: { name: 'Licda. Ejemplo', icpard: '1234', city: 'Verón' } } } });
+  await api.updatePackage(prep, pk.id, { fecha_informe: '2026-10-13', firmante_titulo: 'Contador Público' });
+  const pkg = await api.getPackage(prep, pk.id);
+  assert.equal(pkg.title, 'ESTADOS FINANCIEROS PROYECTADOS DEL 01 DE ENERO AL 31 DE ENERO DEL AÑO 2026');
+  assert.equal(pkg.range_text, 'DESDE EL 01 DE ENERO AL 31 DE ENERO 2026'); assert.equal(pkg.currency_label, 'DOP$');
+  assert.match(pkg.informe, /Empresa Uno SRL, con RNC No\. 131-00000-1 comprendido del 01 de enero al 31 de enero del año 2026/); assert.match(pkg.informe, /Informe Financiero Proyectado que se compone/); assert.match(pkg.informe, /Estados Financieros Proyectados de Empresa Uno SRL/);
+  assert.equal(pkg.signer.nombre, 'Licda. Ejemplo'); assert.equal(pkg.signer.titulo, 'Contador Público'); assert.equal(pkg.signer.fecha, '13 de octubre de 2026'); assert.equal(pkg.firm.name, 'SAVE CONSULTORES SRL');
+  const { file } = await api.exportReport(prep, pk.id);
+  const wb = new ExcelJS.Workbook(); await wb.xlsx.load(Buffer.from(file.base64, 'base64'));
+  assert.ok(wb.getWorksheet('Situación financiera') && wb.getWorksheet('Resultados') && wb.getWorksheet('Flujo de efectivo'));
+  assert.equal(wb.getWorksheet('Resultados').getRow(5).getCell(3).value, 'ENERO');
+});

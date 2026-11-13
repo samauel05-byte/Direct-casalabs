@@ -2544,17 +2544,17 @@ document.addEventListener('DOMContentLoaded',()=>{
 // el RNC y el período y se trae solo lo aprobado. También queda una barra en las pantallas 606
 // y 607 (con lo último usado) para traerlo sin pasar por la pestaña del IT-1.
 (function(){
+  // Antes se recordaba el último RNC y período (localStorage) y CAMI los volvía a poner en cada apertura: quedaban «fijos».
+  // Ya no se recuerda nada; solo se rellenan cuando se llega desde el botón «↗ CAMI» de NALA (?rnc=&periodo=).
   const LS='cami_nala_last';
-  const rd=()=>{try{return JSON.parse(localStorage.getItem(LS)||'{}');}catch(e){return {};}};
-  const wr=o=>{try{localStorage.setItem(LS,JSON.stringify(o));}catch(e){}};
+  try{localStorage.removeItem(LS);}catch(e){}
   async function traer(fmt,rnc,per,razon){
     $('in-rnc').value=rnc; $('in-periodo').value=per; if(razon&&!$('in-razon').value) $('in-razon').value=razon;
-    wr({rnc,periodo:per,razon:razon||$('in-razon').value||''});
     await loadFromNala(true);
     const t=$('nala-status-txt'); if(fmt&&!STATE[fmt]&&t) showToast(t.textContent,'warn');
   }
   document.addEventListener('DOMContentLoaded',()=>{
-    const q=new URLSearchParams(location.search), last=rd();
+    const q=new URLSearchParams(location.search), last={};
     const fromLink=/^\d{5,}$/.test((q.get('rnc')||'').replace(/\D/g,''));
     const rnc=fromLink?q.get('rnc').replace(/\D/g,''):(last.rnc||'');
     const pq=q.get('periodo')||''; const per=/^\d{6}$/.test(pq)?pq.slice(0,4)+'-'+pq.slice(4):(last.periodo||'');

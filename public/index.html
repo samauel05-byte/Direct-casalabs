@@ -316,6 +316,13 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
 .cred-helper{bottom:calc(22px + env(safe-area-inset-bottom,0))}
 
 @media(max-width:640px){
+  /* La cabecera de un administrador lleva muchos botones: se compactan para que NUNCA se salgan de la pantalla */
+  .hdr{gap:8px}
+  .hdr-right{gap:5px;min-width:0;flex:1;justify-content:flex-end}
+  .hdr-right .icon-btn{width:34px;height:34px;flex-shrink:0}
+  .hdr-right .sync-pill{padding:4px 8px;flex-shrink:0}
+  .hdr-right .sync-pill #sync-txt{display:none}
+  .hdr-brand{flex-shrink:0}
   .hdr{padding-left:14px;padding-right:14px}
   .hdr-brand{font-size:16px}
   .main{padding:20px 16px calc(36px + env(safe-area-inset-bottom,0));padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
@@ -428,6 +435,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
       <button class="icon-btn" id="btn-users" title="Usuarios" onclick="showUsers()" hidden>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       </button>
+      <button class="icon-btn" id="btn-tour" title="Ver el tutorial de Direct" aria-label="Ver el tutorial de Direct" onclick="DirectTour.start()" style="font-weight:800;font-size:14px">?</button>
       <button class="icon-btn" title="Cerrar sesión" onclick="confirmLogout()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </button>
@@ -1429,6 +1437,7 @@ function showPortals() {
   const bl=document.getElementById('btn-lic'); if (bl) bl.hidden = !(currentUser?.platformAdmin===true);
   const bs=document.getElementById('btn-sis'); if (bs) { bs.hidden = !isAdmin; reflectSisTest(); }
   DX.renderHome?.();
+  window.DirectTour?.maybeStart();
 }
 function reflectSisTest(){
   const bs=document.getElementById('btn-sis'); if(!bs) return;
@@ -3223,6 +3232,7 @@ initTheme();
 </script>
 <script src="/js/totp.js"></script>
 <script src="/js/direct-extras.js"></script>
+<script src="/js/direct-tour.js"></script>
 <script>boot();</script>
 </body>
 </html>

@@ -385,9 +385,19 @@ lanzamiento en Play Store como app), manteniendo el estilo actual:
   `touch-action:manipulation`); sin scroll horizontal.
 - En Accesos: cabecera y márgenes compactos, botón de editar empresa con mayor
   área táctil, y **modales como hoja inferior** en pantallas pequeñas.
-- Los módulos (NALA, CAMI, IR-2, DGII, Estimación) comparten
-  `public/css/mobile-base.css` con las mejoras universales y seguras; el pulido de
-  layout propio de cada módulo (tablas anchas, pestañas) es trabajo incremental.
+- Los módulos (NALA, CAMI, IR-2, DGII, Estimación, Nómina, Conciliación, Estados Financieros) comparten
+  `public/css/mobile-base.css` (ahora también enlazado en Direct, Nómina, Conciliación y Activar):
+  en ≤640px los campos son de **16px con `!important`** (cada módulo declaraba su propio 11–14px después
+  y en iPhone la pantalla se agrandaba sola al tocar un campo) y botones/campos tienen **≥36px** de alto.
+- **NALA / Estados Financieros** (`nala.css`, ≤860px): los filtros de la barra superior (empresa, período,
+  formato) quedan detrás del botón **«⚙ Filtros»** (`#filters-btn`, clase `.filters-open` en `.topbar`) en vez de
+  ocupar un tercio de la pantalla; las tablas muestran cada fila en una línea y se deslizan de lado; las
+  ventanas (`.modal`) son **hoja inferior** a todo el ancho con botones fijos abajo; el editor en línea de
+  Auditoría cabe en la pantalla y los formularios pasan a una columna.
+- **Estimación Fiscal (DGII)**: la cabecera pasa a varias líneas en ≤700px (antes «Exportar Excel» y «Guardar» quedaban
+  fuera de la pantalla y no se podían usar en el celular).
+- Verificación: Playwright a 390 y 360px (sin desbordes horizontales en ninguna pantalla; las pestañas largas
+  se desplazan dentro de su barra).
 
 ---
 

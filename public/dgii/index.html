@@ -37,6 +37,19 @@ body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:v
 .hdr-sel option{background:var(--surf2)}
 .hdr-inp::placeholder{color:var(--fg3)}
 
+/* CELULAR: la cabecera pasa a varias líneas (antes los botones Exportar/Guardar quedaban fuera de la pantalla) */
+@media (max-width:700px){
+  .hdr{height:auto;flex-wrap:wrap;padding:8px 12px;row-gap:8px}
+  .hdr-l{flex:1 1 100%}
+  .hdr-r{flex:1 1 100%;flex-wrap:wrap;flex-shrink:1;gap:6px}
+  .hdr-r .hdr-sel{flex:1 1 140px;min-width:0}
+  .hdr-r .hdr-inp{flex:1 1 110px;min-width:0;width:auto!important}
+  .hdr-r #anio-sel{flex:0 0 84px;width:84px!important}
+  .hdr-r .btn{flex:1 1 auto;padding:9px 12px}
+  .content{padding:10px}
+  .tab{padding:12px 13px}
+  .btn-back{min-height:36px}
+}
 /* TABS */
 .tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--bdr);padding:0 14px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}

@@ -45,6 +45,28 @@ a { color: var(--accent); }
   .btn.menu-btn { display: inline-flex; }
   .content { padding: 12px; }
 }
+/* CELULAR: los filtros (empresa, período, formato) ocupaban un tercio de la pantalla. Quedan detrás del botón «Filtros»
+   y las tablas anchas muestran cada fila en una sola línea (se desliza de lado) en vez de partir los textos en 5 renglones. */
+.btn.filters-btn { display: none; }
+@media (max-width: 860px) {
+  .topbar { padding: 8px 12px; gap: 8px; }
+  .topbar h1 { font-size: 14px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .btn.filters-btn { display: inline-flex; }
+  .topbar > label.f { display: none; }
+  .topbar.filters-open > label.f { display: flex; flex: 1 1 calc(50% - 8px); min-width: 140px; }
+  .topbar.filters-open > label.f select, .topbar.filters-open > label.f input { max-width: 100% !important; width: 100%; }
+  .content .row > label.f { flex: 1 1 calc(50% - 8px); min-width: 130px; }
+  .content .row > label.f select, .content .row > label.f input { width: 100%; max-width: 100%; }
+  .table-wrap td, .table-wrap th { white-space: nowrap; }
+  .table-wrap td { max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+  .table-wrap td.num, .table-wrap td.mono { max-width: none; }
+  body .modal-bg { align-items: flex-end; padding: 0; }
+  body .modal-bg .modal { width: 100% !important; max-width: 100%; border-radius: 16px 16px 0 0; max-height: 92vh; padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .modal .actions { position: sticky; bottom: -18px; background: var(--surface); padding: 10px 0 2px; flex-wrap: wrap; }
+  .table-wrap tr.inline-edit > td { white-space: normal; max-width: none; overflow: visible; }
+  .table-wrap .inline-editor { position: sticky; left: 0; width: calc(100vw - 56px); max-width: 100%; }
+  .fields { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* Controls */
 .btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--surface); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: 600; white-space: nowrap; }

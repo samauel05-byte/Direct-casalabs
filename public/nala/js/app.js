@@ -261,6 +261,7 @@
   async function boot() {
     document.getElementById('nav').addEventListener('click', e => { const b = e.target.closest('[data-nav]'); if (b) NALA.go(`#/${b.dataset.nav}`); });
     document.getElementById('menu-btn').addEventListener('click', () => document.body.classList.toggle('nav-open'));
+    document.getElementById('filters-btn')?.addEventListener('click', e => { const t = document.querySelector('.topbar'); const on = t.classList.toggle('filters-open'); e.currentTarget.setAttribute('aria-expanded', on ? 'true' : 'false'); });
     try {
       NALA.state.me = await NALA.api('GET', 'me');
     } catch (e) {

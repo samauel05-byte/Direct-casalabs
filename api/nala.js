@@ -53,6 +53,7 @@ const ROUTES = [
   ['POST', /^batches\/([^/]+)\/ventas607$/, (ctx, q, b, m) => invoices.importVentas607(ctx, m[1], b)],
   ['POST', /^batches\/([^/]+)\/b11$/, (ctx, q, b, m) => invoices.importB11(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/relocate$/, (ctx, q, b, m) => invoices.relocate(ctx, m[1], b)],
+  ['POST', /^invoices\/([^/]+)\/counterpart-name$/, (ctx, q, b, m) => invoices.renameCounterpart(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/exclude$/, (ctx, q, b, m) => invoices.setExcluded(ctx, m[1], b, true)],
   ['POST', /^invoices\/([^/]+)\/restore$/, (ctx, q, b, m) => invoices.setExcluded(ctx, m[1], b, false)],
   ['POST', /^exports\/preview$/, (ctx, q, b) => exportsApi.preview(ctx, b)],

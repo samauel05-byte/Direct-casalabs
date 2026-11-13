@@ -215,7 +215,7 @@
       const order = orderFor(inv.format);
       const sevOf = k => { const is = inv.issues.filter(x => x.field === k); return is.some(x => x.severity === 'critical') ? 'has-crit' : (is.some(x => x.severity === 'warning') ? 'has-warn' : ''); };
       // Campos importantes siempre a la vista (tipo de gasto, montos e ITBIS) + los señalados; lo demás, en el detalle.
-      const KEY = inv.format === '606' ? ['tipo_bienes_servicios', 'monto_servicios', 'monto_bienes', 'itbis'] : ['tipo_ingreso', 'monto_facturado', 'itbis'];
+      const KEY = inv.format === '606' ? ['emisor_nombre', 'tipo_bienes_servicios', 'monto_servicios', 'monto_bienes', 'itbis'] : ['receptor_nombre', 'tipo_ingreso', 'monto_facturado', 'itbis'];
       const flagged = [...new Set([...inv.issues.filter(x => x.field && x.severity !== 'info').map(x => x.field), ...KEY.filter(k => order.includes(k))])].sort((a, b) => order.indexOf(a) - order.indexOf(b));
       const notes = inv.issues.filter(x => x.severity !== 'info');
       const dup = inv.issues.find(x => x.code === 'DUPLICADO');
@@ -223,7 +223,7 @@
       const values = { ...inv.fields };
       const notesHtml = notes.length ? notes.map(x => `<div class="issue ${x.severity}"><span class="ico">${x.severity === 'critical' ? '✕' : '!'}</span><span>${esc(x.message)}</span></div>`).join('') : '<div class="issue info"><span class="ico">✓</span>Sin observaciones. Puede aprobar.</div>';
       const hasFields = flagged.length > 0;
-      const fieldsHtml = hasFields ? `<div class="fields" style="margin-top:8px">${flagged.map(k => `<label class="f ${sevOf(k)}" data-field="${k}"><span>${esc((defs[k] || {}).label || k)}</span>${fieldInput(k, defs, values, cat, true)}</label>`).join('')}</div>`
+      const fieldsHtml = hasFields ? `<div class="fields" style="margin-top:8px">${flagged.map(k => `<label class="f ${sevOf(k)} ${['emisor_nombre', 'receptor_nombre'].includes(k) ? 'full' : ''}" data-field="${k}"><span>${esc((defs[k] || {}).label || k)}</span>${fieldInput(k, defs, values, cat, true)}</label>`).join('')}</div>`
         : (green ? '' : '<p class="muted" style="margin-top:8px">Esta observación no se corrige con un solo campo: abra el detalle para revisarla.</p>');
       const detailLink = `#/auditoria/${inv.id}?${new URLSearchParams(params)}`;
       td.innerHTML = `<div class="inline-editor">

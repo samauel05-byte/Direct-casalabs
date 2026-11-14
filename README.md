@@ -114,7 +114,7 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — comisiones bancarias:** la regla de listados del `PROMPT` (`extractor.js`) fija `forma_pago_codigo = "02"` para comisiones/cargos de bancos y procesadores; `validate.js` sigue exigiendo la forma de pago (obligatoria en el 606) cuando falta en cualquier otra factura.
 
-**NALA — numeración de filas:** la columna `#` de la lista de Auditoría muestra siempre `n + 1` (consecutivo en el lote); en lotes de un solo archivo la página va debajo como «pág. N» (`byPage` en `views-audit.js`). Ya no se muestra la nota de «páginas que no aparecen».
+**NALA — numeración de filas:** la columna `#` de la lista de Auditoría muestra siempre `n + 1` (consecutivo en el lote); solo se muestra el número (la página del archivo va en el `title` de la celda, `byPage` en `views-audit.js`). Ya no se muestra la nota de «páginas que no aparecen».
 
 **NALA — filtro de NCF raro:** `GET /api/nala/invoices?has=ncf` se filtra en `list()` por `issues` que contengan `NCF_INVALIDO`, `NCF_FALTANTE`, `NCF_NO_ADMITIDO`, `NCF_19_POSICIONES` o `NCF_MODIFICADO_INVALIDO`; opción «NCF con formato raro» en `#f-has`.
 

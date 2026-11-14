@@ -40,6 +40,14 @@ test('recargos opcionales: 10 % + 4 % por mes adicional; tope solo si se indica'
   assert.equal(calcular({ capital: 1000, tasa: 1.1, desde: '2026-01-01', hasta: '2026-04-01' }).recargo, 0);
 });
 
+test('recargo e interés indemnizatorio van por separado en cada mes', () => {
+  const r = calcular({ capital: 100000, tasa: 1.1, desde: '2026-01-15', hasta: '2026-04-15', recargos: true });
+  assert.deepEqual(r.rows.map(x => x.recargoPct), [10, 14, 18]);
+  assert.deepEqual(r.rows.map(x => x.recargoAcum), [10000, 14000, 18000]);
+  assert.equal(r.rows[2].acumulado, 3336.43); // el interés no incluye el recargo
+  assert.equal(r.total, 100000 + 3336.43 + 18000);
+});
+
 test('valida los datos y no inventa resultados', () => {
   assert.ok(calcular({ capital: 0, tasa: 1.1, desde: '2026-01-01', hasta: '2026-02-01' }).errores.length);
   assert.ok(calcular({ capital: 10, tasa: 1.1, desde: '2026-02-01', hasta: '2026-01-01' }).errores.length);

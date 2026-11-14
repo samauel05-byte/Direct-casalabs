@@ -30,11 +30,13 @@ test('fin de mes: 31 ene + 1 mes = 28 feb, sin arrastrar el día', () => {
   assert.equal(addMonths(parseDate('2026-01-31'), 2).toISOString().slice(0, 10), '2026-03-31');
 });
 
-test('recargos opcionales: 10 % + 4 % por mes adicional, tope 50 %', () => {
+test('recargos opcionales: 10 % + 4 % por mes adicional; tope solo si se indica', () => {
   assert.equal(calcular({ capital: 1000, tasa: 1.1, desde: '2026-01-01', hasta: '2026-01-20', recargos: true }).recargoPct, 10);
   assert.equal(calcular({ capital: 1000, tasa: 1.1, desde: '2026-01-01', hasta: '2026-04-01', recargos: true }).recargoPct, 18);
-  const t = calcular({ capital: 1000, tasa: 1.1, desde: '2024-01-01', hasta: '2026-01-01', recargos: true });
-  assert.equal(t.recargoPct, 50); assert.equal(t.recargo, 500);
+  const sin = calcular({ capital: 1000, tasa: 1.1, desde: '2024-01-01', hasta: '2026-01-01', recargos: true });
+  assert.equal(sin.recargoPct, 10 + 4 * 23); assert.equal(sin.recargo, 1020);
+  const con = calcular({ capital: 1000, tasa: 1.1, desde: '2024-01-01', hasta: '2026-01-01', recargos: true, topeRecargo: 100 });
+  assert.equal(con.recargoPct, 100); assert.equal(con.recargo, 1000);
   assert.equal(calcular({ capital: 1000, tasa: 1.1, desde: '2026-01-01', hasta: '2026-04-01' }).recargo, 0);
 });
 

@@ -55,8 +55,10 @@
       saldo = saldoFinal;
     }
     const meses = rows.length;
-    // Recargo por mora (Art. 252 Código Tributario): 10 % el primer mes o fracción + 4 % por cada mes o fracción adicional, máx. 50 %. Sobre el capital.
-    const recargoPct = opts.recargos && meses ? Math.min(50, 10 + 4 * (meses - 1)) : 0;
+    // Recargo por mora (Art. 252 Código Tributario, régimen 10 % + 4 %): 10 % el primer mes o fracción + 4 % por cada mes o fracción adicional, sobre el capital.
+    // Tope opcional (opts.topeRecargo, en %): sin tope si no se indica (la norma anterior a la Ley 30-26 no lo fijaba; verifique).
+    const tope = Number(opts.topeRecargo) > 0 ? Number(opts.topeRecargo) : Infinity;
+    const recargoPct = opts.recargos && meses ? Math.min(tope, 10 + 4 * (meses - 1)) : 0;
     const recargo = r2(capital * recargoPct / 100);
     const intereses = acumulado;
     return { errores: [], rows, meses, capital: r2(capital), intereses, recargoPct, recargo, total: r2(capital + intereses + recargo), modo, fraccion, tasa };

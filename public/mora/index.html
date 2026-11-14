@@ -57,7 +57,8 @@ tfoot td{font-weight:700;background:var(--surf2)}
       <label class="f">Cálculo<select id="modo"><option value="compuesto">Compuesto: interés sobre interés (acumulativo)</option><option value="simple">Simple: solo sobre el capital</option></select></label>
       <label class="f">Último mes incompleto<select id="fraccion"><option value="completo">Cuenta como mes completo</option><option value="prorrata">Prorrata por días</option></select></label>
     </div>
-    <div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" id="rec"> Incluir recargos por mora (10 % el primer mes + 4 % por cada mes adicional, máx. 50 %)</label></div>
+    <div class="row" style="margin-top:10px;align-items:center"><label class="chk"><input type="checkbox" id="rec"> Incluir recargos por mora (10 % el primer mes + 4 % por cada mes adicional)</label><label class="chk">Tope (%) <input id="tope" inputmode="decimal" placeholder="sin tope" style="width:110px"></label></div>
+    <div class="note" style="margin-top:8px">¿Un impuesto de años anteriores con recargos e intereses según el régimen de cada año? Descarga la <a href="/mora/Plantilla_liquidacion_impuestos.xlsx" download><b>plantilla de liquidación año por año (Excel)</b></a>; sus tasas son editables y deben verificarse.</div>
     <div class="note" style="margin-top:8px">La tasa es editable: por defecto 1.10 % mensual (interés indemnizatorio del Código Tributario). Verifica la tasa y la regla que aplican a tu caso.</div>
     <div id="err" class="err"></div>
   </div>
@@ -72,7 +73,7 @@ const money=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximum
 const dmy=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
 let LAST=null;
-function read(){return {capital:parseFloat(String($('cap').value).replace(/,/g,'')),tasa:parseFloat(String($('tasa').value).replace(',','.')),desde:$('desde').value,hasta:$('hasta').value,modo:$('modo').value,fraccion:$('fraccion').value,recargos:$('rec').checked};}
+function read(){return {capital:parseFloat(String($('cap').value).replace(/,/g,'')),tasa:parseFloat(String($('tasa').value).replace(',','.')),desde:$('desde').value,hasta:$('hasta').value,modo:$('modo').value,fraccion:$('fraccion').value,recargos:$('rec').checked,topeRecargo:parseFloat(String($('tope').value).replace(',','.'))||null};}
 function render(){
   const r=Mora.calcular(read()); LAST=r.errores&&r.errores.length?null:r;
   $('err').textContent=''; const out=$('out');
@@ -115,7 +116,7 @@ function excel(){
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Moratorios'); XLSX.writeFile(wb,'Intereses_moratorios.xlsx');
 }
 $('hasta').value=today();
-['cap','tasa','desde','hasta','modo','fraccion','rec'].forEach(id=>$(id).addEventListener('input',render));
+['cap','tasa','desde','hasta','modo','fraccion','rec','tope'].forEach(id=>$(id).addEventListener('input',render));
 render();
 </script>
 <script src="/js/direct-tour.js"></script>

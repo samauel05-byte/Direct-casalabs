@@ -984,6 +984,7 @@ const INST = {
   nomina:  { name:'Nómina',      desc:'Nómina por empresa · columnas, empleados y períodos', grad:'linear-gradient(135deg,#b45309 0%,#f59e0b 100%)', abbr:'NÓM', tool:true },
   ir2:     { name:'IR-2',        desc:'Acceso contable · Declaración de renta',      grad:'linear-gradient(135deg,#7c3aed 0%,#a78bfa 100%)', abbr:'IR-2',   tool:true },
   'dgii-modulos': { name:'Estimación Fiscal', desc:'Gastos NCF · Inmuebles · Retenciones · Vehículos · Envíos 606 · DGA', grad:'linear-gradient(135deg,#004e89 0%,#0060e0 100%)', abbr:'DGII',  tool:true },
+  mora:    { name:'Intereses moratorios', desc:'Calculadora · Interés compuesto mes a mes y acumulativo, con plantilla Excel', grad:'linear-gradient(135deg,#92400e 0%,#f59e0b 100%)', abbr:'MOR', tool:true },
   estados: { name:'Estados Financieros', desc:'Estados financieros · Proyectados, Interinos y Del año', grad:'linear-gradient(135deg,#5b21b6 0%,#a855f7 100%)', abbr:'EF', tool:true },
   clients: { name:'Clientes', desc:'Gestión de clientes por empresa', grad:'linear-gradient(135deg,#0f766e 0%,#14b8a6 100%)', abbr:'CLI', tool:true },
   conciliacion: { name:'Conciliación bancaria', desc:'Compara el extracto del banco con tu libro auxiliar: conciliados, dudosos y diferencias', grad:'linear-gradient(135deg,#0e7490 0%,#22d3ee 100%)', abbr:'CON', tool:true },
@@ -1689,6 +1690,7 @@ function openModuleTab(key,url,label){
   if(!_modTabs[key]) toast('El navegador bloqueó la pestaña nueva. Permite las ventanas emergentes de este sitio para abrir '+label+'.','warn');
 }
 function openNomina(){ openModuleTab('nomina','/nomina/index.html','Nómina'); }
+function openMora(){ openModuleTab('mora','/mora/index.html','Intereses moratorios'); }
 function openEstados(){ openModuleTab('estados','/estados/index.html','Estados Financieros'); }
 function openIr2(){ openModuleTab('ir2','/ir2/index.html','IR-2'); }
 function openDgiiModulos(){ openModuleTab('dgii','/dgii/index.html','Estimación Fiscal'); }
@@ -1894,16 +1896,18 @@ function renderPortalGrid() {
   // Monitor DGII: estado público del servicio, visible para cualquier usuario
   // autorizado; la configuración y las alertas quedan limitadas a admin (API).
   allowed.push('monitor');
+  // Intereses moratorios: calculadora sin datos de clientes, visible para cualquier usuario autorizado.
+  allowed.push('mora');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },
     { label:'Portales bancarios',       keys:['carnet','azul'] },
     { label:'Otros accesos',            keys:['digisign','gdmail','nexo'] },
-    { label:'Herramientas contables',   keys:['nala','nomina','estados','cami','ir2','dgii-modulos','conciliacion','clients','monitor'] },
+    { label:'Herramientas contables',   keys:['nala','nomina','estados','cami','ir2','dgii-modulos','conciliacion','clients','monitor','mora'] },
   ];
 
   const PLAY='<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z"/></svg>';
-  const TOOL_OPEN={nala:openNala, nomina:openNomina, estados:openEstados, ir2:openIr2, 'dgii-modulos':openDgiiModulos, conciliacion:openConciliacion, clients:openClients, cami:openCami, monitor:openMonitor};
+  const TOOL_OPEN={nala:openNala, nomina:openNomina, estados:openEstados, mora:openMora, ir2:openIr2, 'dgii-modulos':openDgiiModulos, conciliacion:openConciliacion, clients:openClients, cami:openCami, monitor:openMonitor};
   function makeCard(key,inst){
     const isTool=!!inst.tool||!!inst.openRelay||!!inst.openDirect;
     const cos=isTool?[]:getCompanies(key);

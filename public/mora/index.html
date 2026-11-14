@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="/css/mobile-base.css">
+<link rel="stylesheet" href="/css/direct-tour.css">
+<title>Intereses moratorios</title>
+<style>
+:root{--bg:#f6f2ea;--surf:#fffdf9;--surf2:#f1ebe0;--bdr:rgba(60,44,26,.14);--fg:#1e1810;--fg2:#6a5c4b;--acc:#b45309;--acc2:#92400e;--ok:#15924a;--bad:#dc2626;--r:14px}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#070d1a;--surf:#0f1e38;--surf2:#162440;--bdr:rgba(30,90,200,.28);--fg:#e8f0ff;--fg2:#7a9bc0;--acc:#f59e0b;--acc2:#fbbf24;--ok:#20BD5A;--bad:#ef4444}}
+:root[data-theme="dark"]{--bg:#070d1a;--surf:#0f1e38;--surf2:#162440;--bdr:rgba(30,90,200,.28);--fg:#e8f0ff;--fg2:#7a9bc0;--acc:#f59e0b;--acc2:#fbbf24;--ok:#20BD5A;--bad:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:'Poppins',system-ui,sans-serif;font-size:14px}
+.hdr{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--surf);position:sticky;top:0;z-index:5}
+.hdr h1{margin:0;font-size:17px;flex:1}
+.back,.btn{border:1px solid var(--bdr);background:var(--surf2);color:var(--fg);border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer}
+.btn.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--fg2);font-weight:600}
+input,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:9px 10px;width:100%}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg);font-weight:500}
+.chk input{width:auto}
+.err{color:var(--bad);font-weight:600;margin:8px 0}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.kpi{background:var(--surf2);border-radius:12px;padding:12px}.kpi b{display:block;font-size:18px;margin-top:2px}.kpi span{font-size:12px;color:var(--fg2)}
+.kpi.tot{background:var(--acc);color:#fff}.kpi.tot span{color:#fff;opacity:.85}
+.tw{overflow:auto;border:1px solid var(--bdr);border-radius:12px}
+table{border-collapse:collapse;width:100%;white-space:nowrap}
+th,td{padding:8px 10px;border-bottom:1px solid var(--bdr);text-align:right}
+th{background:var(--surf2);font-size:12px;position:sticky;top:0}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3){text-align:left}
+tr.parcial td{color:var(--fg2);font-style:italic}
+tfoot td{font-weight:700;background:var(--surf2)}
+.note{font-size:12px;color:var(--fg2);line-height:1.5}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+@media print{.hdr,.noprint{display:none!important}body{background:#fff;color:#000}.card{border:0;padding:0}}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" type="image/svg+xml" href="/img/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="/img/favicon-48.png">
+<link rel="shortcut icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/img/apple-touch-icon.png">
+</head>
+<body>
+<div class="hdr"><button class="back" onclick="serpBack()">← Volver</button><h1>Intereses moratorios</h1></div>
+<div class="wrap">
+  <div class="card noprint">
+    <div class="grid">
+      <label class="f">Monto adeudado (capital)<input id="cap" inputmode="decimal" placeholder="0.00"></label>
+      <label class="f">Tasa mensual (%)<input id="tasa" inputmode="decimal" value="1.10"></label>
+      <label class="f">Fecha de inicio de la mora<input id="desde" type="date"></label>
+      <label class="f">Calcular hasta (fecha de pago)<input id="hasta" type="date"></label>
+      <label class="f">Cálculo<select id="modo"><option value="compuesto">Compuesto: interés sobre interés (acumulativo)</option><option value="simple">Simple: solo sobre el capital</option></select></label>
+      <label class="f">Último mes incompleto<select id="fraccion"><option value="completo">Cuenta como mes completo</option><option value="prorrata">Prorrata por días</option></select></label>
+    </div>
+    <div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" id="rec"> Incluir recargos por mora (10 % el primer mes + 4 % por cada mes adicional, máx. 50 %)</label></div>
+    <div class="note" style="margin-top:8px">La tasa es editable: por defecto 1.10 % mensual (interés indemnizatorio del Código Tributario). Verifica la tasa y la regla que aplican a tu caso.</div>
+    <div id="err" class="err"></div>
+  </div>
+  <div id="out"></div>
+</div>
+<script src="/serp-host.js"></script>
+<script src="/mora/js/engine.js"></script>
+<script src="/cami/vendor/xlsx.full.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const dmy=s=>{const [y,m,d]=s.split('-');return d+'/'+m+'/'+y};
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+let LAST=null;
+function read(){return {capital:parseFloat(String($('cap').value).replace(/,/g,'')),tasa:parseFloat(String($('tasa').value).replace(',','.')),desde:$('desde').value,hasta:$('hasta').value,modo:$('modo').value,fraccion:$('fraccion').value,recargos:$('rec').checked};}
+function render(){
+  const r=Mora.calcular(read()); LAST=r.errores&&r.errores.length?null:r;
+  $('err').textContent=''; const out=$('out');
+  if(!LAST){ $('err').textContent=(r.errores||[]).join(' '); if(!$('cap').value){$('err').textContent='';} out.innerHTML=''; return; }
+  out.innerHTML=`<div class="card"><div class="kpis">
+    <div class="kpi"><span>Capital</span><b>${money(r.capital)}</b></div>
+    <div class="kpi"><span>Meses (o fracción)</span><b>${r.meses}</b></div>
+    <div class="kpi"><span>Intereses acumulados</span><b>${money(r.intereses)}</b></div>
+    ${r.recargoPct?`<div class="kpi"><span>Recargos (${r.recargoPct} %)</span><b>${money(r.recargo)}</b></div>`:''}
+    <div class="kpi tot"><span>Total a pagar</span><b>${money(r.total)}</b></div></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Mes</th><th>Desde</th><th>Hasta</th><th>Saldo inicial</th><th>Interés del mes</th><th>Saldo final</th><th>Interés acumulado</th></tr></thead><tbody>
+  ${r.rows.map(x=>`<tr class="${x.completo?'':'parcial'}"><td>${x.n}${x.completo?'':' (fracción)'}</td><td>${dmy(x.desde)}</td><td>${dmy(x.hasta)}</td><td>${money(x.saldoInicial)}</td><td>${money(x.interes)}</td><td>${money(x.saldoFinal)}</td><td>${money(x.acumulado)}</td></tr>`).join('')}
+  </tbody><tfoot><tr><td colspan="4">Totales</td><td>${money(r.intereses)}</td><td>${money(r.total-r.recargo)}</td><td>${money(r.intereses)}</td></tr></tfoot></table></div>
+  <div class="row noprint"><button class="btn pri" id="xl">Descargar Excel (con fórmulas)</button><button class="btn" id="cp">Copiar tabla</button><button class="btn" onclick="window.print()">Imprimir / PDF</button></div>
+  <p class="note">Cálculo ${r.modo==='compuesto'?'compuesto: cada mes se calcula sobre el saldo del mes anterior (capital + intereses acumulados)':'simple: cada mes se calcula solo sobre el capital'}. Cada interés mensual se redondea a centavos. ${r.rows.some(x=>!x.completo)?(r.fraccion==='completo'?'El último mes incompleto cuenta como mes completo.':'El último mes incompleto se prorratea por días.'):''}</p></div>`;
+  $('xl').onclick=excel; $('cp').onclick=copiar;
+}
+function copiar(){
+  const r=LAST; const t=['Mes\tDesde\tHasta\tSaldo inicial\tInterés del mes\tSaldo final\tInterés acumulado',...r.rows.map(x=>[x.n,dmy(x.desde),dmy(x.hasta),x.saldoInicial.toFixed(2),x.interes.toFixed(2),x.saldoFinal.toFixed(2),x.acumulado.toFixed(2)].join('\t'))].join('\n');
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$('cp').textContent='¡Copiada!';setTimeout(()=>$('cp').textContent='Copiar tabla',1500)}).catch(()=>alert('No se pudo copiar.'));
+}
+const serial=s=>{const [y,m,d]=s.split('-').map(Number);return Math.round((Date.UTC(y,m-1,d)-Date.UTC(1899,11,30))/86400000)};
+function excel(){
+  const r=LAST, o=read(), comp=r.modo==='compuesto', H=8, first=H+1, last=H+r.rows.length;
+  const D=v=>({t:'n',v:serial(v),z:'dd/mm/yyyy'}), N=v=>({t:'n',v,z:'#,##0.00'});
+  const aoa=[['Intereses moratorios — '+(comp?'interés compuesto mes a mes':'interés simple')],[],
+    ['Capital',N(o.capital)],['Tasa mensual (%)',{t:'n',v:o.tasa}],['Fecha de inicio',D(o.desde)],['Fecha de cálculo',D(o.hasta)],[],
+    ['Mes','Desde','Hasta','Fracción del mes','Saldo inicial','Interés del mes','Saldo final','Interés acumulado']];
+  r.rows.forEach((x,i)=>{const row=first+i;
+    aoa.push([x.n,D(x.desde),D(x.hasta),{t:'n',v:x.factor},
+      i===0||!comp?{t:'n',f:'$B$3',v:x.saldoInicial,z:'#,##0.00'}:{t:'n',f:'G'+(row-1),v:x.saldoInicial,z:'#,##0.00'},
+      {t:'n',f:comp?`ROUND(E${row}*($B$4/100)*D${row},2)`:`ROUND($B$3*($B$4/100)*D${row},2)`,v:x.interes,z:'#,##0.00'},
+      {t:'n',f:comp?`E${row}+F${row}`:`$B$3+H${row}`,v:x.saldoFinal,z:'#,##0.00'},
+      {t:'n',f:`SUM(F$${first}:F${row})`,v:x.acumulado,z:'#,##0.00'}]);});
+  aoa.push([]);aoa.push(['Total intereses',null,null,null,null,{t:'n',f:`SUM(F${first}:F${last})`,v:r.intereses,z:'#,##0.00'}]);
+  const tr=last+2; let tot=r.total;
+  if(r.recargoPct){aoa.push(['Recargos ('+r.recargoPct+' %)',null,null,null,null,N(r.recargo)]);}
+  aoa.push(['Total a pagar',null,null,null,null,{t:'n',f:r.recargoPct?`B3+F${tr}+F${tr+1}`:`B3+F${tr}`,v:tot,z:'#,##0.00'}]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:22},{wch:12},{wch:12},{wch:16},{wch:16},{wch:16},{wch:16},{wch:18}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Moratorios'); XLSX.writeFile(wb,'Intereses_moratorios.xlsx');
+}
+$('hasta').value=today();
+['cap','tasa','desde','hasta','modo','fraccion','rec'].forEach(id=>$(id).addEventListener('input',render));
+render();
+</script>
+<script src="/js/direct-tour.js"></script>
+<script>(function(){var h=document.querySelector('.hdr h1');if(h)h.after(DirectTour.button('mora'));DirectTour.auto('mora',{ready:'#cap'});})();</script>
+</body>
+</html>

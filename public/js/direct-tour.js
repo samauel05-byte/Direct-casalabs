@@ -133,6 +133,15 @@
     end('El resultado separa conciliados, dudosos y diferencias; puedes confirmar los dudosos y descargar todo en Excel.'),
   ];
 
+  TOURS.mora = () => [
+    { title: 'Intereses moratorios', html: '<p>Calcula los intereses por mora <b>mes a mes</b>, con <b>interés compuesto</b> (cada mes sobre el saldo anterior) y acumulado.</p>' },
+    { target: '#cap', title: '1 · Monto adeudado', html: '<p>El capital sobre el que corre la mora.</p>' },
+    { target: '#tasa', title: '2 · Tasa mensual', html: '<p>Viene en 1.10 %. Puedes cambiarla si tu caso usa otra.</p>' },
+    { target: '#desde', title: '3 · Fechas', html: '<p>Desde cuándo está en mora y hasta qué fecha vas a pagar. La tabla se arma sola.</p>' },
+    { target: '#modo', title: 'Compuesto o simple', html: '<p>Compuesto cobra interés sobre los intereses ya acumulados; simple solo sobre el capital.</p>' },
+    end('Descarga el resultado en Excel con fórmulas, cópialo o imprímelo en PDF.'),
+  ];
+
   TOURS.monitor = () => [
     { title: 'Monitor DGII', html: '<p>Te dice si los servicios de <b>facturación electrónica (e-CF)</b> de la DGII están disponibles, antes de que pierdas tiempo intentando enviar.</p>' },
     { target: '#mon-state', title: 'Estado general', html: '<p>Verde: todo operativo. Ámbar o rojo: hay degradación o caída.</p>' },

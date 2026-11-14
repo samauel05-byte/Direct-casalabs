@@ -221,6 +221,13 @@ Los nombres de empresa de la **bóveda de credenciales** (lista de empresas de u
 
 ---
 
+## Intereses moratorios (calculadora)
+
+- **Página:** `public/mora/index.html` (sin API ni base de datos; cálculo en el navegador). Tile `mora` en «Herramientas contables» (`openMora()` en `public/index.html`), visible para cualquier usuario autorizado.
+- **Motor:** `public/mora/js/engine.js` (isomórfico; `Mora.calcular`). Interés **compuesto** mes a mes: cada mes = `ROUND(saldo_inicial × tasa × fracción, 2)` y `saldo_final = saldo_inicial + interés` (acumulativo); modo `simple` calcula sobre el capital. Los meses se cuentan por aniversario desde la fecha de inicio (31 ene + 1 mes = 28/29 feb); `fraccion: 'completo'` cuenta el último mes incompleto entero y `'prorrata'` usa días/días del mes. `recargos`: 10 % el primer mes + 4 % por mes adicional, máx. 50 %, sobre el capital (Art. 252 del Código Tributario). La tasa por defecto es 1.10 % mensual y es editable: se debe verificar la vigente.
+- **Excel:** la plantilla descargada (SheetJS, `/cami/vendor/xlsx.full.min.js`) lleva fórmulas vivas (`ROUND`, `SUM`) sobre celdas de capital, tasa y fechas.
+- **Tutorial:** `TOURS.mora` en `public/js/direct-tour.js`. **Pruebas:** `npm run test:mora`.
+
 ## Estados Financieros (Proyectados · Interinos · Del año)
 
 Módulo de Contabilidad (`public/estados/`, API en `api/estados.js` → `lib/estados/`), integrado a Direct con el mismo login, el mismo menú de accesos y las mismas empresas (`direct_clients`). Se abre en su propia pestaña, como NALA/Nómina, y reutiliza `nala.css` (tema claro/oscuro y móvil).

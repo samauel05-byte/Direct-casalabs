@@ -35,6 +35,6 @@ test('/favicon.ico es un ICO válido con imágenes PNG', () => {
 });
 
 test('las páginas de módulo comparten el logo de Direct o el de su módulo', () => {
-  for (const f of ['conciliacion/index.html', 'dgii/index.html', 'estados/index.html', 'ir2/index.html', 'monitor/index.html', 'nomina/index.html']) assert.match(fs.readFileSync(path.join(PUBLIC, f), 'utf8'), /\/img\/favicon-32\.png/);
+  for (const f of ['conciliacion/index.html', 'dgii/index.html', 'estados/index.html', 'ir2/index.html', 'mora/index.html', 'monitor/index.html', 'nomina/index.html']) assert.match(fs.readFileSync(path.join(PUBLIC, f), 'utf8'), /\/img\/favicon-32\.png/);
   assert.match(fs.readFileSync(path.join(PUBLIC, 'nala/index.html'), 'utf8'), /favicon-nala-32\.png/);
 });

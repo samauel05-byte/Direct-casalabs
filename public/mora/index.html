@@ -58,23 +58,18 @@ tfoot td{font-weight:700;background:var(--surf2)}
       <label class="f" id="lanio">Seleccionar el año<input id="vanio" inputmode="numeric" maxlength="4" placeholder="Ej: 2024"></label>
       <label class="f">Monto del impuesto (RD$)<input id="cap" inputmode="decimal" placeholder="Ej: 10,000"></label>
       <label class="f">Fecha de pago prevista<input id="hasta" type="date"></label>
+      <label class="f" id="ldesde" style="display:none">Fecha de vencimiento<input id="desde" type="date"></label>
       <label class="f">Ver el detalle<select id="vista"><option value="mes">Mes por mes</option><option value="anio">Año por año</option></select></label>
     </div>
-    <details style="margin-top:12px"><summary><b>Opciones avanzadas</b> (vencimiento, tasa de interés, método)</summary>
-      <div class="grid" style="margin-top:8px">
-        <label class="f">Fecha de vencimiento (se calcula sola; cámbiala si hace falta)<input id="desde" type="date"></label>
-        <label class="f">Interés indemnizatorio (%)<span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><input id="tasa" inputmode="decimal" value="1.10"><select id="tper" style="width:120px"><option value="mensual">por mes</option><option value="anual">por año</option></select></span></label>
-        <label class="f">Cálculo del interés<select id="modo"><option value="simple">Como la DGII: simple (tasa × meses)</option><option value="compuesto">Compuesto: interés sobre interés (acumulativo)</option></select></label>
-        <label class="f">Último mes incompleto<select id="fraccion"><option value="completo">Cuenta como mes completo (DGII)</option><option value="prorrata">Prorrata por días</option></select></label>
-      </div>
-      <div class="row" style="margin-top:10px;align-items:center"><label class="chk"><input type="checkbox" id="rec" checked> Incluir el recargo por mora (aparte del interés)</label></div>
-      <div class="tw" style="margin-top:8px"><table style="white-space:normal"><thead><tr><th>Régimen de recargo: rige desde (mes que empieza)</th><th>Primer mes (%)</th><th>Cada mes adicional (%)</th><th>Tope (%) (vacío = sin tope)</th></tr></thead><tbody>
-        <tr><td><input id="rg0d" type="date" value="1992-01-01"></td><td><input id="rg0p" inputmode="decimal" value="10"></td><td><input id="rg0a" inputmode="decimal" value="4"></td><td><input id="rg0t" inputmode="decimal" placeholder="sin tope"></td></tr>
-        <tr><td><input id="rg1d" type="date" value="2026-06-30"></td><td><input id="rg1p" inputmode="decimal" value="3"></td><td><input id="rg1a" inputmode="decimal" value="3"></td><td><input id="rg1t" inputmode="decimal" value="100"></td></tr>
-      </tbody></table></div>
-      <div class="note" style="margin-top:6px">Cada mes de mora usa el régimen vigente cuando ese mes empieza: el primer mes es el «primer mes»; cada mes siguiente suma el «adicional», sin pasar del tope y sin bajar de lo ya acumulado. Régimen 1: Art. 252 (10 % + 4 %). Régimen 2: Ley 30-26 (3 % por mes, tope 100 %).</div>
-    </details>
-    <div class="note" style="margin-top:8px" id="vnota">Vencimientos: ITBIS día 20 del mes siguiente; IR-1 31 de marzo del año siguiente; IR-2 120 días después del cierre (el mes es el de cierre). La DGII puede correr la fecha por feriados o fin de semana: verifícala en «Opciones avanzadas».</div>
+    <div hidden>
+      <input id="tasa" value="1.10"><select id="tper"><option value="mensual" selected>por mes</option><option value="anual">por año</option></select>
+      <select id="modo"><option value="simple" selected>simple</option><option value="compuesto">compuesto</option></select>
+      <select id="fraccion"><option value="completo" selected>completo</option><option value="prorrata">prorrata</option></select>
+      <input type="checkbox" id="rec" checked>
+      <input id="rg0d" type="date" value="1992-01-01"><input id="rg0p" value="10"><input id="rg0a" value="4"><input id="rg0t" value="">
+      <input id="rg1d" type="date" value="2026-06-30"><input id="rg1p" value="3"><input id="rg1a" value="3"><input id="rg1t" value="100">
+    </div>
+    <div class="note" style="margin-top:8px" id="vnota">Vencimientos: ITBIS día 20 del mes siguiente; IR-1 31 de marzo del año siguiente; IR-2 120 días después del cierre (el mes es el de cierre). El sábado o domingo pasa al lunes. Si tu fecha es otra (por ejemplo por un feriado), escoge «Otro» y escribe la fecha de vencimiento.</div>
     <div class="note" style="margin-top:8px">¿Varios impuestos o años a la vez? Descarga la <a href="/mora/Plantilla_liquidacion_impuestos.xlsx" download><b>plantilla de liquidación año por año (Excel)</b></a>. Verificado contra 4 consultas a la calculadora oficial de la DGII (dgii.gov.do/herramientas/calculadoras): coincide al centavo; confirma casos límite allí.</div>
     <div id="err" class="err"></div>
   </div>
@@ -105,7 +100,7 @@ function tabla(r){
 function render(){
   const r=Mora.calcular(read()); LAST=r.errores&&r.errores.length?null:r;
   $('err').textContent=''; const out=$('out');
-  if(!LAST){ $('err').textContent=(r.errores||[]).join(' ').replace('La fecha de inicio no es válida.','Indica el año del impuesto (o la fecha de vencimiento en «Opciones avanzadas»).'); if(!$('cap').value){$('err').textContent='';} out.innerHTML=''; return; }
+  if(!LAST){ $('err').textContent=(r.errores||[]).join(' ').replace('La fecha de inicio no es válida.','Indica el año del impuesto (o escoge «Otro» y escribe la fecha de vencimiento).'); if(!$('cap').value){$('err').textContent='';} out.innerHTML=''; return; }
   const NOM={ITB:'ITB — ITBIS',IR1:'IR1 — Impuesto a la renta pers. físicas',IR2:'IR2 — Impuesto a la renta sociedades',OTRO:'Otro impuesto'}[$('vimp').value];
   out.innerHTML=`<div class="card"><div class="kpis">
     <div class="kpi"><span>Nombre del impuesto</span><b style="font-size:15px">${NOM}</b></div>
@@ -155,7 +150,7 @@ window.addEventListener('message',e=>{ if(e.origin!==location.origin||!e.data||e
 try{ const h=serpHost(); if(h) h.postMessage({action:'mora-ready'},location.origin); else $('deny').style.display=''; }catch(e){ $('deny').style.display=''; }
 $('vmes').innerHTML=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');
 $('vmes').value='12';
-function autoVenc(){ const t=$('vimp').value; $('lmes').style.display=(t==='IR1'||t==='OTRO')?'none':''; $('lanio').style.display=t==='OTRO'?'none':'';
+function autoVenc(){ const t=$('vimp').value; $('lmes').style.display=(t==='IR1'||t==='OTRO')?'none':''; $('lanio').style.display=t==='OTRO'?'none':''; $('ldesde').style.display=t==='OTRO'?'':'none';
   if(t==='OTRO'){ render(); return; }
   const v=Mora.vencimiento(t,$('vmes').value,$('vanio').value); if(v){ $('desde').value=v; $('vnota').style.color=''; } else { $('desde').value=''; }
   render(); }

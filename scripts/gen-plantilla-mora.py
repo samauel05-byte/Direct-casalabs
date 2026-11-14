@@ -50,7 +50,7 @@ wp['A7'] = 'Regímenes (ordénalos por fecha ascendente; cada fila rige desde su
 heads = ['Rige desde', 'Recargo 1.er mes (%)', 'Recargo por cada mes adicional (%)', 'Tope de recargo (%) (vacío = sin tope)', 'Interés mensual (%)', 'Fuente / nota (VERIFICAR)']
 HR = P0  # fila de encabezados
 rows = [
- (date(2001, 1, 1), 10, 4, None, 1.10, 'VERIFICAR. Recargo 10 % + 4 % por mes adicional (Art. 252, mod. Ley 147-00). Interés 1.10 % mensual (DGII). Antes de ~2015 el interés pudo ser distinto (Art. 27: tasa de la Junta Monetaria + 30 %). Tope: confirmar.'),
+ (date(2001, 1, 1), 10, 4, None, 1.00, 'Recargo 10 % el primer mes + 4 % por cada mes adicional (Art. 252, mod. Ley 147-00). Interés indemnizatorio 1 % mensual según indicación de Contabilidad (fuentes de la DGII citan 1.10 %: VERIFICAR). Antes de ~2015 el interés pudo ser distinto (Art. 27: tasa de la Junta Monetaria + 30 %). Tope: confirmar.'),
  (date(2026, 7, 1), 3, 3, 100, None, 'VERIFICAR. Ley 30-26: recargo 3 % mensual con tope 100 % del tributo; interés = tasa del Banco Central + 0.30 pts (ESCRIBE la tasa mensual vigente). Vigencia: fuentes dicen 18-jun-2026 o 01-jul-2026.'),
 ]
 for j, h in enumerate(heads, 1):

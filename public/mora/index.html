@@ -52,7 +52,7 @@ tfoot td{font-weight:700;background:var(--surf2)}
   <div class="card noprint">
     <div class="grid">
       <label class="f">Monto adeudado (capital)<input id="cap" inputmode="decimal" placeholder="0.00"></label>
-      <label class="f">Interés indemnizatorio mensual (%)<input id="tasa" inputmode="decimal" value="1.10"></label>
+      <label class="f">Interés indemnizatorio mensual (%)<input id="tasa" inputmode="decimal" value="1.00"></label>
       <label class="f">Fecha de inicio de la mora<input id="desde" type="date"></label>
       <label class="f">Calcular hasta (fecha de pago)<input id="hasta" type="date"></label>
       <label class="f">Cálculo<select id="modo"><option value="compuesto">Compuesto: interés sobre interés (acumulativo)</option><option value="simple">Simple: solo sobre el capital</option></select></label>
@@ -60,7 +60,7 @@ tfoot td{font-weight:700;background:var(--surf2)}
     </div>
     <div class="row" style="margin-top:10px;align-items:center"><label class="chk"><input type="checkbox" id="rec"> Incluir recargo por mora, aparte del interés (10 % el primer mes + 4 % por cada mes adicional)</label><label class="chk">Tope (%) <input id="tope" inputmode="decimal" placeholder="sin tope" style="width:110px"></label></div>
     <div class="note" style="margin-top:8px">¿Un impuesto de años anteriores con recargos e intereses según el régimen de cada año? Descarga la <a href="/mora/Plantilla_liquidacion_impuestos.xlsx" download><b>plantilla de liquidación año por año (Excel)</b></a>; sus tasas son editables y deben verificarse.</div>
-    <div class="note" style="margin-top:8px">El interés indemnizatorio y el recargo por mora son cargos distintos de la DGII y se calculan por separado. La tasa de interés es editable: por defecto 1.10 % mensual. Verifica la tasa y la regla que aplican a tu caso.</div>
+    <div class="note" style="margin-top:8px">El interés indemnizatorio y el recargo por mora son cargos distintos de la DGII y se calculan por separado. La tasa de interés es editable: por defecto 1 % mensual (algunas fuentes de la DGII citan 1.10 %: verifica la tuya). Verifica la tasa y la regla que aplican a tu caso.</div>
     <div id="err" class="err"></div>
   </div>
   <div id="out"></div>

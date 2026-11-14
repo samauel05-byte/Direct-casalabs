@@ -52,15 +52,15 @@ tfoot td{font-weight:700;background:var(--surf2)}
   <div class="card noprint">
     <div class="grid">
       <label class="f">Monto adeudado (capital)<input id="cap" inputmode="decimal" placeholder="0.00"></label>
-      <label class="f">Tasa mensual (%)<input id="tasa" inputmode="decimal" value="1.10"></label>
+      <label class="f">Interés indemnizatorio mensual (%)<input id="tasa" inputmode="decimal" value="1.10"></label>
       <label class="f">Fecha de inicio de la mora<input id="desde" type="date"></label>
       <label class="f">Calcular hasta (fecha de pago)<input id="hasta" type="date"></label>
       <label class="f">Cálculo<select id="modo"><option value="compuesto">Compuesto: interés sobre interés (acumulativo)</option><option value="simple">Simple: solo sobre el capital</option></select></label>
       <label class="f">Último mes incompleto<select id="fraccion"><option value="completo">Cuenta como mes completo</option><option value="prorrata">Prorrata por días</option></select></label>
     </div>
-    <div class="row" style="margin-top:10px;align-items:center"><label class="chk"><input type="checkbox" id="rec"> Incluir recargos por mora (10 % el primer mes + 4 % por cada mes adicional)</label><label class="chk">Tope (%) <input id="tope" inputmode="decimal" placeholder="sin tope" style="width:110px"></label></div>
+    <div class="row" style="margin-top:10px;align-items:center"><label class="chk"><input type="checkbox" id="rec"> Incluir recargo por mora, aparte del interés (10 % el primer mes + 4 % por cada mes adicional)</label><label class="chk">Tope (%) <input id="tope" inputmode="decimal" placeholder="sin tope" style="width:110px"></label></div>
     <div class="note" style="margin-top:8px">¿Un impuesto de años anteriores con recargos e intereses según el régimen de cada año? Descarga la <a href="/mora/Plantilla_liquidacion_impuestos.xlsx" download><b>plantilla de liquidación año por año (Excel)</b></a>; sus tasas son editables y deben verificarse.</div>
-    <div class="note" style="margin-top:8px">La tasa es editable: por defecto 1.10 % mensual (interés indemnizatorio del Código Tributario). Verifica la tasa y la regla que aplican a tu caso.</div>
+    <div class="note" style="margin-top:8px">El interés indemnizatorio y el recargo por mora son cargos distintos de la DGII y se calculan por separado. La tasa de interés es editable: por defecto 1.10 % mensual. Verifica la tasa y la regla que aplican a tu caso.</div>
     <div id="err" class="err"></div>
   </div>
   <div id="out"></div>
@@ -82,12 +82,12 @@ function render(){
   out.innerHTML=`<div class="card"><div class="kpis">
     <div class="kpi"><span>Capital</span><b>${money(r.capital)}</b></div>
     <div class="kpi"><span>Meses (o fracción)</span><b>${r.meses}</b></div>
-    <div class="kpi"><span>Intereses acumulados</span><b>${money(r.intereses)}</b></div>
-    ${r.recargoPct?`<div class="kpi"><span>Recargos (${r.recargoPct} %)</span><b>${money(r.recargo)}</b></div>`:''}
+    <div class="kpi"><span>Interés indemnizatorio (DGII)</span><b>${money(r.intereses)}</b></div>
+    ${r.recargoPct?`<div class="kpi"><span>Recargo por mora (${r.recargoPct} %)</span><b>${money(r.recargo)}</b></div>`:''}
     <div class="kpi tot"><span>Total a pagar</span><b>${money(r.total)}</b></div></div></div>
-  <div class="card"><div class="tw"><table><thead><tr><th>Mes</th><th>Desde</th><th>Hasta</th><th>Saldo inicial</th><th>Interés del mes</th><th>Saldo final</th><th>Interés acumulado</th></tr></thead><tbody>
-  ${r.rows.map(x=>`<tr class="${x.completo?'':'parcial'}"><td>${x.n}${x.completo?'':' (fracción)'}</td><td>${dmy(x.desde)}</td><td>${dmy(x.hasta)}</td><td>${money(x.saldoInicial)}</td><td>${money(x.interes)}</td><td>${money(x.saldoFinal)}</td><td>${money(x.acumulado)}</td></tr>`).join('')}
-  </tbody><tfoot><tr><td colspan="4">Totales</td><td>${money(r.intereses)}</td><td>${money(r.total-r.recargo)}</td><td>${money(r.intereses)}</td></tr></tfoot></table></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>Mes</th><th>Desde</th><th>Hasta</th><th>Saldo inicial</th><th>Interés indemnizatorio del mes</th><th>Saldo con interés</th><th>Interés acumulado</th>${r.recargoPct?'<th>Recargo acumulado (%)</th><th>Recargo acumulado (RD$)</th>':''}</tr></thead><tbody>
+  ${r.rows.map(x=>`<tr class="${x.completo?'':'parcial'}"><td>${x.n}${x.completo?'':' (fracción)'}</td><td>${dmy(x.desde)}</td><td>${dmy(x.hasta)}</td><td>${money(x.saldoInicial)}</td><td>${money(x.interes)}</td><td>${money(x.saldoFinal)}</td><td>${money(x.acumulado)}</td>${r.recargoPct?`<td>${x.recargoPct}</td><td>${money(x.recargoAcum)}</td>`:''}</tr>`).join('')}
+  </tbody><tfoot><tr><td colspan="4">Totales</td><td>${money(r.intereses)}</td><td>${money(r.total-r.recargo)}</td><td>${money(r.intereses)}</td>${r.recargoPct?`<td>${r.recargoPct}</td><td>${money(r.recargo)}</td>`:''}</tr></tfoot></table></div>
   <div class="row noprint"><button class="btn pri" id="xl">Descargar Excel (con fórmulas)</button><button class="btn" id="cp">Copiar tabla</button><button class="btn" onclick="window.print()">Imprimir / PDF</button></div>
   <p class="note">Cálculo ${r.modo==='compuesto'?'compuesto: cada mes se calcula sobre el saldo del mes anterior (capital + intereses acumulados)':'simple: cada mes se calcula solo sobre el capital'}. Cada interés mensual se redondea a centavos. ${r.rows.some(x=>!x.completo)?(r.fraccion==='completo'?'El último mes incompleto cuenta como mes completo.':'El último mes incompleto se prorratea por días.'):''}</p></div>`;
   $('xl').onclick=excel; $('cp').onclick=copiar;

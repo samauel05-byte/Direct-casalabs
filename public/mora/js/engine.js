@@ -55,6 +55,10 @@
       saldo = saldoFinal;
     }
     const meses = rows.length;
+    // Recargo por mora y interés indemnizatorio son cargos DISTINTOS: el recargo es un % del impuesto que crece por mes;
+    // el interés indemnizatorio es una tasa mensual. Cada fila lleva los dos por separado.
+    const tope0 = Number(opts.topeRecargo) > 0 ? Number(opts.topeRecargo) : Infinity;
+    rows.forEach((x, i) => { x.recargoPct = opts.recargos ? Math.min(tope0, 10 + 4 * i) : 0; x.recargoAcum = r2(capital * x.recargoPct / 100); });
     // Recargo por mora (Art. 252 Código Tributario, régimen 10 % + 4 %): 10 % el primer mes o fracción + 4 % por cada mes o fracción adicional, sobre el capital.
     // Tope opcional (opts.topeRecargo, en %): sin tope si no se indica (la norma anterior a la Ley 30-26 no lo fijaba; verifique).
     const tope = Number(opts.topeRecargo) > 0 ? Number(opts.topeRecargo) : Infinity;

@@ -683,6 +683,7 @@ button,a,label,.p-card,.company-card,.home-access-chip,.icon-btn,.btn,.btn-full,
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-ir2"> IR-2 — Declaración de renta</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-estimacion"> Estimación Fiscal — Anexos DGII</label>
       <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-estados"> Estados Financieros — proyectados, interinos y del año</label>
+      <label class="chk-row" style="padding:4px 0;font-weight:600"><input type="checkbox" id="u-access-mora"> Intereses moratorios — solo personas autorizadas</label>
       <div class="ferr" id="user-err" hidden></div>
     </div>
     <div class="modal-ftr" id="modal-user-ftr">
@@ -1210,7 +1211,7 @@ async function boot() {
         if(refreshToken && tokenExpiresAt && tokenExpiresAt < Date.now()+60000) await refreshSession();
         scheduleRefresh();
         const s = JSON.parse(storedSess);
-        currentUser = {username:s.username||'', role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_nomina:s.access_nomina, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_estados:s.access_estados, access_clientes:s.access_clientes, portals:s.portals, platformAdmin:s.platformAdmin===true, license:s.license||null};
+        currentUser = {username:s.username||'', role:s.role, access_direct:s.access_direct, access_cami:s.access_cami, access_nala:s.access_nala, access_nomina:s.access_nomina, access_ir2:s.access_ir2, access_estimacion:s.access_estimacion, access_estados:s.access_estados, access_mora:s.access_mora, access_clientes:s.access_clientes, portals:s.portals, platformAdmin:s.platformAdmin===true, license:s.license||null};
         const v = JSON.parse(storedVault);
         vaultSecret = C._u8(v.secret);
         const homeData = fetchHomeData();
@@ -1267,7 +1268,7 @@ async function handleSetup() {
     broadcastSession();
     storeSession(signIn);
 
-    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_nomina:true, access_ir2:true, access_estimacion:true, access_estados:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
+    currentUser = { role:'admin', access_direct:true, access_cami:true, access_nala:true, access_nomina:true, access_ir2:true, access_estimacion:true, access_estados:true, access_mora:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla'] };
     vaultSecret = vaultSecretBytes;
     appConfig = { vaultSalt, verifierIv:verIv, verifierCt:verCt };
 
@@ -1275,7 +1276,7 @@ async function handleSetup() {
     await A.post('/api/config',{key:'verifierIv',value:verIv});
     await A.post('/api/config',{key:'verifierCt',value:verCt});
 
-    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, access_nomina:true, access_ir2:true, access_estimacion:true, access_estados:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla']}));
+    sessionStorage.setItem('dsession', JSON.stringify({role:'admin', access_direct:true, access_cami:true, access_nala:true, access_nomina:true, access_ir2:true, access_estimacion:true, access_estados:true, access_mora:true, access_clientes:true, portals:['dgii','tss','trabajo','sirla']}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecretBytes)}));
     await loadHome();
   } catch(e){ err.textContent='Error: '+e.message; err.hidden=false; }
@@ -1325,7 +1326,7 @@ async function handleLogin() {
     activeSessionId = res.session_id || null;
     if(activeSessionId) localStorage.setItem('direct_session_id',activeSessionId);
     storeSession(res);
-    currentUser = { username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_estados:res.access_estados, access_clientes:res.access_clientes, portals:res.portals, platformAdmin:res.platformAdmin===true, license:res.license||null };
+    currentUser = { username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_estados:res.access_estados, access_mora:res.access_mora, access_clientes:res.access_clientes, portals:res.portals, platformAdmin:res.platformAdmin===true, license:res.license||null };
 
     // 2. Home data only needs the token: fetch it while the vault keys are derived.
     const homeData = fetchHomeData();
@@ -1344,7 +1345,7 @@ async function handleLogin() {
     }
     sessionStorage.setItem('dtoken', sessionToken);
     broadcastSession();
-    sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_estados:res.access_estados, access_clientes:res.access_clientes, portals:res.portals, platformAdmin:res.platformAdmin===true, license:res.license||null}));
+    sessionStorage.setItem('dsession', JSON.stringify({username, role:res.role, access_direct:res.access_direct, access_cami:res.access_cami, access_nala:res.access_nala, access_nomina:res.access_nomina, access_ir2:res.access_ir2, access_estimacion:res.access_estimacion, access_estados:res.access_estados, access_mora:res.access_mora, access_clientes:res.access_clientes, portals:res.portals, platformAdmin:res.platformAdmin===true, license:res.license||null}));
     sessionStorage.setItem('dvault', JSON.stringify({secret:C._b64(vaultSecret)}));
     if (C.isLegacySalt(res.userSalt)) migrateKdf(pw, res.userSalt, vaultSecret); // en segundo plano
     await loadHome(homeData);
@@ -1520,9 +1521,10 @@ async function renderUsersList() {
       if (user.access_ir2) modules.push('IR-2');
       if (user.access_estimacion) modules.push('Estimación');
       if (user.access_estados) modules.push('Estados Financieros');
+      if (user.access_mora) modules.push('Intereses moratorios');
       const uname=(user.username||user.email||'(sin nombre)').replace('@direct.local','');
       const initials=(uname.replace(/[^A-Za-z0-9]/g,'').charAt(0)||'?').toUpperCase();
-      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,companies_direct:user.companies_direct??null,access_cami:user.access_cami,access_nala:user.access_nala,access_nomina:user.access_nomina,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion,access_estados:user.access_estados}).replace(/"/g,'&quot;');
+      const userData=JSON.stringify({id:user.id,username:uname,role:user.role,access_direct:user.access_direct,portals_direct:user.portals_direct,companies_direct:user.companies_direct??null,access_cami:user.access_cami,access_nala:user.access_nala,access_nomina:user.access_nomina,access_ir2:user.access_ir2,access_estimacion:user.access_estimacion,access_estados:user.access_estados,access_mora:user.access_mora}).replace(/"/g,'&quot;');
       const item=document.createElement('div');
       item.className='user-card';
       item.innerHTML=`
@@ -1581,6 +1583,7 @@ async function openUserModal(userData=null) {
   document.getElementById('u-access-ir2').checked = userData?.access_ir2 || false;
   document.getElementById('u-access-estimacion').checked = userData?.access_estimacion || false;
   document.getElementById('u-access-estados').checked = userData?.access_estados || false;
+  document.getElementById('u-access-mora').checked = userData?.access_mora || false;
   document.getElementById('user-err').hidden=true;
   window.DX?.fillUserCompanies(userData);
   document.getElementById('modal-user').hidden=false;
@@ -1600,6 +1603,7 @@ async function saveUser() {
   const access_ir2=document.getElementById('u-access-ir2').checked;
   const access_estimacion=document.getElementById('u-access-estimacion').checked;
   const access_estados=document.getElementById('u-access-estados').checked;
+  const access_mora=document.getElementById('u-access-mora').checked;
   const err=document.getElementById('user-err'); err.hidden=true;
   if (!username){err.textContent='Escribe un nombre de usuario';err.hidden=false;return;}
   if (!userId && !password){err.textContent='La contraseña es requerida';err.hidden=false;return;}
@@ -1612,7 +1616,7 @@ async function saveUser() {
       const enc=await C.encBytes(newUserKey, vaultSecret);
       vaultKeyIv=enc.iv; vaultKeyCt=enc.ct;
     }
-    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados};
+    const body={username, role, access_direct, portals_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_mora};
     if (window.DX) body.companies_direct = DX.readUserCompanies();
     if (password){ body.password=password; body.userSalt=userSalt; body.vaultKeyIv=vaultKeyIv; body.vaultKeyCt=vaultKeyCt; }
     if (userId) await A.put(`/api/users/${userId}`,body);
@@ -1704,6 +1708,11 @@ window.addEventListener('message', e => {
   if (e.data.action === 'monitor-ready') {
     const fr = e.source;
     if (fr && fr !== window) { try { fr.postMessage({ action:'monitor-init', token: sessionToken, sessionId: activeSessionId, role: currentUser?.role || 'user', username: currentUser?.username || '' }, location.origin); } catch (_) { /* pestaña cerrada */ } }
+  }
+  // Intereses moratorios (módulo restringido): la pantalla pide confirmación del acceso al abrirse.
+  if (e.data.action === 'mora-ready') {
+    const fr = e.source;
+    if (fr && fr !== window) { try { fr.postMessage({ action:'mora-init', allowed: currentUser?.access_mora === true }, location.origin); } catch (_) { /* ventana cerrada */ } }
   }
   // «Jalar de DGII» (Estimación Fiscal): abre la Oficina Virtual de esa empresa
   // por el relay (auto-login), para ir a «Consulta de Envíos». El jalado de la
@@ -1896,8 +1905,8 @@ function renderPortalGrid() {
   // Monitor DGII: estado público del servicio, visible para cualquier usuario
   // autorizado; la configuración y las alertas quedan limitadas a admin (API).
   allowed.push('monitor');
-  // Intereses moratorios: calculadora sin datos de clientes, visible para cualquier usuario autorizado.
-  allowed.push('mora');
+  // Intereses moratorios: módulo restringido; solo quien tenga el acceso (sin atajo para administradores).
+  if (currentUser?.access_mora) allowed.push('mora');
 
   const GROUPS=[
     { label:'Portales gubernamentales', keys:['dgii','tss','trabajo','sirla','idoppril','onapi','formalizate','camara','citrus'] },

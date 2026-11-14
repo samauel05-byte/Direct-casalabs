@@ -47,7 +47,8 @@ tfoot td{font-weight:700;background:var(--surf2)}
 </head>
 <body>
 <div class="hdr"><button class="back" onclick="serpBack()">← Volver</button><h1>Intereses moratorios</h1></div>
-<div class="wrap">
+<div id="deny" class="wrap" style="display:none"><div class="card"><b>Sin acceso.</b><p class="note">Este módulo es solo para personas autorizadas. Ábrelo desde Direct con tu usuario, o pide acceso a un administrador.</p></div></div>
+<div class="wrap" id="app" style="display:none">
   <div class="card noprint">
     <div class="grid">
       <label class="f">Monto adeudado (capital)<input id="cap" inputmode="decimal" placeholder="0.00"></label>
@@ -115,6 +116,9 @@ function excel(){
   const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:22},{wch:12},{wch:12},{wch:16},{wch:16},{wch:16},{wch:16},{wch:18}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Moratorios'); XLSX.writeFile(wb,'Intereses_moratorios.xlsx');
 }
+// Acceso restringido: el shell de Direct confirma si este usuario tiene el módulo; sin eso no se muestra nada.
+window.addEventListener('message',e=>{ if(e.origin!==location.origin||!e.data||e.data.action!=='mora-init')return; const ok=e.data.allowed===true; $('app').style.display=ok?'':'none'; $('deny').style.display=ok?'none':''; });
+try{ const h=serpHost(); if(h) h.postMessage({action:'mora-ready'},location.origin); else $('deny').style.display=''; }catch(e){ $('deny').style.display=''; }
 $('hasta').value=today();
 ['cap','tasa','desde','hasta','modo','fraccion','rec','tope'].forEach(id=>$(id).addEventListener('input',render));
 render();

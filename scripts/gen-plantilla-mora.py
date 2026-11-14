@@ -44,6 +44,8 @@ wp['A3'] = 'Fecha de cálculo (si no escribes fecha de pago)'; wp['B3'] = '=TODA
 wp['A4'] = 'Interés indemnizatorio'; wp['B4'] = 'Compuesto'; wp['B4'].fill = INP
 dv = DataValidation(type='list', formula1='"Compuesto,Simple"', allow_blank=False); wp.add_data_validation(dv); dv.add('B4')
 wp['A5'] = 'Compuesto = cada mes sobre el saldo con intereses acumulados; Simple = siempre sobre el impuesto.'; wp['A5'].font = Font(italic=True, color='6A5C4B')
+wp['A6'] = 'Máximo de meses de recargo e interés a pagar (amnistía; vacío = sin límite)'; wp['B6'].fill = INP
+wp['C6'] = 'Ej.: 12 si una amnistía permite pagar el impuesto más hasta un año de recargos e intereses. VERIFICAR la norma aplicable.'; wp['C6'].font = Font(italic=True, color='6A5C4B')
 wp['A7'] = 'Regímenes (ordénalos por fecha ascendente; cada fila rige desde su fecha hasta la siguiente)'; wp['A7'].font = B
 heads = ['Rige desde', 'Recargo 1.er mes (%)', 'Recargo por cada mes adicional (%)', 'Tope de recargo (%) (vacío = sin tope)', 'Interés mensual (%)', 'Fuente / nota (VERIFICAR)']
 HR = P0  # fila de encabezados
@@ -78,7 +80,7 @@ for r in range(FILAS):
     wc.cell(cr, 2, f'=IF(Liquidación!D{lr}="","",Liquidación!D{lr})')
     wc.cell(cr, 3, f'=IF(Liquidación!D{lr}="","",IF(Liquidación!E{lr}="",Parámetros!$B$3,Liquidación!E{lr}))')
     wc.cell(cr, 4, f'=IF(Liquidación!C{lr}="",0,Liquidación!C{lr})')
-    wc.cell(cr, 5, f'=IF(OR(B{cr}="",C{cr}<=B{cr}),0,MIN({N},DATEDIF(B{cr},C{cr},"m")+IF(EDATE(B{cr},DATEDIF(B{cr},C{cr},"m"))<C{cr},1,0)))')
+    wc.cell(cr, 5, f'=IF(OR(B{cr}="",C{cr}<=B{cr}),0,MIN({N},IF(Parámetros!$B$6="",{N},Parámetros!$B$6),DATEDIF(B{cr},C{cr},"m")+IF(EDATE(B{cr},DATEDIF(B{cr},C{cr},"m"))<C{cr},1,0)))')
     for k in range(1, N + 1):
         rc, sc, pc = L(RS + k - 1), L(SS + k - 1), L(PS + k - 1)
         f_per = f'EDATE($B{cr},{k - 1})'
@@ -98,7 +100,8 @@ for r in range(FILAS):
 wl = wb.create_sheet('Liquidación', 1)
 wl['A1'] = 'Liquidación de impuestos de años anteriores (recargos + intereses)'; wl['A1'].font = Font(bold=True, size=13)
 wl['A2'] = 'Escribe en las celdas amarillas. Verifica primero los regímenes de la hoja «Parámetros».'; wl['A2'].font = Font(italic=True, color='6A5C4B')
-wl['A3'] = 'Interés:'; wl['B3'] = '=Parámetros!B4'; wl['C3'] = 'Fecha de cálculo:'; wl['D3'] = '=Parámetros!B3'; wl['D3'].number_format = DT
+wl['A3'] = 'Contribuyente'; wl['A3'].font = B; wl['B3'].fill = INP; wl['C3'] = 'RNC'; wl['C3'].font = B; wl['D3'].fill = INP
+wl['A4'] = 'Interés / fecha de cálculo'; wl['B4'] = '=Parámetros!B4'; wl['C4'] = '=Parámetros!B3'; wl['C4'].number_format = DT
 H = ['Impuesto / concepto', 'Año', 'Impuesto adeudado (RD$)', 'Fecha de vencimiento', 'Fecha de pago (vacía = hoy)', 'Meses (o fracción)', 'Recargo (%)', 'Recargo (RD$)', 'Intereses (RD$)', 'Total a pagar (RD$)', 'Aviso']
 for j, h in enumerate(H, 1):
     c = wl.cell(5, j, h); c.fill = HDR; c.font = WH; c.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center'); c.border = BOX
@@ -108,7 +111,7 @@ for r in range(FILAS):
     for j in range(1, 6):
         c = wl.cell(lr, j); c.fill = INP; c.border = BOX
     wl.cell(lr, 3).number_format = MONEY; wl.cell(lr, 4).number_format = DT; wl.cell(lr, 5).number_format = DT
-    wl.cell(lr, 6, f'=IF(D{lr}="","",Calc!E{cr})')
+    wl.cell(lr, 6, f'=IF(D{lr}="","",IF(Calc!C{cr}<=Calc!B{cr},0,DATEDIF(Calc!B{cr},Calc!C{cr},"m")+IF(EDATE(Calc!B{cr},DATEDIF(Calc!B{cr},Calc!C{cr},"m"))<Calc!C{cr},1,0)))')
     wl.cell(lr, 7, f'=IF(D{lr}="","",Calc!G{cr})'); wl.cell(lr, 7).number_format = '0.00'
     wl.cell(lr, 8, f'=IF(D{lr}="","",ROUND(Calc!D{cr}*Calc!G{cr}/100,2))')
     sumr = f'SUM(Calc!{L(RS)}{cr}:{L(RS + N - 1)}{cr})'
@@ -127,5 +130,27 @@ for col, w in zip('ABCDEFGHIJK', [34, 8, 22, 18, 20, 12, 12, 16, 16, 20, 52]): w
 wl.freeze_panes = 'A6'
 # ejemplo de partida: una fila de muestra para ver el cálculo (se puede borrar)
 wl['A6'] = 'Ejemplo: ITBIS 2022 (borra o reemplaza)'; wl['B6'] = 2022; wl['C6'] = 100000; wl['D6'] = date(2023, 3, 20); wl['E6'] = date(2026, 6, 20)
+# ── Resumen por año ─────────────────────────────────────────────────────────
+wr = wb.create_sheet('Resumen por año', 2)
+wr['A1'] = 'Resumen por año fiscal'; wr['A1'].font = Font(bold=True, size=13)
+wr['A2'] = 'Suma lo escrito en «Liquidación» por la columna «Año». Solo aparecen los años con impuestos.'; wr['A2'].font = Font(italic=True, color='6A5C4B')
+for j, h in enumerate(['Año', 'Impuesto (RD$)', 'Recargo (RD$)', 'Intereses (RD$)', 'Total (RD$)'], 1):
+    c = wr.cell(4, j, h); c.fill = HDR; c.font = WH; c.border = BOX; c.alignment = Alignment(horizontal='center')
+last = 6 + FILAS - 1
+for i, y in enumerate(range(2005, 2036)):
+    r = 5 + i
+    wr.cell(r, 1, y)
+    for j, col in ((2, 'C'), (3, 'H'), (4, 'I'), (5, 'J')):
+        wr.cell(r, j, f'=IF(COUNTIF(Liquidación!$B$6:$B${last},$A{r})=0,"",SUMIF(Liquidación!$B$6:$B${last},$A{r},Liquidación!${col}$6:${col}${last}))').number_format = MONEY
+tr2 = 5 + 31
+wr.cell(tr2, 1, 'TOTAL').font = B
+for j, col in ((2, 'B'), (3, 'C'), (4, 'D'), (5, 'E')):
+    c = wr.cell(tr2, j, f'=SUM({col}5:{col}{tr2 - 1})'); c.number_format = MONEY; c.font = B
+for j in range(1, 6): wr.cell(tr2, j).fill = TOT
+for col, w in zip('ABCDE', [10, 20, 20, 20, 20]): wr.column_dimensions[col].width = w
+for w in (wl, wr, wp):
+    w.page_setup.orientation = 'landscape'; w.page_setup.fitToWidth = 1; w.page_setup.fitToHeight = 0
+    w.sheet_properties.pageSetUpPr.fitToPage = True
+wc.sheet_properties.tabColor = '9CA3AF'
 wb.save('public/mora/Plantilla_liquidacion_impuestos.xlsx')
 print('ok')

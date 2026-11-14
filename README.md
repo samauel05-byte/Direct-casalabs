@@ -112,6 +112,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — edición rápida desde la lista de Auditoría:** el botón **«✎ Editar»/«✎ Corregir»** aparece en toda factura editable (no solo en las que tienen observaciones) y abre el panel en línea con los campos importantes siempre visibles —606: tipo de bien/servicio (tipo de gasto), monto en servicios, monto en bienes e ITBIS; 607: tipo de ingreso, monto facturado e ITBIS— más los campos señalados; lo demás se edita en «Abrir detalle». **IR-17/B11 por archivo:** el botón «+ B11» del lote 606 también acepta subir el Excel (`.xlsx`, `.csv` o `.txt`; `POST batches/:id/b11` con `file_base64`/`file_name`, máx. 4 MB), que se lee con `b11.workbookToText` (primera hoja visible, primeras 12 columnas) igual que si se pegara.
 
+**NALA — filtro de NCF raro:** `GET /api/nala/invoices?has=ncf` se filtra en `list()` por `issues` que contengan `NCF_INVALIDO`, `NCF_FALTANTE`, `NCF_NO_ADMITIDO`, `NCF_19_POSICIONES` o `NCF_MODIFICADO_INVALIDO`; opción «NCF con formato raro» en `#f-has`.
+
 **NALA — listas de NCF (606):** el `PROMPT` de `lib/nala/extractor.js` incluye la regla «LISTADOS DE COMPROBANTES DE UN PROVEEDOR» (una entrada por fila: `ncf`, `fecha_emision` de la fila, `total`=`subtotal`=Monto, `itbis` null, `emisor` del título/pie/manuscrito, receptor null, se ignora la numeración manuscrita del margen) y `max_tokens` sube a 16000 para listas largas. La clave de OpenAI y su lectura no cambian.
 
 **NALA — visor (corrección):** el temporizador de `mountViewer` ya no llama a `loadingTask.destroy()` (destruía el worker compartido de pdf.js → `sendWithPromise` nulo); solo abandona la carga por rangos y reintenta con `disableRange/disableStream`.

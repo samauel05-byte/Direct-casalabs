@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA (606) — listas de NCF de bancos y procesadores: una fila por NCF**: al subir una lista como el «Comprobante fiscal por cargos» de Popular o la lista de NCF de Banco Santa Cruz, la lectura ahora devuelve **una factura por cada fila** (NCF, fecha de la fila y monto; ITBIS vacío si la fila no lo imprime), toma el nombre y RNC del proveedor del título, el pie o lo escrito a mano arriba, e ignora los números escritos a mano en el margen. Listas largas (40+ filas) ya no se cortan. Siempre queda en revisión: confirma los RNC y el tipo de gasto antes de aprobar.
 - **NALA — corregido: la imagen de la factura no salía («Cannot read properties of null (reading 'sendWithPromise')»)**: el reintento del visor del PDF destruía el lector compartido al vencer el tiempo y dejaba el visor roto. Ahora el visor ya no lo destruye: reintenta descargando el archivo completo y sigue funcionando.
 - **NALA — el nombre del proveedor se puede corregir siempre**: aunque la factura esté **aprobada** o **excluida** (o el formulario esté bloqueado), el campo del nombre del proveedor (606) / cliente (607) sigue editable con su botón **«Guardar nombre»**. No cambia el estado de la factura ni el TXT de la DGII (ahí solo va el RNC) y queda en el historial. También se puede cambiar desde «✎ Corregir» en la lista.
 - **NALA — el visor del PDF ya no se queda en «Cargando documento…»**: si el PDF no abre por partes en 15 s, reintenta descargándolo completo y, si tampoco se puede, muestra un mensaje con «Abrir original».

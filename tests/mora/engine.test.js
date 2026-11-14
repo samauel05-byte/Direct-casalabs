@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { calcular, addMonths, parseDate } = require('../../public/mora/js/engine');
+const { calcular, porAnio, tasaMensual, addMonths, parseDate } = require('../../public/mora/js/engine');
 
 test('interés compuesto mes a mes y acumulativo (3 meses, 1.10 %)', () => {
   const r = calcular({ capital: 100000, tasa: 1.1, desde: '2026-01-15', hasta: '2026-04-15', modo: 'compuesto' });
@@ -52,4 +52,17 @@ test('valida los datos y no inventa resultados', () => {
   assert.ok(calcular({ capital: 0, tasa: 1.1, desde: '2026-01-01', hasta: '2026-02-01' }).errores.length);
   assert.ok(calcular({ capital: 10, tasa: 1.1, desde: '2026-02-01', hasta: '2026-01-01' }).errores.length);
   assert.ok(calcular({ capital: 10, tasa: 1.1, desde: 'x', hasta: '2026-01-01' }).errores.length);
+});
+
+test('vista por año: suma el interés de cada año calendario y deja el saldo al cierre', () => {
+  const r = calcular({ capital: 100000, tasa: 1, desde: '2025-11-15', hasta: '2026-03-15', recargos: true });
+  const a = porAnio(r.rows);
+  assert.deepEqual(a.map(x => [x.anio, x.meses]), [[2025, 2], [2026, 2]]);
+  assert.equal(a[0].interes, Math.round((r.rows[0].interes + r.rows[1].interes) * 100) / 100);
+  assert.equal(a[1].saldoFinal, r.rows[3].saldoFinal); assert.equal(a[1].acumulado, r.intereses); assert.equal(a[1].recargoPct, 22);
+  assert.equal(Math.round((a[0].interes + a[1].interes) * 100) / 100, r.intereses);
+});
+
+test('tasa anual se convierte a mensual (anual / 12)', () => {
+  assert.equal(tasaMensual(12, 'anual'), 1); assert.equal(tasaMensual(1, 'mensual'), 1);
 });

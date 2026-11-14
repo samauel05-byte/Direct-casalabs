@@ -67,5 +67,18 @@
     const intereses = acumulado;
     return { errores: [], rows, meses, capital: r2(capital), intereses, recargoPct, recargo, total: r2(capital + intereses + recargo), modo, fraccion, tasa };
   }
-  return { calcular, addMonths, parseDate, r2 };
+  // Agrupa las filas mensuales por año calendario (año en que empieza cada mes). Devuelve, por año: meses, interés del año,
+  // saldo y interés acumulado al cierre del año y recargo acumulado al cierre.
+  function porAnio(rows) {
+    const out = [];
+    for (const x of rows) {
+      const y = Number(x.desde.slice(0, 4)); let g = out[out.length - 1];
+      if (!g || g.anio !== y) { g = { anio: y, meses: 0, interes: 0, saldoInicial: x.saldoInicial, desde: x.desde }; out.push(g); }
+      g.meses += 1; g.interes = r2(g.interes + x.interes); g.hasta = x.hasta; g.saldoFinal = x.saldoFinal; g.acumulado = x.acumulado; g.recargoPct = x.recargoPct || 0; g.recargoAcum = x.recargoAcum || 0;
+    }
+    return out;
+  }
+  // Tasa anual nominal → mensual equivalente (anual / 12).
+  const tasaMensual = (valor, periodo) => (periodo === 'anual' ? Number(valor) / 12 : Number(valor));
+  return { calcular, porAnio, tasaMensual, addMonths, parseDate, r2 };
 });

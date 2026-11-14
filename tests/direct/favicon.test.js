@@ -34,7 +34,22 @@ test('/favicon.ico es un ICO válido con imágenes PNG', () => {
   }
 });
 
-test('las páginas de módulo comparten el logo de Direct o el de su módulo', () => {
-  for (const f of ['conciliacion/index.html', 'dgii/index.html', 'estados/index.html', 'ir2/index.html', 'mora/index.html', 'monitor/index.html', 'nomina/index.html']) assert.match(fs.readFileSync(path.join(PUBLIC, f), 'utf8'), /\/img\/favicon-32\.png/);
+test('cada módulo abre con su propio logo y Direct con el suyo', () => {
+  const MOD = { 'conciliacion/index.html': 'conciliacion', 'dgii/index.html': 'dgii', 'estados/index.html': 'estados', 'ir2/index.html': 'ir2', 'mora/index.html': 'mora', 'monitor/index.html': 'monitor', 'nomina/index.html': 'nomina' };
+  for (const [f, k] of Object.entries(MOD)) {
+    const html = fs.readFileSync(path.join(PUBLIC, f), 'utf8');
+    assert.match(html, new RegExp(`/img/favicon-${k}-32\\.png`), `${f} debe usar su ícono propio`);
+    assert.doesNotMatch(html, /\/img\/favicon-32\.png|href="\/favicon\.ico"/, `${f} no debe usar el ícono de Direct`);
+  }
   assert.match(fs.readFileSync(path.join(PUBLIC, 'nala/index.html'), 'utf8'), /favicon-nala-32\.png/);
+  assert.match(fs.readFileSync(path.join(PUBLIC, 'cami/index.html'), 'utf8'), /assets\/favicon-32\.png/);
+});
+
+test('los íconos de pestaña no tienen fondo negro (esquinas transparentes o color de marca)', () => {
+  const zlib = require('zlib');
+  const png = f => { const b = fs.readFileSync(path.join(PUBLIC, 'img', f)); let o = 8, idat = [], w, h, ct; while (o < b.length) { const len = b.readUInt32BE(o), t = b.slice(o + 4, o + 8).toString(); if (t === 'IHDR') { w = b.readUInt32BE(o + 8); h = b.readUInt32BE(o + 12); ct = b[o + 17]; } if (t === 'IDAT') idat.push(b.slice(o + 8, o + 8 + len)); o += 12 + len; } return { w, h, ct, raw: zlib.inflateSync(Buffer.concat(idat)) }; };
+  for (const f of ['favicon-32.png', 'favicon-48.png', 'favicon-nomina-32.png', 'favicon-mora-32.png']) {
+    const { ct } = png(f); assert.equal(ct, 6, `${f} debe ser RGBA (con transparencia en las esquinas)`);
+  }
+  const big = png('apple-touch-icon.png'); assert.ok(big.ct === 2 || big.ct === 6);
 });

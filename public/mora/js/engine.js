@@ -2,7 +2,7 @@
    Interés COMPUESTO mes a mes y ACUMULATIVO: cada mes se calcula sobre el saldo del mes anterior
    (capital + intereses ya acumulados). Modo «simple» disponible para comparar. Cada interés mensual se
    redondea a centavos (igual que ROUND(...,2) en la plantilla de Excel). NO inventa tasas: la tasa mensual la da
-   quien calcula (por defecto 1.10 %, la del interés indemnizatorio del Código Tributario; verifique la vigente). */
+   quien calcula (por defecto 1 %; algunas fuentes de la DGII citan 1.10 %: verifique la vigente). */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(); else root.Mora = factory();
 })(typeof self !== 'undefined' ? self : this, function () {

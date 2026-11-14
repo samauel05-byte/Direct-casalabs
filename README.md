@@ -112,6 +112,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — edición rápida desde la lista de Auditoría:** el botón **«✎ Editar»/«✎ Corregir»** aparece en toda factura editable (no solo en las que tienen observaciones) y abre el panel en línea con los campos importantes siempre visibles —606: tipo de bien/servicio (tipo de gasto), monto en servicios, monto en bienes e ITBIS; 607: tipo de ingreso, monto facturado e ITBIS— más los campos señalados; lo demás se edita en «Abrir detalle». **IR-17/B11 por archivo:** el botón «+ B11» del lote 606 también acepta subir el Excel (`.xlsx`, `.csv` o `.txt`; `POST batches/:id/b11` con `file_base64`/`file_name`, máx. 4 MB), que se lee con `b11.workbookToText` (primera hoja visible, primeras 12 columnas) igual que si se pegara.
 
+**NALA — visor (corrección):** el temporizador de `mountViewer` ya no llama a `loadingTask.destroy()` (destruía el worker compartido de pdf.js → `sendWithPromise` nulo); solo abandona la carga por rangos y reintenta con `disableRange/disableStream`.
+
 **NALA — nombre de la contraparte:** `POST /api/nala/invoices/:id/counterpart-name` (`renameCounterpart`, permiso `edit`, `{ name, version }`) cambia solo `emisor_nombre` (606) / `receptor_nombre` (607) y `counterpart_name` en cualquier estado sin cambiar el estado; lo marca como corregido y lo registra como evento `saved`. UI: botón `#rename-cp` en el detalle cuando el formulario está bloqueado. **Visor de PDF:** `mountViewer` abre por rangos (15 s) y reintenta con `disableRange/disableStream` (90 s); si falla muestra el error.
 
 **NALA — edición en línea:** `buildEditor` (`views-audit.js`) muestra siempre `emisor_nombre` (606) / `receptor_nombre` (607) además de los campos señalados y los de tipo/montos/ITBIS.

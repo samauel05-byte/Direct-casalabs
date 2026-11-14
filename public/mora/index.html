@@ -50,35 +50,32 @@ tfoot td{font-weight:700;background:var(--surf2)}
 <div id="deny" class="wrap" style="display:none"><div class="card"><b>Sin acceso.</b><p class="note">Este módulo es solo para personas autorizadas. Ábrelo desde Direct con tu usuario, o pide acceso a un administrador.</p></div></div>
 <div class="wrap" id="app" style="display:none">
   <div class="card noprint">
-    <div class="note" style="margin:0 0 10px"><b>Calcula como la calculadora de recargos e intereses de la DGII</b>: recargo por mora e interés indemnizatorio por separado, con el régimen de cada mes, y el resultado mes por mes o año por año.</div>
+    <h2 style="margin:0 0 4px;font-size:16px">Calculadora de recargos e intereses</h2>
+    <div class="note" style="margin:0 0 12px">Igual que la de la DGII (impuesto, mes, año, monto y fecha de pago previstos), y además puedes ver el detalle <b>mes por mes o año por año</b>.</div>
     <div class="grid">
-      <label class="f">Monto del impuesto adeudado (RD$)<input id="cap" inputmode="decimal" placeholder="Ej: 10,000"></label>
-      <label class="f">Fecha de vencimiento (inicio de la mora)<input id="desde" type="date"></label>
+      <label class="f">Seleccionar el impuesto<select id="vimp"><option value="ITB">ITB — ITBIS</option><option value="IR1">IR1 — Impuesto a la renta pers. físicas</option><option value="IR2">IR2 — Impuesto a la renta sociedades</option><option value="OTRO">Otro — escribo la fecha de vencimiento</option></select></label>
+      <label class="f" id="lmes">Seleccionar el mes<select id="vmes"></select></label>
+      <label class="f" id="lanio">Seleccionar el año<input id="vanio" inputmode="numeric" maxlength="4" placeholder="Ej: 2024"></label>
+      <label class="f">Monto del impuesto (RD$)<input id="cap" inputmode="decimal" placeholder="Ej: 10,000"></label>
       <label class="f">Fecha de pago prevista<input id="hasta" type="date"></label>
-      <label class="f">Interés indemnizatorio (%)<span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><input id="tasa" inputmode="decimal" value="1.10"><select id="tper" style="width:120px"><option value="mensual">por mes</option><option value="anual">por año</option></select></span></label>
-      <label class="f">Cálculo del interés<select id="modo"><option value="simple">Como la DGII: simple (tasa × meses)</option><option value="compuesto">Compuesto: interés sobre interés (acumulativo)</option></select></label>
-      <label class="f">Ver el resultado<select id="vista"><option value="mes">Mes por mes</option><option value="anio">Año por año</option></select></label>
-      <label class="f">Último mes incompleto<select id="fraccion"><option value="completo">Cuenta como mes completo (DGII)</option><option value="prorrata">Prorrata por días</option></select></label>
+      <label class="f">Ver el detalle<select id="vista"><option value="mes">Mes por mes</option><option value="anio">Año por año</option></select></label>
     </div>
-    <details style="margin-top:10px"><summary><b>¿No sabes la fecha de vencimiento? Calcúlala por impuesto, mes y año</b></summary>
+    <details style="margin-top:12px"><summary><b>Opciones avanzadas</b> (vencimiento, tasa de interés, método)</summary>
       <div class="grid" style="margin-top:8px">
-        <label class="f">Impuesto<select id="vimp"><option value="ITB">ITB — ITBIS</option><option value="IR1">IR1 — Renta personas físicas</option><option value="IR2">IR2 — Renta sociedades</option></select></label>
-        <label class="f">Mes<select id="vmes"></select></label>
-        <label class="f">Año<input id="vanio" inputmode="numeric" maxlength="4" placeholder="2024"></label>
-        <label class="f">&nbsp;<button class="btn" id="vbtn" type="button">Poner el vencimiento</button></label>
+        <label class="f">Fecha de vencimiento (se calcula sola; cámbiala si hace falta)<input id="desde" type="date"></label>
+        <label class="f">Interés indemnizatorio (%)<span class="row" style="margin:0;gap:6px;flex-wrap:nowrap"><input id="tasa" inputmode="decimal" value="1.10"><select id="tper" style="width:120px"><option value="mensual">por mes</option><option value="anual">por año</option></select></span></label>
+        <label class="f">Cálculo del interés<select id="modo"><option value="simple">Como la DGII: simple (tasa × meses)</option><option value="compuesto">Compuesto: interés sobre interés (acumulativo)</option></select></label>
+        <label class="f">Último mes incompleto<select id="fraccion"><option value="completo">Cuenta como mes completo (DGII)</option><option value="prorrata">Prorrata por días</option></select></label>
       </div>
-      <div class="note" id="vnota" style="margin-top:6px">ITBIS: día 20 del mes siguiente. IR-1: 31 de marzo del año siguiente. IR-2: 120 días después del cierre del ejercicio (el mes es el de cierre). La DGII puede correr la fecha por feriados o fin de semana: verifícala.</div>
-    </details>
-    <div class="row" style="margin-top:10px;align-items:center"><label class="chk"><input type="checkbox" id="rec" checked> Incluir el recargo por mora (aparte del interés)</label></div>
-    <details style="margin-top:8px"><summary><b>Régimen de recargo por mora (editable)</b></summary>
-      <div class="tw" style="margin-top:8px"><table style="white-space:normal"><thead><tr><th>Rige desde (mes que empieza)</th><th>Primer mes (%)</th><th>Cada mes adicional (%)</th><th>Tope (%) (vacío = sin tope)</th></tr></thead><tbody>
+      <div class="row" style="margin-top:10px;align-items:center"><label class="chk"><input type="checkbox" id="rec" checked> Incluir el recargo por mora (aparte del interés)</label></div>
+      <div class="tw" style="margin-top:8px"><table style="white-space:normal"><thead><tr><th>Régimen de recargo: rige desde (mes que empieza)</th><th>Primer mes (%)</th><th>Cada mes adicional (%)</th><th>Tope (%) (vacío = sin tope)</th></tr></thead><tbody>
         <tr><td><input id="rg0d" type="date" value="1992-01-01"></td><td><input id="rg0p" inputmode="decimal" value="10"></td><td><input id="rg0a" inputmode="decimal" value="4"></td><td><input id="rg0t" inputmode="decimal" placeholder="sin tope"></td></tr>
         <tr><td><input id="rg1d" type="date" value="2026-06-30"></td><td><input id="rg1p" inputmode="decimal" value="3"></td><td><input id="rg1a" inputmode="decimal" value="3"></td><td><input id="rg1t" inputmode="decimal" value="100"></td></tr>
       </tbody></table></div>
-      <div class="note" style="margin-top:6px">Cada mes de mora usa el régimen vigente cuando ese mes empieza. El recargo del primer mes es el «primer mes»; cada mes siguiente suma el «adicional», sin pasar del tope y sin bajar de lo ya acumulado (por eso un recargo que ya pasó de 100 % se conserva). Régimen 1: Art. 252 (10 % + 4 %). Régimen 2: Ley 30-26 (3 % por mes, tope 100 %).</div>
+      <div class="note" style="margin-top:6px">Cada mes de mora usa el régimen vigente cuando ese mes empieza: el primer mes es el «primer mes»; cada mes siguiente suma el «adicional», sin pasar del tope y sin bajar de lo ya acumulado. Régimen 1: Art. 252 (10 % + 4 %). Régimen 2: Ley 30-26 (3 % por mes, tope 100 %).</div>
     </details>
-    <div class="note" style="margin-top:8px">¿Varios impuestos o años a la vez? Descarga la <a href="/mora/Plantilla_liquidacion_impuestos.xlsx" download><b>plantilla de liquidación año por año (Excel)</b></a>.</div>
-    <div class="note" style="margin-top:8px">Verificado contra 4 consultas a la calculadora de la DGII (ITBIS, IR-1 e IR-2; pago 20/11/2026): coincide al centavo en recargo, interés y total. La fecha exacta en que cambia el régimen se dedujo de esas consultas; confirma cualquier caso límite en la calculadora oficial: dgii.gov.do/herramientas/calculadoras. La tasa de interés es editable y puede ser por mes o por año (anual / 12).</div>
+    <div class="note" style="margin-top:8px" id="vnota">Vencimientos: ITBIS día 20 del mes siguiente; IR-1 31 de marzo del año siguiente; IR-2 120 días después del cierre (el mes es el de cierre). La DGII puede correr la fecha por feriados o fin de semana: verifícala en «Opciones avanzadas».</div>
+    <div class="note" style="margin-top:8px">¿Varios impuestos o años a la vez? Descarga la <a href="/mora/Plantilla_liquidacion_impuestos.xlsx" download><b>plantilla de liquidación año por año (Excel)</b></a>. Verificado contra 4 consultas a la calculadora oficial de la DGII (dgii.gov.do/herramientas/calculadoras): coincide al centavo; confirma casos límite allí.</div>
     <div id="err" class="err"></div>
   </div>
   <div id="out"></div>
@@ -108,14 +105,18 @@ function tabla(r){
 function render(){
   const r=Mora.calcular(read()); LAST=r.errores&&r.errores.length?null:r;
   $('err').textContent=''; const out=$('out');
-  if(!LAST){ $('err').textContent=(r.errores||[]).join(' '); if(!$('cap').value){$('err').textContent='';} out.innerHTML=''; return; }
+  if(!LAST){ $('err').textContent=(r.errores||[]).join(' ').replace('La fecha de inicio no es válida.','Indica el año del impuesto (o la fecha de vencimiento en «Opciones avanzadas»).'); if(!$('cap').value){$('err').textContent='';} out.innerHTML=''; return; }
+  const NOM={ITB:'ITB — ITBIS',IR1:'IR1 — Impuesto a la renta pers. físicas',IR2:'IR2 — Impuesto a la renta sociedades',OTRO:'Otro impuesto'}[$('vimp').value];
   out.innerHTML=`<div class="card"><div class="kpis">
-    <div class="kpi"><span>Capital</span><b>${money(r.capital)}</b></div>
-    <div class="kpi"><span>Vencimiento original</span><b>${dmy(r.rows[0].desde)}</b></div>
-    <div class="kpi"><span>Meses en mora (o fracción)</span><b>${r.meses}</b></div>
-    <div class="kpi"><span>Interés indemnizatorio (DGII)</span><b>${money(r.intereses)}</b></div>
-    ${r.recargoPct?`<div class="kpi"><span>Recargo por mora (${r.recargoPct} %)</span><b>${money(r.recargo)}</b></div>`:''}
-    <div class="kpi tot"><span>Total a pagar</span><b>${money(r.total)}</b></div></div></div>
+    <div class="kpi"><span>Nombre del impuesto</span><b style="font-size:15px">${NOM}</b></div>
+    <div class="kpi"><span>Recargos${r.recargoPct?` (${r.recargoPct} %)`:''}</span><b>${money(r.recargo)}</b></div>
+    <div class="kpi"><span>Interés${r.modo==='compuesto'?' (compuesto)':''}</span><b>${money(r.intereses)}</b></div>
+    <div class="kpi"><span>Monto del impuesto</span><b>${money(r.capital)}</b></div>
+    <div class="kpi"><span>Fecha de vencimiento original</span><b>${dmy(r.vencimiento)}</b></div>
+    <div class="kpi"><span>Fecha de vencimiento próxima</span><b>${dmy(r.proximo)}</b></div>
+    <div class="kpi"><span>Meses en mora</span><b>${r.meses}</b></div>
+    <div class="kpi tot"><span>Total</span><b>${money(r.total)}</b></div></div>
+    <p class="note" style="margin:10px 0 0"><b>Base legal.</b> Recargos: Art. 252 del Código Tributario, modificado por la Ley núm. 30-26 del 18 de junio de 2026 (3 % por cada mes o fracción de mes, sin exceder el 100 % del tributo; antes, 10 % el primer mes y 4 % por cada mes adicional). Interés indemnizatorio: Art. 27 del Código Tributario, por cada mes o fracción de mes en mora, a la tasa fijada por la DGII.</p></div>
   <div class="card"><div class="tw">${tabla(r)}</div>
   <div class="row noprint"><button class="btn pri" id="xl">Descargar Excel (con fórmulas)</button><button class="btn" id="cp">Copiar tabla</button><button class="btn" onclick="window.print()">Imprimir / PDF</button></div>
   <p class="note">Cálculo ${r.modo==='compuesto'?'compuesto: cada mes se calcula sobre el saldo del mes anterior (capital + intereses acumulados)':'simple: cada mes se calcula solo sobre el capital'}. Cada interés mensual se redondea a centavos. ${r.rows.some(x=>!x.completo)?(r.fraccion==='completo'?'El último mes incompleto cuenta como mes completo.':'El último mes incompleto se prorratea por días.'):''}</p></div>`;
@@ -153,9 +154,13 @@ function excel(){
 window.addEventListener('message',e=>{ if(e.origin!==location.origin||!e.data||e.data.action!=='mora-init')return; const ok=e.data.allowed===true; $('app').style.display=ok?'':'none'; $('deny').style.display=ok?'none':''; });
 try{ const h=serpHost(); if(h) h.postMessage({action:'mora-ready'},location.origin); else $('deny').style.display=''; }catch(e){ $('deny').style.display=''; }
 $('vmes').innerHTML=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'].map((n,i)=>`<option value="${i+1}">${n}</option>`).join('');
-$('vmes').value='12'; $('vbtn').onclick=()=>{ const v=Mora.vencimiento($('vimp').value,$('vmes').value,$('vanio').value); if(!v){ $('vnota').style.color='var(--bad)'; $('vnota').textContent='Escribe un año válido (y el mes que corresponda).'; return; } $('desde').value=v; $('vnota').style.color=''; $('vnota').textContent='Vencimiento calculado: '+dmy(v)+'. La DGII puede correr la fecha por feriados o fin de semana: verifícala.'; render(); };
-$('vimp').onchange=()=>{ $('vmes').disabled=$('vimp').value==='IR1'; };
-$('hasta').value=today();
+$('vmes').value='12';
+function autoVenc(){ const t=$('vimp').value; $('lmes').style.display=(t==='IR1'||t==='OTRO')?'none':''; $('lanio').style.display=t==='OTRO'?'none':'';
+  if(t==='OTRO'){ render(); return; }
+  const v=Mora.vencimiento(t,$('vmes').value,$('vanio').value); if(v){ $('desde').value=v; $('vnota').style.color=''; } else { $('desde').value=''; }
+  render(); }
+['vimp','vmes','vanio'].forEach(id=>$(id).addEventListener('input',autoVenc));
+$('hasta').value=today(); autoVenc();
 ['cap','tasa','tper','vista','desde','hasta','modo','fraccion','rec','rg0d','rg0p','rg0a','rg0t','rg1d','rg1p','rg1a','rg1t'].forEach(id=>$(id).addEventListener('input',render));
 render();
 </script>

@@ -74,7 +74,9 @@
     const recargoPct = opts.recargos && meses ? rows[meses - 1].recargoPct : 0;
     const recargo = r2(capital * recargoPct / 100);
     const intereses = acumulado;
-    return { errores: [], rows, meses, capital: r2(capital), intereses, recargoPct, recargo, total: r2(capital + intereses + recargo), modo, fraccion, tasa };
+    // Próximo vencimiento (como la DGII): primer aniversario mensual del vencimiento que es igual o posterior a la fecha de pago.
+    const proximo = fmt(addMonths(desde, meses));
+    return { errores: [], rows, meses, capital: r2(capital), intereses, recargoPct, recargo, total: r2(capital + intereses + recargo), modo, fraccion, tasa, vencimiento: fmt(desde), proximo };
   }
   // Agrupa las filas mensuales por año calendario (año en que empieza cada mes). Devuelve, por año: meses, interés del año,
   // saldo y interés acumulado al cierre del año y recargo acumulado al cierre.

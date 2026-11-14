@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA — corregido: la imagen de la factura no salía («Cannot read properties of null (reading 'sendWithPromise')»)**: el reintento del visor del PDF destruía el lector compartido al vencer el tiempo y dejaba el visor roto. Ahora el visor ya no lo destruye: reintenta descargando el archivo completo y sigue funcionando.
 - **NALA — el nombre del proveedor se puede corregir siempre**: aunque la factura esté **aprobada** o **excluida** (o el formulario esté bloqueado), el campo del nombre del proveedor (606) / cliente (607) sigue editable con su botón **«Guardar nombre»**. No cambia el estado de la factura ni el TXT de la DGII (ahí solo va el RNC) y queda en el historial. También se puede cambiar desde «✎ Corregir» en la lista.
 - **NALA — el visor del PDF ya no se queda en «Cargando documento…»**: si el PDF no abre por partes en 15 s, reintenta descargándolo completo y, si tampoco se puede, muestra un mensaje con «Abrir original».
 - **NALA — editar el nombre del proveedor desde la lista**: el botón «✎ Editar/Corregir» de la lista ahora incluye siempre el **nombre del proveedor** (606) o del cliente (607), junto a tipo de gasto, montos e ITBIS; antes solo se podía cambiar abriendo el detalle de la factura.

@@ -403,11 +403,12 @@
           if (NALA.cache.viewerPdf?.key !== key) {
             if (!canvasBox.querySelector('canvas')) canvasBox.innerHTML = '<div class="muted" style="padding:16px">Cargando documento…</div>';
             // Por rangos (rápido); si el servidor no los atiende o tarda demasiado, se reintenta descargando el archivo completo.
-            const open = opts => { const task = pdfjsLib.getDocument({ url: info.url, ...opts }); return Promise.race([task.promise, new Promise((_, rej) => setTimeout(() => { try { task.destroy(); } catch (e) { /* nada */ } rej(new Error('tiempo de espera agotado')); }, opts.timeout || 20000))]); };
+            const open = opts => { const task = pdfjsLib.getDocument({ url: info.url, ...opts }); return Promise.race([task.promise, new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo de espera agotado')), opts.timeout || 20000))]); };
             let pdfDoc;
             try { pdfDoc = await open({ disableAutoFetch: true, rangeChunkSize: 262144, timeout: 15000 }); }
             catch (e1) {
               canvasBox.innerHTML = '<div class="muted" style="padding:16px">Cargando documento completo… (puede tardar con archivos grandes)</div>';
+              NALA.cache.viewerPdf = null;
               try { pdfDoc = await open({ disableRange: true, disableStream: true, timeout: 90000 }); }
               catch (e2) { throw new Error('No se pudo abrir el PDF (' + (e2.message || e1.message) + '). Usa «Abrir original» o reintenta.'); }
             }

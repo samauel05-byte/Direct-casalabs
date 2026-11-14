@@ -27,7 +27,7 @@ txt = [
  ('4. Total a pagar = impuesto + recargo + interés. Cada «mes o fracción» cuenta como mes completo.', False),
  ('', False),
  ('IMPORTANTE — LOS PARÁMETROS SON EDITABLES Y DEBEN VERIFICARSE', True),
- ('Las tasas y reglas cambian por ley. Los regímenes precargados en «Parámetros» salen de fuentes públicas (DGII y referencias secundarias, que no coinciden del todo) y están marcados como VERIFICAR. Antes de usar un resultado, confirma cada régimen (porcentajes, tope, fecha de vigencia y tasa de interés de cada período) con la ley vigente en cada año o con la DGII, y corrige la tabla si hace falta.', False),
+ ('Las tasas y reglas cambian por ley. Los dos regímenes precargados en «Parámetros» reproducen al centavo 4 consultas a la calculadora de recargos e intereses de la DGII (dgii.gov.do/herramientas/calculadoras, 14-nov-2026: ITBIS, IR-1 e IR-2). Los años anteriores a 2015 y la fecha exacta del cambio de régimen no están verificados. Antes de usar un resultado, confirma cada régimen (porcentajes, tope, fecha de vigencia y tasa de interés de cada período) con la ley vigente en cada año o con la DGII, y corrige la tabla si hace falta.', False),
  ('El interés indemnizatorio de la Ley 30-26 (tasa del Banco Central + 30 puntos básicos) es variable: debes escribir la tasa mensual que corresponda; mientras esté vacía la hoja avisa en rojo y no da el resultado por bueno.', False),
  ('Fuentes consultadas (secundarias, verificar): https://siemprealdia.co/republica-dominicana/impuestos/recargos-por-mora-e-interes-indemnizatorio-dgii/ · https://ayuda.dgii.gov.do/conversations/informacin-general/ca516-qu-porcentaje-de-recargos-por-mora-e-inters-indemnizatorio-se-les-aplica-a-los-impuestos-que-dejo-de-pagar-en-su-fecha-lmite/5f3c176d8cd858ce879d2f10 · Código Tributario Ley 11-92 (dgii.gov.do)', False),
  ('No incluye amnistías, descuentos por pronto pago, multas ni sanciones: solo recargos e intereses.', False),
@@ -41,7 +41,7 @@ ws0.column_dimensions['A'].width = 120
 wp = wb.create_sheet('Parámetros')
 wp['A1'] = 'Parámetros de la liquidación'; wp['A1'].font = Font(bold=True, size=13)
 wp['A3'] = 'Fecha de cálculo (si no escribes fecha de pago)'; wp['B3'] = '=TODAY()'; wp['B3'].number_format = DT; wp['B3'].fill = INP
-wp['A4'] = 'Interés indemnizatorio'; wp['B4'] = 'Compuesto'; wp['B4'].fill = INP
+wp['A4'] = 'Interés indemnizatorio'; wp['B4'] = 'Simple'; wp['B4'].fill = INP
 dv = DataValidation(type='list', formula1='"Compuesto,Simple"', allow_blank=False); wp.add_data_validation(dv); dv.add('B4')
 wp['A5'] = 'Compuesto = cada mes sobre el saldo con intereses acumulados; Simple = siempre sobre el impuesto.'; wp['A5'].font = Font(italic=True, color='6A5C4B')
 wp['A6'] = 'Máximo de meses de recargo e interés a pagar (amnistía; vacío = sin límite)'; wp['B6'].fill = INP
@@ -50,8 +50,8 @@ wp['A7'] = 'Regímenes (ordénalos por fecha ascendente; cada fila rige desde su
 heads = ['Rige desde', 'Recargo 1.er mes (%)', 'Recargo por cada mes adicional (%)', 'Tope de recargo (%) (vacío = sin tope)', 'Interés mensual (%)', 'Fuente / nota (VERIFICAR)']
 HR = P0  # fila de encabezados
 rows = [
- (date(2001, 1, 1), 10, 4, None, 1.00, 'Recargo 10 % el primer mes + 4 % por cada mes adicional (Art. 252, mod. Ley 147-00). Interés indemnizatorio 1 % mensual según indicación de Contabilidad (fuentes de la DGII citan 1.10 %: VERIFICAR). Antes de ~2015 el interés pudo ser distinto (Art. 27: tasa de la Junta Monetaria + 30 %). Tope: confirmar.'),
- (date(2026, 7, 1), 3, 3, 100, None, 'VERIFICAR. Ley 30-26: recargo 3 % mensual con tope 100 % del tributo; interés = tasa del Banco Central + 0.30 pts (ESCRIBE la tasa mensual vigente). Vigencia: fuentes dicen 18-jun-2026 o 01-jul-2026.'),
+ (date(2001, 1, 1), 10, 4, None, 1.10, 'Recargo 10 % el primer mes + 4 % por cada mes adicional, sin tope (Art. 252). Interés indemnizatorio 1.10 % mensual SIMPLE, como lo calcula la calculadora de la DGII (verificado con consultas del 14-nov-2026). Antes de ~2015 el interés pudo ser distinto (Art. 27): VERIFICAR años anteriores.'),
+ (date(2026, 6, 30), 3, 3, 100, 1.10, 'Ley 30-26 (18-jun-2026): recargo 3 % por mes con tope 100 %; un recargo ya acumulado mayor se conserva. La calculadora de la DGII sigue aplicando 1.10 % de interés. La fecha 30-jun-2026 (mes que empieza desde esa fecha) se dedujo de 4 consultas a la calculadora de la DGII: confirma casos límite.'),
 ]
 for j, h in enumerate(heads, 1):
     c = wp.cell(HR, j, h); c.fill = HDR; c.font = WH; c.alignment = Alignment(wrap_text=True, vertical='center'); c.border = BOX
@@ -93,7 +93,7 @@ for r in range(FILAS):
             wc[f'{pc}{cr}'] = f'=IF({k}>$E{cr},0,MIN({cap},IFERROR(INDEX({PB},{m}),0)))'
         else:
             pp = f'{L(PS + k - 2)}{cr}'
-            wc[f'{pc}{cr}'] = f'=IF({k}>$E{cr},{pp},MIN({cap},{pp}+IFERROR(INDEX({PC},{m}),0)))'
+            wc[f'{pc}{cr}'] = f'=IF({k}>$E{cr},{pp},MAX({pp},MIN({cap},{pp}+IFERROR(INDEX({PC},{m}),0))))'
     wc.cell(cr, 6, f'={L(SS + N - 1)}{cr}'); wc.cell(cr, 7, f'={L(PS + N - 1)}{cr}')
 
 # ── Liquidación ─────────────────────────────────────────────────────────────

@@ -86,3 +86,11 @@ test('fecha de vencimiento por impuesto (ITBIS día 20 del mes siguiente, IR-1 3
   assert.equal(vencimiento('IR1', 12, 2024), '2025-03-31'); assert.equal(vencimiento('IR2', 12, 2024), '2025-04-30');
   assert.equal(vencimiento('IR2', 6, 2025), '2025-10-28'); assert.equal(vencimiento('XX', 1, 2025), null);
 });
+
+test('monto no redondo: 4,375 (ITBIS 06/2025, pago 20/11/2026) coincide con la DGII al centavo', () => {
+  assert.equal(vencimiento('ITB', 6, 2025), '2025-07-21'); // el 20 cae en domingo → lunes
+  const r = calcular({ capital: 4375, tasa: 1.1, desde: '2025-07-21', hasta: '2026-11-20', modo: 'simple', recargos: true });
+  assert.equal(r.meses, 16); assert.equal(r.intereses, 770); assert.equal(r.recargo, 2887.5); assert.equal(r.total, 8032.5);
+  assert.equal(r.proximo, '2026-11-21');
+  assert.equal(Math.round(r.rows.reduce((t, x) => t + x.interes, 0) * 100) / 100, 770); // los meses suman el total
+});

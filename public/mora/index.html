@@ -138,9 +138,9 @@ function excel(){
   r.rows.forEach((x,i)=>{const row=first+i;
     aoa.push([x.n,D(x.desde),D(x.hasta),{t:'n',v:x.factor},
       i===0||!comp?{t:'n',f:'$B$3',v:x.saldoInicial,z:'#,##0.00'}:{t:'n',f:'G'+(row-1),v:x.saldoInicial,z:'#,##0.00'},
-      {t:'n',f:comp?`ROUND(E${row}*($B$4/100)*D${row},2)`:`ROUND($B$3*($B$4/100)*D${row},2)`,v:x.interes,z:'#,##0.00'},
+      {t:'n',f:comp?`ROUND(E${row}*($B$4/100)*D${row},2)`:(i===0?`H${row}`:`H${row}-H${row-1}`),v:x.interes,z:'#,##0.00'},
       {t:'n',f:comp?`E${row}+F${row}`:`$B$3+H${row}`,v:x.saldoFinal,z:'#,##0.00'},
-      {t:'n',f:`SUM(F$${first}:F${row})`,v:x.acumulado,z:'#,##0.00'}]);});
+      {t:'n',f:comp?`SUM(F$${first}:F${row})`:`ROUND($B$3*($B$4/100)*SUM(D$${first}:D${row}),2)`,v:x.acumulado,z:'#,##0.00'}]);});
   aoa.push([]);aoa.push(['Total intereses',null,null,null,null,{t:'n',f:`SUM(F${first}:F${last})`,v:r.intereses,z:'#,##0.00'}]);
   const tr=last+2; let tot=r.total;
   if(r.recargoPct){aoa.push(['Recargos ('+r.recargoPct+' %)',null,null,null,null,N(r.recargo)]);}

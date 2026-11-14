@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { calcular, porAnio, tasaMensual, addMonths, parseDate } = require('../../public/mora/js/engine');
+const { calcular, porAnio, tasaMensual, vencimiento, addMonths, parseDate } = require('../../public/mora/js/engine');
 
 test('interés compuesto mes a mes y acumulativo (3 meses, 1.10 %)', () => {
   const r = calcular({ capital: 100000, tasa: 1.1, desde: '2026-01-15', hasta: '2026-04-15', modo: 'compuesto' });
@@ -30,12 +30,12 @@ test('fin de mes: 31 ene + 1 mes = 28 feb, sin arrastrar el día', () => {
   assert.equal(addMonths(parseDate('2026-01-31'), 2).toISOString().slice(0, 10), '2026-03-31');
 });
 
-test('recargos opcionales: 10 % + 4 % por mes adicional; tope solo si se indica', () => {
+test('recargos: 10 % + 4 % por mes adicional (régimen anterior); tope solo si el régimen lo trae', () => {
   assert.equal(calcular({ capital: 1000, tasa: 1.1, desde: '2026-01-01', hasta: '2026-01-20', recargos: true }).recargoPct, 10);
   assert.equal(calcular({ capital: 1000, tasa: 1.1, desde: '2026-01-01', hasta: '2026-04-01', recargos: true }).recargoPct, 18);
   const sin = calcular({ capital: 1000, tasa: 1.1, desde: '2024-01-01', hasta: '2026-01-01', recargos: true });
   assert.equal(sin.recargoPct, 10 + 4 * 23); assert.equal(sin.recargo, 1020);
-  const con = calcular({ capital: 1000, tasa: 1.1, desde: '2024-01-01', hasta: '2026-01-01', recargos: true, topeRecargo: 100 });
+  const con = calcular({ capital: 1000, tasa: 1.1, desde: '2024-01-01', hasta: '2026-01-01', recargos: true, regimenes: [{ desde: '1992-01-01', primerMes: 10, adicional: 4, tope: 100 }] });
   assert.equal(con.recargoPct, 100); assert.equal(con.recargo, 1000);
   assert.equal(calcular({ capital: 1000, tasa: 1.1, desde: '2026-01-01', hasta: '2026-04-01' }).recargo, 0);
 });
@@ -65,4 +65,24 @@ test('vista por año: suma el interés de cada año calendario y deja el saldo a
 
 test('tasa anual se convierte a mensual (anual / 12)', () => {
   assert.equal(tasaMensual(12, 'anual'), 1); assert.equal(tasaMensual(1, 'mensual'), 1);
+});
+
+// Casos reales de la calculadora de la DGII (consultados el 14-nov-2026; pago previsto 20/11/2026, impuesto RD$100,000).
+const DGII = [
+  { n: 'ITBIS 03/2023', v: '2023-04-20', meses: 43, recargo: 162000, interes: 47300, total: 309300 },
+  { n: 'ITBIS 03/2026', v: '2026-04-21', meses: 7, recargo: 30000, interes: 7700, total: 137700 },
+  { n: 'IR-2 12/2024', v: '2025-04-30', meses: 19, recargo: 77000, interes: 20900, total: 197900 },
+  { n: 'IR-1 12/2024', v: '2025-03-31', meses: 20, recargo: 81000, interes: 22000, total: 203000 },
+];
+for (const c of DGII) {
+  test('coincide con la calculadora de la DGII: ' + c.n, () => {
+    const r = calcular({ capital: 100000, tasa: 1.1, desde: c.v, hasta: '2026-11-20', modo: 'simple', recargos: true });
+    assert.equal(r.meses, c.meses); assert.equal(r.recargo, c.recargo); assert.equal(r.intereses, c.interes); assert.equal(r.total, c.total);
+  });
+}
+
+test('fecha de vencimiento por impuesto (ITBIS día 20 del mes siguiente, IR-1 31 de marzo, IR-2 120 días tras el cierre)', () => {
+  assert.equal(vencimiento('ITB', 3, 2023), '2023-04-20'); assert.equal(vencimiento('ITB', 12, 2024), '2025-01-20');
+  assert.equal(vencimiento('IR1', 12, 2024), '2025-03-31'); assert.equal(vencimiento('IR2', 12, 2024), '2025-04-30');
+  assert.equal(vencimiento('IR2', 6, 2025), '2025-10-28'); assert.equal(vencimiento('XX', 1, 2025), null);
 });

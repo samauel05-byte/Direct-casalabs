@@ -8,6 +8,10 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   const r2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
   const DAY = 86400000;
+  // Régimen de recargos por mora tal como lo aplica la calculadora de la DGII (verificado con consultas reales, ver README):
+  // hasta el 29-jun-2026 (mes que empieza antes del 30-jun-2026): 10 % el primer mes + 4 % por cada mes adicional, sin tope;
+  // desde entonces (Ley 30-26): 3 % por mes con tope de 100 %. Las fechas y porcentajes son editables.
+  const REGIMENES_DGII = [{ desde: '1992-01-01', primerMes: 10, adicional: 4, tope: null }, { desde: '2026-06-30', primerMes: 3, adicional: 3, tope: 100 }];
   function parseDate(s) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '').trim());
     if (!m) return null;
@@ -55,14 +59,19 @@
       saldo = saldoFinal;
     }
     const meses = rows.length;
-    // Recargo por mora y interés indemnizatorio son cargos DISTINTOS: el recargo es un % del impuesto que crece por mes;
-    // el interés indemnizatorio es una tasa mensual. Cada fila lleva los dos por separado.
-    const tope0 = Number(opts.topeRecargo) > 0 ? Number(opts.topeRecargo) : Infinity;
-    rows.forEach((x, i) => { x.recargoPct = opts.recargos ? Math.min(tope0, 10 + 4 * i) : 0; x.recargoAcum = r2(capital * x.recargoPct / 100); });
-    // Recargo por mora (Art. 252 Código Tributario, régimen 10 % + 4 %): 10 % el primer mes o fracción + 4 % por cada mes o fracción adicional, sobre el capital.
-    // Tope opcional (opts.topeRecargo, en %): sin tope si no se indica (la norma anterior a la Ley 30-26 no lo fijaba; verifique).
-    const tope = Number(opts.topeRecargo) > 0 ? Number(opts.topeRecargo) : Infinity;
-    const recargoPct = opts.recargos && meses ? Math.min(tope, 10 + 4 * (meses - 1)) : 0;
+    // Recargo por mora e interés indemnizatorio son cargos DISTINTOS. El recargo se arma mes a mes con el régimen vigente en
+    // cada mes (opts.regimenes; por defecto el de la calculadora de la DGII): 1.er mes = primerMes %; cada mes siguiente suma
+    // «adicional» % sin pasar del tope, y nunca baja de lo ya acumulado (con tope 100 %, un recargo ya mayor se conserva).
+    const reg = (Array.isArray(opts.regimenes) && opts.regimenes.length ? opts.regimenes : REGIMENES_DGII).slice().sort((x, y) => String(x.desde).localeCompare(String(y.desde)));
+    let prev = 0;
+    rows.forEach((x, i) => {
+      if (!opts.recargos) { x.recargoPct = 0; x.recargoAcum = 0; return; }
+      const r = reg.filter(g => String(g.desde) <= x.desde).pop() || reg[0];
+      const tope = Number(r.tope) > 0 ? Number(r.tope) : Infinity;
+      prev = i === 0 ? Math.min(tope, Number(r.primerMes)) : Math.max(prev, Math.min(tope, prev + Number(r.adicional)));
+      x.recargoPct = r2(prev); x.recargoAcum = r2(capital * prev / 100);
+    });
+    const recargoPct = opts.recargos && meses ? rows[meses - 1].recargoPct : 0;
     const recargo = r2(capital * recargoPct / 100);
     const intereses = acumulado;
     return { errores: [], rows, meses, capital: r2(capital), intereses, recargoPct, recargo, total: r2(capital + intereses + recargo), modo, fraccion, tasa };
@@ -80,5 +89,15 @@
   }
   // Tasa anual nominal → mensual equivalente (anual / 12).
   const tasaMensual = (valor, periodo) => (periodo === 'anual' ? Number(valor) / 12 : Number(valor));
-  return { calcular, porAnio, tasaMensual, addMonths, parseDate, r2 };
+  // Fecha de vencimiento según la calculadora de la DGII: ITBIS = día 20 del mes siguiente; IR-1 = 31 de marzo del año siguiente;
+  // IR-2 = 120 días después del cierre del ejercicio (mes de cierre). El día puede correrse por feriados o fines de semana: verifique.
+  function vencimiento(impuesto, mes, anio) {
+    const m = Number(mes), y = Number(anio);
+    if (!Number.isFinite(y) || y < 1990 || y > 2100) return null;
+    if (impuesto === 'ITB') { if (!(m >= 1 && m <= 12)) return null; return fmt(new Date(Date.UTC(y, m, 20))); }
+    if (impuesto === 'IR1') return fmt(new Date(Date.UTC(y + 1, 2, 31)));
+    if (impuesto === 'IR2') { if (!(m >= 1 && m <= 12)) return null; return fmt(new Date(Date.UTC(y, m, 0) + 120 * DAY)); }
+    return null;
+  }
+  return { calcular, porAnio, tasaMensual, vencimiento, REGIMENES_DGII, addMonths, parseDate, r2 };
 });

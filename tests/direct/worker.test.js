@@ -198,6 +198,9 @@ test('DGII: el «Código de Seguridad» dentro de la Oficina Virtual (solo Token
   assert.match(html, /serp-dgii-midtoken-/);
   assert.match(html, /function midToken\(\)/);
   assert.match(html, /function watchMidToken\(\)/);
+  assert.match(html, /function tokenInputLoose\(\)/);
+  // las expresiones del navegador llevan \\s (no «s»): se evalúa el script servido
+  assert.match(html, /c\[oó\]digo\\s\+de\\s\+seguridad\|token\/i\.test\(\(document\.body/);
   assert.match(html, /log\.length >= 3/);
   assert.match(html, /continuar/i);
 });

@@ -1126,12 +1126,28 @@ export default {
   // Token Digital, sin casilla de clave. Se escribe el código y se pulsa «Continuar». Se vigila toda la
   // sesión (la pantalla puede aparecer tarde o varias veces al declarar). Tope de seguridad contra bloqueos:
   // nunca el mismo código dos veces y máximo 3 envíos en 10 minutos.
+  // Respaldo cuando la casilla no dice «token» en su nombre: una casilla de texto visible y vacía dentro de un
+  // bloque (ventana, fila o formulario pequeño) cuyo texto habla del token o del código de seguridad.
+  function tokenInputLoose(){
+    var cands = Array.from(document.querySelectorAll('input')).filter(function(i){
+      return /^(text|tel|number|password|)$/i.test(i.getAttribute('type') || '') && i.offsetParent !== null && !i.value && !i.readOnly && !i.disabled;
+    });
+    for(var k = 0; k < cands.length; k++){
+      var node = cands[k].parentElement;
+      for(var d = 0; d < 6 && node; d++, node = node.parentElement){
+        var vis = Array.from(node.querySelectorAll('input')).filter(function(i){ return i.offsetParent !== null && !/^(hidden|submit|button|image|checkbox|radio)$/i.test(i.type || 'text'); });
+        if(vis.length > 2) break;
+        if(/c[oó]digo\\s+de\\s+seguridad|token/i.test(node.textContent || '')) return cands[k];
+      }
+    }
+    return null;
+  }
   var midBusy = false;
   function midToken(){
     if(!p.totp || midBusy || requestedCardPosition()) return false;
-    var mtok = tokenInput();
+    var mtok = tokenInput() || tokenInputLoose();
     if(!mtok || mtok.offsetParent === null || mtok.value) return false;
-    if(!/c[oó]digo\s+de\s+seguridad|token\s*digital/i.test((document.body && document.body.innerText) || '')) return false;
+    if(!/c[oó]digo\\s+de\\s+seguridad|token/i.test((document.body && document.body.innerText) || '')) return false;
     var mkey = 'serp-dgii-midtoken-' + (p.flow || hash), log = [];
     try { log = JSON.parse(sessionStorage.getItem(mkey) || '[]').filter(function(x){ return Date.now() - x.t < 600000; }); } catch(e) {}
     if(log.length >= 3) return false;

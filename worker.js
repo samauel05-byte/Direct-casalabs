@@ -1110,26 +1110,38 @@ export default {
       // instead of repeatedly submitting the same value.
       if (cardField && code && !hasSubmittedDgiiCard(position)) { run(); return; }
     }
-    // «Código de Seguridad» ya dentro de la Oficina Virtual (confirmar una transacción): solo pide el
-    // Token Digital, sin casilla de clave. Se escribe el código y se pulsa «Continuar» UNA vez por pantalla;
-    // si la DGII lo rechaza y vuelve a pedirlo, no se reintenta antes de 90 s (evita bloquear la cuenta).
-    if (!pEl && isDgii && p.totp && !requestedCardPosition()) {
-      var mtok = tokenInput();
-      var mkey = 'serp-dgii-midtoken-' + (p.flow || hash), last = 0;
-      try { last = Number(sessionStorage.getItem(mkey) || 0); } catch(e) {}
-      if (mtok && /c[oó]digo\s+de\s+seguridad|token\s*digital/i.test((document.body && document.body.innerText) || '') && Date.now() - last > 90000) {
-        try { sessionStorage.setItem(mkey, String(Date.now())); } catch(e) {}
-        totpCode(p.totp).then(function(mcode){
-          fill(mtok, mcode);
-          var mbtn = Array.from(document.querySelectorAll('input[type="submit"],input[type="button"],button')).find(function(b){ return /continuar/i.test(b.value || b.textContent || ''); });
-          setTimeout(function(){ if(mbtn) mbtn.click(); }, 180);
-        }, function(){ try { mtok.focus(); } catch(e) {} });
-        return;
-      }
-    }
+    if (!pEl && isDgii && midToken()) return;
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
     // DGII must never be submitted without the requested position on the card.
     else if (pEl && !isDgii) run();
+  }
+  // «Código de Seguridad» ya dentro de la Oficina Virtual (confirmar/presentar una declaración): solo pide el
+  // Token Digital, sin casilla de clave. Se escribe el código y se pulsa «Continuar». Se vigila toda la
+  // sesión (la pantalla puede aparecer tarde o varias veces al declarar). Tope de seguridad contra bloqueos:
+  // nunca el mismo código dos veces y máximo 3 envíos en 10 minutos.
+  var midBusy = false;
+  function midToken(){
+    if(!p.totp || midBusy || requestedCardPosition()) return false;
+    var mtok = tokenInput();
+    if(!mtok || mtok.offsetParent === null || mtok.value) return false;
+    if(!/c[oó]digo\s+de\s+seguridad|token\s*digital/i.test((document.body && document.body.innerText) || '')) return false;
+    var mkey = 'serp-dgii-midtoken-' + (p.flow || hash), log = [];
+    try { log = JSON.parse(sessionStorage.getItem(mkey) || '[]').filter(function(x){ return Date.now() - x.t < 600000; }); } catch(e) {}
+    if(log.length >= 3) return false;
+    midBusy = true;
+    totpCode(p.totp).then(function(mcode){
+      if(log.some(function(x){ return x.c === mcode; })){ midBusy = false; return; }
+      log.push({ t: Date.now(), c: mcode });
+      try { sessionStorage.setItem(mkey, JSON.stringify(log)); } catch(e) {}
+      fill(mtok, mcode);
+      var mbtn = Array.from(document.querySelectorAll('input[type="submit"],input[type="button"],button')).find(function(b){ return /continuar|aceptar|enviar/i.test(b.value || b.textContent || '') && !/cancelar/i.test(b.value || b.textContent || ''); });
+      setTimeout(function(){ if(mbtn) mbtn.click(); midBusy = false; }, 180);
+    }, function(){ midBusy = false; try { mtok.focus(); } catch(e) {} });
+    return true;
+  }
+  function watchMidToken(){
+    if('${hostname}'.indexOf('dgii.gov.do') === -1 || !p.totp) return;
+    var n = 0, iv = setInterval(function(){ midToken(); if(++n > 900) clearInterval(iv); }, 1000);
   }
   // After the login was sent, tell Direct (the tab that opened this one)
   // whether the portal accepted the password, so it can flag companies whose
@@ -1196,8 +1208,8 @@ export default {
     b.addEventListener('click', function(){ serpSendCapture(b); });
     (document.body||document.documentElement).appendChild(b);
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); scheduleReport(); setupSerpCapture(); });
-  else { waitAndRun(100); scheduleReport(); setupSerpCapture(); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', function(){ waitAndRun(100); scheduleReport(); setupSerpCapture(); watchMidToken(); });
+  else { waitAndRun(100); scheduleReport(); setupSerpCapture(); watchMidToken(); }
 })();
 <\/script>`;
 

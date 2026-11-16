@@ -122,7 +122,7 @@
     const docIds = new Set(invoices.map(x => x.document_id).filter(Boolean));
     const byPage = mode === 'batch' && docIds.size === 1 && invoices.length > 0 && invoices.every(x => x.page_from);
     const missingPages = [];
-    const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted"${byPage ? ` title="Fila ${n + 1} de esta lista · página ${i.page_from}${i.page_to > i.page_from ? '–' + i.page_to : ''} del archivo"` : ` title="Factura n.º ${n + 1} de esta lista"`}>${n + 1}</td><td class="mono" data-c="ncf"><a class="ncf-link" href="#/auditoria/${i.id}?${new URLSearchParams(params)}" title="Abrir la factura para validarla">${esc(i.ncf || '—')}</a></td><td data-c="cp">${cpCell(i)}</td>
+    const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted"${byPage ? ` title="Fila ${n + 1} de esta lista · página ${i.page_from}${i.page_to > i.page_from ? '–' + i.page_to : ''} del archivo"` : ` title="Factura n.º ${n + 1} de esta lista"`}>${n + 1}${mode === 'batch' && canEdit ? `<span class="mv" style="display:inline-flex;flex-direction:column;margin-left:4px;vertical-align:middle"><button type="button" class="btn sm" data-mv="up" data-id="${i.id}" title="Subir una posición (sin cambiar el NCF)" style="padding:0 5px;line-height:14px;min-height:0;height:16px">▲</button><button type="button" class="btn sm" data-mv="down" data-id="${i.id}" title="Bajar una posición (sin cambiar el NCF)" style="padding:0 5px;line-height:14px;min-height:0;height:16px;margin-top:1px">▼</button></span>` : ''}</td><td class="mono" data-c="ncf"><a class="ncf-link" href="#/auditoria/${i.id}?${new URLSearchParams(params)}" title="Abrir la factura para validarla">${esc(i.ncf || '—')}</a></td><td data-c="cp">${cpCell(i)}</td>
       <td data-c="date">${esc(i.invoice_date || '—')}</td>${unifiedCol ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>DOP</td><td class="num" data-c="subtotal">${money(i.subtotal_dop)}</td><td class="num" data-c="itbis">${money(i.itbis_dop)}</td><td class="num" data-c="total">${money(i.total_dop)}</td><td data-c="status">${NALA.badge(i.status)}</td><td data-c="review">${reviewCell(i)}</td></tr>
       <tr class="inline-edit" data-edit="${i.id}" hidden><td colspan="${cols}"></td></tr>`;
     root.innerHTML = `<div class="stack">
@@ -151,6 +151,12 @@
     // Eliminar (excluir, con motivo y reversible) o restaurar una factura directamente desde la lista.
     if (root._rowAct) root.removeEventListener('click', root._rowAct);
     root._rowAct = async e => {
+      const mv = e.target.closest('[data-mv]');
+      if (mv) {
+        e.stopPropagation(); mv.disabled = true;
+        try { await NALA.api('POST', `invoices/${mv.dataset.id}/move`, { dir: mv.dataset.mv }); NALA.route(); } catch (err) { mv.disabled = false; NALA.fail(err); }
+        return;
+      }
       const del = e.target.closest('[data-del]'); const res = e.target.closest('[data-restore-row]');
       if (!del && !res) return;
       e.stopPropagation();

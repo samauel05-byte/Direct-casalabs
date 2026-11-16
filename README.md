@@ -114,6 +114,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — comisiones bancarias:** la regla de listados del `PROMPT` (`extractor.js`) fija `forma_pago_codigo = "02"` para comisiones/cargos de bancos y procesadores; `validate.js` sigue exigiendo la forma de pago (obligatoria en el 606) cuando falta en cualquier otra factura.
 
+**NALA — orden manual de filas:** columna `nala_invoices.sort_pos` (migración `202611160001_nala_sort_pos.sql`, ya aplicada). `cmpRows` (`lib/nala/api/invoices.js`) ordena la lista: documento → `page_from` → `page_to` → `sort_pos` (las que tienen posición, primero) → número final de `extraction_key` (orden de lectura) → fecha → id. `POST /api/nala/invoices/:id/move` `{dir:'up'|'down'}` (permiso `edit`, `moveRow`) numera las filas de la misma página (documento + página) y intercambia dos; queda en el historial. UI: botones `data-mv` ▲ ▼ en la primera columna de la lista de un lote. Pruebas: `tests/nala/order.test.js`. Nota: la unicidad de NCF aprobados (`nala_invoices_approved_unique`) sigue vigente; cambiar NCF para reordenar ya no es necesario.
+
 **CAMI — notas de crédito por tipo de comprobante:** la fila `byNcf['04']` (B04/E34) de «Compras por tipo de comprobante» usa `itbis` como cifra (con «−») y el subtotal como texto auxiliar; el «Total compras facturadas (neto de notas de crédito)» sigue calculándose con el monto.
 
 **CAMI — notas de crédito por forma de pago (v2):** en `process606` (`itbis-web.html`) `p._pagoKey = ncfCode==='04' ? 'creditNote' : compraPagoKey(...)`: todo B04/E34 se acumula en `byPago.creditNote` sin importar la forma de pago del 606 (y por tanto sale de las demás filas). 

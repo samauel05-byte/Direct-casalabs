@@ -114,6 +114,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — comisiones bancarias:** la regla de listados del `PROMPT` (`extractor.js`) fija `forma_pago_codigo = "02"` para comisiones/cargos de bancos y procesadores; `validate.js` sigue exigiendo la forma de pago (obligatoria en el 606) cuando falta en cualquier otra factura.
 
+**NALA — cambio de empresa en Auditoría:** `NALA.setScope` (`public/nala/js/app.js`) ahora, en `#/auditoria` y `#/lotes`, elimina de la URL los parámetros `batch`, `client`, `period` y `format` al cambiar el filtro de arriba (conserva `status`, `has`, `q`); antes `listQuery` usaba `params.client ?? s.client` y el `client` fijado por las pestañas 606/607 ganaba sobre la empresa elegida.
+
 **NALA — orden manual de filas:** columna `nala_invoices.sort_pos` (migración `202611160001_nala_sort_pos.sql`, ya aplicada). `cmpRows` (`lib/nala/api/invoices.js`) ordena la lista: documento → `page_from` → `page_to` → `sort_pos` (las que tienen posición, primero) → número final de `extraction_key` (orden de lectura) → fecha → id. `POST /api/nala/invoices/:id/move` `{dir:'up'|'down'}` (permiso `edit`, `moveRow`) numera las filas de la misma página (documento + página) y intercambia dos; queda en el historial. UI: botones `data-mv` ▲ ▼ en la primera columna de la lista de un lote. Pruebas: `tests/nala/order.test.js`. Nota: la unicidad de NCF aprobados (`nala_invoices_approved_unique`) sigue vigente; cambiar NCF para reordenar ya no es necesario.
 
 **CAMI — notas de crédito por tipo de comprobante:** la fila `byNcf['04']` (B04/E34) de «Compras por tipo de comprobante» usa `itbis` como cifra (con «−») y el subtotal como texto auxiliar; el «Total compras facturadas (neto de notas de crédito)» sigue calculándose con el monto.

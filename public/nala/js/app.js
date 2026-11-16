@@ -159,9 +159,19 @@
     Object.assign(NALA.state, patch); savePrefs(); renderScope();
     // Si estabas viendo un registro puntual (un lote o una factura), al cambiar
     // el filtro vuelve a su lista para que el nuevo filtro se vea aplicado.
-    const { view, id } = NALA.parseHash();
+    const { view, id, params } = NALA.parseHash();
     const listOf = { lotes: '#/lotes', auditoria: '#/auditoria' };
-    if (id && listOf[view]) NALA.go(listOf[view]); else route();
+    if (id && listOf[view]) { NALA.go(listOf[view]); return; }
+    // La URL de Auditoría puede traer fijados empresa, período, formato o lote (por las pestañas 606/607 o al abrir un lote): si
+    // se quedan, mandan sobre el filtro de arriba y la lista sigue mostrando la empresa anterior. Se sueltan al cambiar el filtro.
+    if (listOf[view] && ['batch', 'client', 'period', 'format'].some(k => k in params)) {
+      const rest = { ...params }; for (const k of ['batch', 'client', 'period', 'format']) delete rest[k];
+      const q = new URLSearchParams(rest).toString();
+      const target = listOf[view] + (q ? `?${q}` : '');
+      if (location.hash === target) route(); else NALA.go(target);
+      return;
+    }
+    route();
   };
   function renderScope() {
     const s = NALA.state;

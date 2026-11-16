@@ -199,7 +199,13 @@
       const picked = invoices.filter(i => shade.has(i.id));
       if (!picked.length) { bar.hidden = true; bar.innerHTML = ''; return; }
       const fmts = [...new Set(picked.map(i => i.format))].sort();
-      const part = f => { const L = picked.filter(i => i.format === f); return `${fmts.length > 1 ? `<b>${f}</b> (${L.length}): ` : ''}Subtotal <b>${fmtC(sumC(L.map(i => i.subtotal_dop)))}</b> · ITBIS <b>${fmtC(sumC(L.map(i => i.itbis_dop)))}</b> · Total <b>${fmtC(sumC(L.map(i => i.total_dop)))}</b>`; };
+      // Propina legal aparte; el «Total» de lo sombreado es SOLO subtotal + ITBIS (la propina no se suma).
+      const part = f => {
+        const L = picked.filter(i => i.format === f);
+        const sub = sumC(L.map(i => i.subtotal_dop)), itb = sumC(L.map(i => i.itbis_dop)), tip = sumC(L.map(i => (i.fields || {}).propina));
+        const tot = sumC([...L.map(i => i.subtotal_dop), ...L.map(i => i.itbis_dop)]);
+        return `${fmts.length > 1 ? `<b>${f}</b> (${L.length}): ` : ''}Subtotal <b>${fmtC(sub)}</b> · ITBIS <b>${fmtC(itb)}</b>${tip !== null && tip !== 0n ? ` · Propina legal <b>${fmtC(tip)}</b>` : ''} · Total (subtotal + ITBIS) <b>${fmtC(tot)}</b>`;
+      };
       bar.innerHTML = `<span><b>${picked.length}</b> sombrada(s)</span><span>${fmts.map(part).join(' &nbsp;|&nbsp; ')}</span><span class="spacer" style="flex:1"></span><button class="btn sm" id="shade-clear">Quitar sombreado</button>`;
       bar.hidden = false;
       bar.querySelector('#shade-clear').addEventListener('click', () => { shade.clear(); paintShade(); });

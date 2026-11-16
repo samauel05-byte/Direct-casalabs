@@ -109,12 +109,21 @@
     const hasFixables = i => isIncomplete(i) || i.issues.some(x => x.code === 'DUPLICADO');
     const showFix = i => editableInv(i);
     const unifiedCol = mode === 'unified' && !s.client;
-    const cols = (canBulk ? 1 : 0) + 11 + (unifiedCol ? 1 : 0);
+    const cols = (canBulk ? 1 : 0) + 12 + (unifiedCol ? 1 : 0);
     let bulkRefresh = null;
     // Celdas que la edición en línea refresca sin recargar toda la tabla.
     const fixBtn = i => showFix(i) ? ` <button class="btn sm fix-btn" data-fix="${i.id}" title="Editar aquí tipo de gasto, monto e ITBIS, sin abrir el detalle">${hasFixables(i) ? '✎ Corregir' : '✎ Editar'}</button>` : '';
     const delBtn = i => i.status === 'excluded' ? (canExclude ? ` <button class="btn sm" data-restore-row="${i.id}" title="Volver a incluir esta factura en el lote">Restaurar</button>` : '')
       : (canExclude && (i.status !== 'approved' || NALA.can('revert')) ? ` <button class="btn sm danger" data-del="${i.id}" title="Eliminar esta factura del lote">🗑 Eliminar</button>` : '');
+    // Forma de pago «por afuera»: en el 606 la del comprobante; en el 607 las formas en que se cobró (las casillas con monto).
+    const PAGO607 = { pago_efectivo: 'Efectivo', pago_cheque: 'Cheque/Transf.', pago_tarjeta: 'Tarjeta', pago_credito: 'Crédito', pago_bonos: 'Bonos', pago_permuta: 'Permuta', pago_otros: 'Otros' };
+    const fpText = i => {
+      const f = i.fields || {};
+      if (i.format === '606') { const c = f.forma_pago; if (c === null || c === undefined || c === '') return ''; const k = String(c).padStart(2, '0'); return (cat.formaPago || {})[k] || k; }
+      const used = Object.keys(PAGO607).filter(k => f[k] !== null && f[k] !== undefined && f[k] !== '' && Number(String(f[k]).replace(/,/g, '')) !== 0);
+      return used.length === 0 ? '' : (used.length === 1 ? PAGO607[used[0]] : `Mixto (${used.map(k => PAGO607[k]).join(' + ')})`);
+    };
+    const fpCell = i => { const t = fpText(i); return t ? esc(t) : '<span class="muted" title="Sin forma de pago">—</span>'; };
     const reviewCell = i => `${NALA.issueBadges(i)}${fixBtn(i)}${delBtn(i)}`;
     const cpCell = i => `${esc(i.counterpart_name || '—')}<div class="muted mono">${esc(i.counterpart_id || '')}</div>`;
     // En un lote de UN archivo (PDF), la primera columna muestra la PÁGINA del archivo, no un contador: así «1» abre la página 1 y
@@ -123,7 +132,7 @@
     const byPage = mode === 'batch' && docIds.size === 1 && invoices.length > 0 && invoices.every(x => x.page_from);
     const missingPages = [];
     const rowHtml = (i, n) => `<tr class="clickable" data-id="${i.id}">${canBulk ? `<td class="chk" data-c="chk">${isGreen(i) ? `<input type="checkbox" class="row-chk" data-cid="${i.id}">` : ''}</td>` : ''}<td class="muted"${byPage ? ` title="Fila ${n + 1} de esta lista · página ${i.page_from}${i.page_to > i.page_from ? '–' + i.page_to : ''} del archivo"` : ` title="Factura n.º ${n + 1} de esta lista"`}>${n + 1}${mode === 'batch' && canEdit ? `<span class="mv" style="display:inline-flex;flex-direction:column;margin-left:4px;vertical-align:middle"><button type="button" class="btn sm" data-mv="up" data-id="${i.id}" title="Subir una posición (sin cambiar el NCF)" style="padding:0 5px;line-height:14px;min-height:0;height:16px">▲</button><button type="button" class="btn sm" data-mv="down" data-id="${i.id}" title="Bajar una posición (sin cambiar el NCF)" style="padding:0 5px;line-height:14px;min-height:0;height:16px;margin-top:1px">▼</button></span>` : ''}</td><td class="mono" data-c="ncf"><a class="ncf-link" href="#/auditoria/${i.id}?${new URLSearchParams(params)}" title="Abrir la factura para validarla">${esc(i.ncf || '—')}</a></td><td data-c="cp">${cpCell(i)}</td>
-      <td data-c="date">${esc(i.invoice_date || '—')}</td>${unifiedCol ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>DOP</td><td class="num" data-c="subtotal">${money(i.subtotal_dop)}</td><td class="num" data-c="itbis">${money(i.itbis_dop)}</td><td class="num" data-c="total">${money(i.total_dop)}</td><td data-c="status">${NALA.badge(i.status)}</td><td data-c="review">${reviewCell(i)}</td></tr>
+      <td data-c="date">${esc(i.invoice_date || '—')}</td>${unifiedCol ? `<td>${esc(NALA.clientName(i.client_id))}</td>` : ''}<td>${i.format}</td><td>DOP</td><td class="num" data-c="subtotal">${money(i.subtotal_dop)}</td><td class="num" data-c="itbis">${money(i.itbis_dop)}</td><td class="num" data-c="total">${money(i.total_dop)}</td><td data-c="fp" style="white-space:nowrap">${fpCell(i)}</td><td data-c="status">${NALA.badge(i.status)}</td><td data-c="review">${reviewCell(i)}</td></tr>
       <tr class="inline-edit" data-edit="${i.id}" hidden><td colspan="${cols}"></td></tr>`;
     root.innerHTML = `<div class="stack">
       <div class="tabs"><button class="${mode === 'batch' ? 'active' : ''}" id="t-batch">Vista por lotes</button><button class="${mode === 'unified' ? 'active' : ''}" id="t-uni">Vista unificada (empresa y período)</button></div>
@@ -145,7 +154,7 @@
         <span class="spacer" style="flex:1"></span>
         <button class="btn ok" id="bulk-approve" disabled>✓ Aprobar seleccionadas (<span id="sel-count">0</span>)</button></div>` : ''}
       ${missingPages.length ? `<div class="muted" style="font-size:12px">📄 «Pág.» es la página del archivo. No aparecen en esta lista las páginas <b>${missingPages.length > 25 ? missingPages.slice(0, 25).join(', ') + '…' : missingPages.join(', ')}</b> (excluidas o filtradas con los criterios de arriba).</div>` : ''}
-      ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th title="Número de fila en la lista (siempre consecutivo, aunque varias filas vengan de la misma página)">#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${unifiedCol ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Subtotal</th><th class="num">ITBIS</th><th class="num">Total</th><th>Estado</th><th>Revisión</th></tr>
+      ${invoices.length ? `<div class="table-wrap"><table><tr>${canBulk ? '<th></th>' : ''}<th title="Número de fila en la lista (siempre consecutivo, aunque varias filas vengan de la misma página)">#</th><th>NCF</th><th>Contraparte</th><th>Fecha</th>${unifiedCol ? '<th>Empresa</th>' : ''}<th>Fmt</th><th>Mon.</th><th class="num">Subtotal</th><th class="num">ITBIS</th><th class="num">Total</th><th>Forma de pago</th><th>Estado</th><th>Revisión</th></tr>
         ${invoices.map((i, n) => rowHtml(i, n)).join('')}</table></div>`
         : '<div class="card empty">No hay comprobantes con estos filtros.</div>'}</div>`;
     // Eliminar (excluir, con motivo y reversible) o restaurar una factura directamente desde la lista.
@@ -265,7 +274,7 @@
       if (tr) {
         const set2 = (c, html) => { const el = tr.querySelector(`[data-c="${c}"]`); if (el) el.innerHTML = html; };
         set2('ncf', `<a class="ncf-link" href="#/auditoria/${upd.id}?${new URLSearchParams(params)}" title="Abrir la factura para validarla">${esc(upd.ncf || '—')}</a>`); set2('cp', cpCell(upd)); set2('date', esc(upd.invoice_date || '—'));
-        set2('total', money(upd.total_dop)); set2('status', NALA.badge(upd.status)); set2('review', reviewCell(upd));
+        set2('total', money(upd.total_dop)); set2('fp', fpCell(upd)); set2('status', NALA.badge(upd.status)); set2('review', reviewCell(upd));
         const chk = tr.querySelector('[data-c="chk"]');
         if (chk) { chk.innerHTML = isGreen(upd) && bulkRefresh ? `<input type="checkbox" class="row-chk" data-cid="${upd.id}">` : '';
           const nc = chk.querySelector('.row-chk'); if (nc && bulkRefresh) { nc.addEventListener('change', bulkRefresh); chk.addEventListener('click', e => e.stopPropagation()); } }

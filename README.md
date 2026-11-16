@@ -116,6 +116,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — comisiones bancarias:** la regla de listados del `PROMPT` (`extractor.js`) fija `forma_pago_codigo = "02"` para comisiones/cargos de bancos y procesadores; `validate.js` sigue exigiendo la forma de pago (obligatoria en el 606) cuando falta en cualquier otra factura.
 
+**NALA — barra de sombreado:** `paintShade` (`views-audit.js`) muestra por formato `Subtotal · ITBIS · Propina legal (suma de `fields.propina`, solo si hay) · Total`, donde Total = Σ`subtotal_dop` + Σ`itbis_dop` (no usa `total_dop`, para no incluir la propina).
+
 **NALA — columna «Forma de pago» en la lista:** `fpText`/`fpCell` en `views-audit.js` (celda `data-c="fp"`, entre «Total» y «Estado»; `cols` pasó a 12 + extras). 606: `fields.forma_pago` con el catálogo `catalogs.formaPago`; 607: las casillas `pago_*` con monto distinto de cero (una = su nombre; varias = «Mixto (A + B)»). Se refresca en la edición en línea.
 
 **NALA — cambio de empresa en Auditoría:** `NALA.setScope` (`public/nala/js/app.js`) ahora, en `#/auditoria` y `#/lotes`, elimina de la URL los parámetros `batch`, `client`, `period` y `format` al cambiar el filtro de arriba (conserva `status`, `has`, `q`); antes `listQuery` usaba `params.client ?? s.client` y el `client` fijado por las pestañas 606/607 ganaba sobre la empresa elegida.

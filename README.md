@@ -114,6 +114,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **NALA — comisiones bancarias:** la regla de listados del `PROMPT` (`extractor.js`) fija `forma_pago_codigo = "02"` para comisiones/cargos de bancos y procesadores; `validate.js` sigue exigiendo la forma de pago (obligatoria en el 606) cuando falta en cualquier otra factura.
 
+**CAMI — notas de crédito por tipo de comprobante:** la fila `byNcf['04']` (B04/E34) de «Compras por tipo de comprobante» usa `itbis` como cifra (con «−») y el subtotal como texto auxiliar; el «Total compras facturadas (neto de notas de crédito)» sigue calculándose con el monto.
+
 **CAMI — notas de crédito por forma de pago (v2):** en `process606` (`itbis-web.html`) `p._pagoKey = ncfCode==='04' ? 'creditNote' : compraPagoKey(...)`: todo B04/E34 se acumula en `byPago.creditNote` sin importar la forma de pago del 606 (y por tanto sale de las demás filas). 
 **CAMI — notas de crédito por forma de pago:** en `public/cami/itbis-web.html` (cuadre del IT-1, «Compras por forma de pago»), la fila `creditNote` usa `byPago.creditNote.itbis` como cifra (con «−» si es negativo) y deja el subtotal como texto auxiliar; el resto de las filas no cambia.
 

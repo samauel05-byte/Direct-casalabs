@@ -1110,6 +1110,23 @@ export default {
       // instead of repeatedly submitting the same value.
       if (cardField && code && !hasSubmittedDgiiCard(position)) { run(); return; }
     }
+    // «Código de Seguridad» ya dentro de la Oficina Virtual (confirmar una transacción): solo pide el
+    // Token Digital, sin casilla de clave. Se escribe el código y se pulsa «Continuar» UNA vez por pantalla;
+    // si la DGII lo rechaza y vuelve a pedirlo, no se reintenta antes de 90 s (evita bloquear la cuenta).
+    if (!pEl && isDgii && p.totp && !requestedCardPosition()) {
+      var mtok = tokenInput();
+      var mkey = 'serp-dgii-midtoken-' + (p.flow || hash), last = 0;
+      try { last = Number(sessionStorage.getItem(mkey) || 0); } catch(e) {}
+      if (mtok && /c[oó]digo\s+de\s+seguridad|token\s*digital/i.test((document.body && document.body.innerText) || '') && Date.now() - last > 90000) {
+        try { sessionStorage.setItem(mkey, String(Date.now())); } catch(e) {}
+        totpCode(p.totp).then(function(mcode){
+          fill(mtok, mcode);
+          var mbtn = Array.from(document.querySelectorAll('input[type="submit"],input[type="button"],button')).find(function(b){ return /continuar/i.test(b.value || b.textContent || ''); });
+          setTimeout(function(){ if(mbtn) mbtn.click(); }, 180);
+        }, function(){ try { mtok.focus(); } catch(e) {} });
+        return;
+      }
+    }
     if (remaining > 0) setTimeout(function(){ waitAndRun(remaining - 1); }, 150);
     // DGII must never be submitted without the requested position on the card.
     else if (pEl && !isDgii) run();

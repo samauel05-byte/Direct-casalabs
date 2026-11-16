@@ -354,7 +354,10 @@ export default {
             }
           }
           const portalType = portalRes.headers.get('content-type') || '';
-          if (msAjax || (portalType && !/text\/html|application\/xhtml/i.test(portalType))) {
+          // Una descarga (Content-Disposition: attachment) pasa tal cual aunque el portal la marque como text/html: las exportaciones a
+          // Excel de DGII (y de otros portales) suelen ser una tabla HTML con nombre de archivo; reescribirla la dejaba sin descargarse.
+          const isAttachment = /\battachment\b/i.test(portalRes.headers.get('content-disposition') || '');
+          if (msAjax || isAttachment || (portalType && !/text\/html|application\/xhtml/i.test(portalType))) {
             const rawHeaders = new Headers({ 'Cache-Control': 'no-store' });
             if (lastFlowCookie) rawHeaders.append('Set-Cookie', lastFlowCookie);
             if (portalType) rawHeaders.set('Content-Type', portalType);

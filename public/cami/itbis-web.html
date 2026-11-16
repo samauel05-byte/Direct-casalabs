@@ -2206,6 +2206,10 @@ function updateIT1() {
   const comprasNcfRows=compraRows(cp.byNcf,{...COMPRA_NCF_LABEL},ncfOrder,['01','02','03','04']);
   const pagoKeys=Object.keys(COMPRA_PAGO_LABEL);
   const comprasPagoRows=compraRows(cp.byPago,COMPRA_PAGO_LABEL,pagoKeys,pagoKeys.filter(k=>k!=='none'));
+  // Notas de crédito: en esta tabla la cifra es el ITBIS de las notas (no el subtotal); el subtotal pasa al texto pequeño.
+  const ncPagoV=cp.byPago.creditNote;
+  if(ncPagoV&&ncPagoV.count){const i=comprasPagoRows.findIndex(r=>r.lbl===COMPRA_PAGO_LABEL.creditNote);
+    if(i>=0)comprasPagoRows[i]={...comprasPagoRows[i],amt:Math.abs(ncPagoV.itbis||0),sign:(ncPagoV.itbis||0)<0?'−':undefined,source:`${fmtI(ncPagoV.count)} comp. · subtotal ${fmtM(Math.abs(ncPagoV.monto))}${ncPagoV.monto<0?' (−)':''}`};}
   const comprasTipoRows=compraRows(cp.byTipo,COMPRA_TIPO_LABEL,['01','02','03','04','05','06','07','08','09','10','11']);
   const compraTotal=r2(Object.values(cp.byNcf).reduce((n,v)=>n+v.monto,0));
   const comprasHtml=has606?`<div class="cuadre-group-title">Compras por tipo de comprobante</div>${cuadreRows([...comprasNcfRows,{lbl:'Total compras facturadas (neto de notas de crédito)',amt:compraTotal},{lbl:'ITBIS facturado en compras',amt:s6.totItbis},{lbl:'ITBIS por adelantar (crédito fiscal)',amt:s6.totAdel},...(s6.totCosto?[{lbl:'ITBIS llevado al costo',amt:s6.totCosto}]:[]),...(s6.totRet?[{lbl:'ITBIS retenido',amt:s6.totRet}]:[]),{lbl:'Impuesto Selectivo al Consumo',source:'informativo · no suma al ITBIS',amt:s6.totIsc||0,muted:true},{lbl:'Otros impuestos / tasas',source:'informativo · no suma al ITBIS',amt:s6.totOtrosImp||0,muted:true},...(s6.totPropina?[{lbl:'Propina legal',source:'informativo · no suma al ITBIS',amt:s6.totPropina,muted:true}]:[])])}`

@@ -2205,6 +2205,10 @@ function updateIT1() {
   const compraRows=(map,labels,order,always=[])=>order.filter(k=>map[k]||always.includes(k)).map(k=>{const v=map[k]||{count:0,monto:0,itbis:0};return {lbl:`${labels[k]||'Sin NCF o tipo reconocible'}`,source:v.count?`${fmtI(v.count)} comp.${v.itbis?` · ITBIS ${fmtM(Math.abs(v.itbis))}${v.itbis<0?' (−)':''}`:''}`:'',sign:v.monto<0?'−':undefined,amt:Math.abs(v.monto)};});
   const ncfOrder=['01','02','03','04','11','12','13','14','15','16','17','sin'];
   const comprasNcfRows=compraRows(cp.byNcf,{...COMPRA_NCF_LABEL},ncfOrder,['01','02','03','04']);
+  // Notas de crédito (B04 / E34): la cifra de la fila es su ITBIS (no el subtotal); el subtotal pasa al texto pequeño.
+  const ncTipoV=cp.byNcf['04'];
+  if(ncTipoV&&ncTipoV.count){const i=comprasNcfRows.findIndex(r=>r.lbl===COMPRA_NCF_LABEL['04']);
+    if(i>=0)comprasNcfRows[i]={...comprasNcfRows[i],amt:Math.abs(ncTipoV.itbis||0),sign:(ncTipoV.itbis||0)<0?'−':undefined,source:`${fmtI(ncTipoV.count)} comp. · subtotal ${fmtM(Math.abs(ncTipoV.monto))}${ncTipoV.monto<0?' (−)':''}`};}
   const pagoKeys=Object.keys(COMPRA_PAGO_LABEL);
   const comprasPagoRows=compraRows(cp.byPago,COMPRA_PAGO_LABEL,pagoKeys,pagoKeys.filter(k=>k!=='none'));
   // Notas de crédito: en esta tabla la cifra es el ITBIS de las notas (no el subtotal); el subtotal pasa al texto pequeño.

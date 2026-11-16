@@ -796,6 +796,13 @@ export default {
   try {
     if(hash) sessionStorage.setItem('serp-relay-autofill-payload', hash);
     else hash = sessionStorage.getItem('serp-relay-autofill-payload') || '';
+    // Pestaña nueva abierta desde otra pestaña del relay (p. ej. la declaración): no hereda la
+    // sesión de esa pestaña, así que recoge el traspaso de 15 s que dejó la pestaña de origen.
+    if(!hash){
+      var ho = null; try { ho = JSON.parse(localStorage.getItem('serp-handoff') || 'null'); } catch(e2) {}
+      try { localStorage.removeItem('serp-handoff'); } catch(e2) {}
+      if(ho && ho.p && Date.now() - ho.t < 15000){ hash = ho.p; sessionStorage.setItem('serp-relay-autofill-payload', hash); }
+    }
   } catch(e) {}
   if(!hash) return;
   var p; try { p = JSON.parse(decodeURIComponent(atob(hash))); } catch(e){ return; }
@@ -1345,10 +1352,22 @@ export default {
       Object.defineProperty(_lp,'href',{configurable:true,get:_hd.get,set:function(href){var p=proxyHref(String(href));_origSet.call(this,p||href);}});
     }
   }catch(e){}
+  // Traspaso a una pestaña nueva del relay (se borra a los 15 s o al leerse): ver el script de autollenado.
+  function serpHandoff(){
+    try{
+      var hp=sessionStorage.getItem('serp-relay-autofill-payload'); if(!hp) return;
+      localStorage.setItem('serp-handoff',JSON.stringify({p:hp,t:Date.now()}));
+      setTimeout(function(){ try{ var c=JSON.parse(localStorage.getItem('serp-handoff')||'null'); if(c&&c.p===hp) localStorage.removeItem('serp-handoff'); }catch(e){} },15000);
+    }catch(e){}
+  }
+  var _newTarget=function(t){ return !!t && !/^_(self|top|parent)$/i.test(t); };
+  document.addEventListener('click',function(e){ try{ var a=e.target&&e.target.closest&&e.target.closest('a[target]'); if(a&&_newTarget(a.getAttribute('target'))) serpHandoff(); }catch(x){} },true);
+  document.addEventListener('submit',function(e){ try{ var f=e.target; if(f&&f.getAttribute&&_newTarget(f.getAttribute('target'))) serpHandoff(); }catch(x){} },true);
   // Patch window.open — catches new-tab/window navigations that bypass the proxy
   try{
     var _origOpen=window.open;
     window.open=function(url,target,features){
+      if(_newTarget(target)||target===undefined) serpHandoff();
       if(url&&typeof url==='string'&&!/^(javascript:|#|mailto:|tel:|about:|blob:)/i.test(url)){
         var p=proxyHref(url);
         if(p) return _origOpen.call(window,p,target,features);

@@ -202,6 +202,13 @@ test('DGII: el «Código de Seguridad» dentro de la Oficina Virtual (solo Token
   assert.match(html, /continuar/i);
 });
 
+test('DGII: una pestaña nueva abierta desde el relay (declaración) recibe el traspaso del token y la sesión', async () => {
+  const html = await (await proxied('https://www.dgii.gov.do/ofv/login.aspx')).text();
+  assert.match(html, /serp-handoff/);
+  assert.match(html, /function serpHandoff\(\)/);
+  assert.match(html, /Date\.now\(\) - ho\.t < 15000/);
+});
+
 test('descargas que el portal marca como text/html (Excel de DGII) llegan intactas con su nombre de archivo', async () => {
   const res = await proxied('https://www.dgii.gov.do/ofv/consultas/exportar.aspx?id=1');
   assert.match(res.headers.get('content-disposition'), /envios\.xls/);

@@ -1564,7 +1564,8 @@ function process606(rows) {
     p._otrosImp=cm.otros_impuestos?Math.abs(cleanNum(r[cm.otros_impuestos]))*fiscalSign:0;
     p._propina=cm.propina_legal?Math.abs(cleanNum(r[cm.propina_legal]))*fiscalSign:0;
     p._ncfKey=compraNcfCode(cm.ncf?r[cm.ncf]:'');
-    p._pagoKey=compraPagoKey(cm.forma_pago?r[cm.forma_pago]:'');
+    // Una nota de crédito (B04 / E34) siempre va en la fila «Notas de crédito» de la forma de pago, sea cual sea el código de forma de pago del 606.
+    p._pagoKey=ncfCode==='04'?'creditNote':compraPagoKey(cm.forma_pago?r[cm.forma_pago]:'');
     p._tipoKey=compraTipoKey(cm.tipo_comprobante?r[cm.tipo_comprobante]:'');
     return p;
   });

@@ -60,6 +60,8 @@ Los portales se abren a través de `portal-rd-relay.samauel05.workers.dev`, que:
 - **Token Digital de la DGII**: si la pantalla de la Oficina Virtual trae la casilla «Token Digital» (`tokenInput()`), el robot calcula el TOTP en la página (`totpCode`, RFC 6238, mismo formato que `public/js/totp.js`, incluidas las claves `serp:` calibradas) con `p.totp` (solo en el hash) y envía; sin `p.totp` deja el foco en la casilla y no envía. Mientras haya casilla de token no se escribe la tarjeta de códigos en ella. La DGII muestra el token en una **segunda pantalla** (Usuario de solo lectura + Clave + «Token Digital» + Continuar): tras enviar la primera pantalla, `waitAndRun` detecta esa casilla, la llena y pulsa Continuar **una sola vez** (guarda `serp-dgii-token-submit-<flujo>` en sessionStorage para no repetir envíos y evitar bloqueos de la cuenta).
 - **Jalado automático 606/607 (solo DGII)**: cuando la Oficina Virtual se abre desde Estimación Fiscal con «Jalar de DGII» (el lanzamiento lleva `capture` en el hash), el relay inyecta un botón flotante «Traer 606/607 a SERP» que serializa las tablas de la pantalla (p. ej. «Consulta de Envíos») y las manda a la app por `postMessage`; la app las pasa a su importador con vista previa. Aislado tras esa bandera: no aparece en aperturas normales ni en otros portales.
 
+- **Descargas:** toda respuesta con `Content-Disposition: attachment` (aunque venga como `text/html`, p. ej. el Excel de «Consulta de envíos» de la DGII) y toda respuesta que no sea HTML se devuelve en crudo, con su tipo y nombre de archivo y sin inyectar `<base>` ni scripts (`isAttachment` en `worker.js`; prueba en `tests/direct/worker.test.js`).
+
 El relay se despliega automáticamente desde `main`.
 
 ---

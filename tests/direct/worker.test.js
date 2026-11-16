@@ -19,6 +19,7 @@ test.before(async () => {
     seen = { url: String(url), headers: init.headers || {} };
     if (/appconfig\.production\.json/.test(url)) return new Response('{"remoteServiceBaseUrl":"https://api.mt.gob.do","appBaseUrl":"https://ovi.mt.gob.do"}', { headers: { 'content-type': 'application/json' } });
     if (/GetPadronElectoral/.test(url)) return new Response('{"error":false}', { headers: { 'content-type': 'application/json', 'set-cookie': 'AspxAutoDetectCookieSupport=1; path=/' } });
+    if (/exportar\.aspx/.test(url)) return new Response('<html><body><table><tr><td>NCF</td></tr></table></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8', 'content-disposition': 'attachment; filename="envios.xls"' } });
     if (/reporte\.aspx/.test(url)) return new Response(Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0xff]), { headers: { 'content-type': 'application/pdf', 'content-disposition': 'attachment; filename="r.pdf"' } });
     if (init.headers?.['X-MicrosoftAjax']) return new Response('1|#||4|12|updatePanel|x|', { headers: { 'content-type': 'text/plain; charset=utf-8', 'set-cookie': 'ASP.NET_SessionId=abc; path=/; HttpOnly' } });
     return new Response(PAGE, { headers: { 'content-type': 'text/html; charset=utf-8', 'set-cookie': 'ASP.NET_SessionId=abc; domain=.dgii.gov.do; path=/ofv; HttpOnly' } });
@@ -190,4 +191,11 @@ test('DGII con Token Digital: el robot calcula el código y no envía la pantall
   assert.match(html, /if\(!p\.totp\)\{ try \{ tokEl\.focus\(\); \}/);
   // la tarjeta de códigos no se escribe en la casilla del token
   assert.match(html, /if\(cfg && cfg\.tarjeta && !tokEl\)/);
+});
+
+test('descargas que el portal marca como text/html (Excel de DGII) llegan intactas con su nombre de archivo', async () => {
+  const res = await proxied('https://www.dgii.gov.do/ofv/consultas/exportar.aspx?id=1');
+  assert.match(res.headers.get('content-disposition'), /envios\.xls/);
+  const body = await res.text();
+  assert.equal(body, '<html><body><table><tr><td>NCF</td></tr></table></body></html>', 'sin <base> ni scripts inyectados');
 });

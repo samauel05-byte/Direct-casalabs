@@ -196,8 +196,9 @@ test('DGII con Token Digital: el robot calcula el código y no envía la pantall
 test('DGII: el «Código de Seguridad» dentro de la Oficina Virtual (solo Token, sin clave) también se llena y se envía una vez', async () => {
   const html = await (await proxied('https://www.dgii.gov.do/ofv/login.aspx')).text();
   assert.match(html, /serp-dgii-midtoken-/);
-  assert.match(html, /if \(!pEl && isDgii && p\.totp && !requestedCardPosition\(\)\)/);
-  assert.match(html, /Date\.now\(\) - last > 90000/);
+  assert.match(html, /function midToken\(\)/);
+  assert.match(html, /function watchMidToken\(\)/);
+  assert.match(html, /log\.length >= 3/);
   assert.match(html, /continuar/i);
 });
 

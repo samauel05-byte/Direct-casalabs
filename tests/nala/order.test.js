@@ -21,3 +21,18 @@ test('las que tienen posición van antes que las que no, y la página manda sobr
   const rows = [r('p70', { page_from: 70, page_to: 70, sort_pos: 1 }), r('manual', { extraction_key: 'manual:abc', invoice_date: '2026-10-02' }), r('p69', { sort_pos: 5 })];
   assert.deepEqual(rows.sort(cmpRows).map(x => x.id), ['p69', 'manual', 'p70']);
 });
+
+test('exportación (Excel/TXT): mismo orden que la lista; las filas sin documento van al final por posición y NCF', () => {
+  const { buildSnapshot } = require('../../lib/nala/formats');
+  assert.equal(typeof buildSnapshot, 'function');
+  const f = require('../../lib/nala/formats');
+  assert.ok(f.cmpExport, 'cmpExport expuesto');
+  const mk = (id, o) => ({ id, status: 'approved', fields: { ncf: o.ncf || '', fecha_comprobante: o.fecha || '2026-10-31' }, _batch_at: '2026-11-01', ...o });
+  const rows = [
+    mk('b2', { document_id: null, ncf: 'B1100001494', sort_pos: 2 }),
+    mk('p2', { document_id: 'd1', _doc_at: '2026-11-01', page_from: 2, page_to: 2, fecha: '2026-10-01' }),
+    mk('b1', { document_id: null, ncf: 'B1100001493', sort_pos: 1 }),
+    mk('p1', { document_id: 'd1', _doc_at: '2026-11-01', page_from: 1, page_to: 1, fecha: '2026-10-20' }),
+  ];
+  assert.deepEqual(rows.sort(f.cmpExport).map(x => x.id), ['p1', 'p2', 'b1', 'b2']);
+});

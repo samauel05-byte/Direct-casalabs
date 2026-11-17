@@ -159,6 +159,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Relay — casilla del token por contexto:** si `tokenInput()` no la reconoce, `tokenInputLoose()` toma una casilla visible y vacía dentro de un bloque con ≤2 casillas cuyo texto menciona «token» o «código de seguridad». Ojo: el script del relay vive en una plantilla de JS, las regex deben escribirse con `\\s` (si no, el navegador recibe `s`).
 
+**Logo de Direct:** `public/img/direct-logo.png` (para fondo oscuro) y `direct-logo-light.png` (fondo claro) son PNG con canal alfa real (se quitó el fondo negro; versión clara = blancos pasados a azul marino), recortados y referenciados con `?v=2` para saltar la caché. El tema claro/oscuro elige el archivo (`index.html`, `activar.html`).
+
 **Relay — traspaso a pestañas nuevas:** un enlace/formulario con `target` distinto de `_self`, o `window.open`, guarda el payload en `localStorage['serp-handoff']` (`serpHandoff()`, 15 s, se borra al leerse); el script de autollenado de la pestaña nueva lo recoge si no tiene `hash` ni payload de sesión.
 
 **Relay — Token Digital a mitad de sesión:** `waitAndRun` (worker.js) ahora maneja la pantalla «Código de Seguridad» sin campo de clave (`!pEl`): si hay `p.totp`, `tokenInput()` la encuentra y el texto menciona código de seguridad/Token Digital, escribe el TOTP y pulsa «Continuar»; `midToken()` se vigila con `watchMidToken()` (cada 1 s hasta 15 min, también al declarar); registra los envíos en `serp-dgii-midtoken-<flow>`: nunca el mismo código dos veces y máximo 3 en 10 min. El payload sigue en `sessionStorage` de la pestaña. Prueba en tests/direct/worker.test.js.

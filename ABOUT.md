@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Logo de Direct sin fondo negro**: el logo (nube con llave) ahora es un PNG con transparencia real, en versión para fondo oscuro (texto blanco) y para fondo claro (texto azul marino), recortado a su tamaño. Ya no aparece el recuadro negro sobre páginas claras.
 - **Relay: arreglo del auto-llenado del token en la Oficina Virtual**: una expresión del script llegaba mal escrita al navegador y la pantalla «Código de Seguridad» no se reconocía; además ahora la casilla del Token Digital se detecta por el texto que la rodea (declaraciones, ventanas emergentes).
 - **Relay: las pestañas nuevas de la DGII (p. ej. al declarar) también reciben el token automático**: si la declaración se abre en otra pestaña, esa pestaña no heredaba los datos y no llenaba el token; ahora la pestaña de origen le pasa los datos durante 15 segundos (y se borran al leerse).
 - **Relay: el Token Digital también se llena en el «Código de Seguridad» de la Oficina Virtual**: cuando la DGII pide el token en medio de la sesión (por ejemplo al abrir «Datos Básicos» o confirmar una transacción), Direct escribe el código y pulsa «Continuar» y vigila toda la sesión, así que también funciona al declarar (la pantalla puede salir tarde o varias veces); nunca repite el mismo código y envía máximo 3 en 10 minutos para no bloquear la cuenta. Antes solo se llenaba en la pantalla de inicio de sesión.

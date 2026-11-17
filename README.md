@@ -159,6 +159,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Relay — casilla del token por contexto:** si `tokenInput()` no la reconoce, `tokenInputLoose()` toma una casilla visible y vacía dentro de un bloque con ≤2 casillas cuyo texto menciona «token» o «código de seguridad». Ojo: el script del relay vive en una plantilla de JS, las regex deben escribirse con `\\s` (si no, el navegador recibe `s`).
 
+**Login:** en `index.html` `.on-dark` usa `direct-logo.png` y `.on-light` usa `direct-logo-light.png` (antes estaban cruzados); `.auth-logo-img` mide 64 px.
+
 **Logo de Direct:** `public/img/direct-logo.png` (para fondo oscuro) y `direct-logo-light.png` (fondo claro) son PNG con canal alfa real (se quitó el fondo negro; versión clara = blancos pasados a azul marino), recortados y referenciados con `?v=2` para saltar la caché. El tema claro/oscuro elige el archivo (`index.html`, `activar.html`).
 
 **Relay — traspaso a pestañas nuevas:** un enlace/formulario con `target` distinto de `_self`, o `window.open`, guarda el payload en `localStorage['serp-handoff']` (`serpHandoff()`, 15 s, se borra al leerse); el script de autollenado de la pestaña nueva lo recoge si no tiene `hash` ni payload de sesión.

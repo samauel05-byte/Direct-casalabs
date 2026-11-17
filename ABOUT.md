@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Logo de la pantalla de inicio de sesión visible en tema claro y oscuro**: se habían intercambiado las dos versiones del logo (en claro salía el de texto blanco y casi no se veía); ahora cada tema usa la suya y el logo es un poco más grande.
 - **Logo de Direct sin fondo negro**: el logo (nube con llave) ahora es un PNG con transparencia real, en versión para fondo oscuro (texto blanco) y para fondo claro (texto azul marino), recortado a su tamaño. Ya no aparece el recuadro negro sobre páginas claras.
 - **Relay: arreglo del auto-llenado del token en la Oficina Virtual**: una expresión del script llegaba mal escrita al navegador y la pantalla «Código de Seguridad» no se reconocía; además ahora la casilla del Token Digital se detecta por el texto que la rodea (declaraciones, ventanas emergentes).
 - **Relay: las pestañas nuevas de la DGII (p. ej. al declarar) también reciben el token automático**: si la declaración se abre en otra pestaña, esa pestaña no heredaba los datos y no llenaba el token; ahora la pestaña de origen le pasa los datos durante 15 segundos (y se borran al leerse).

@@ -1615,7 +1615,7 @@ function process606(rows) {
     const base=Math.abs(p._total);
     if(p._itbis!==0&&base>0&&Math.abs(p._itbis)/base>0.185)flags.push('ITBIS mayor al 18%');
     if(Math.abs(p._ret)>Math.abs(p._itbis)+0.01)flags.push('Retenido mayor al ITBIS');
-    return {i,fecha:val(p,cm.fecha),rnc:val(p,cm.rnc),ncf:ncf||val(p,cm.ncf),tipo:val(p,cm.tipo_comprobante),pago:val(p,cm.forma_pago),total:p._total,itbis:p._itbis,adel:p._adel,ret:p._ret,flags};
+    return {i,fecha:val(p,cm.fecha),rnc:val(p,cm.rnc),ncf:ncf||val(p,cm.ncf),tipo:val(p,cm.tipo_comprobante),pago:val(p,cm.forma_pago),total:p._total,itbis:p._itbis,adel:p._adel,cs:(p._serv+p._bien>0?r2(p._adel*p._serv/(p._serv+p._bien)):0),ret:p._ret,flags};
   });
   return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras,totIsc,totOtrosImp,totPropina}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), revision };
 }
@@ -1841,7 +1841,8 @@ function render606(data, filename) {
     kpiCard('Total Facturado',fmtM(s.totTotal),'g');
   $('kpis-itbis-606').innerHTML=
     kpiCard('ITBIS Facturado',fmtM(s.totItbis),'')+
-    kpiCard('ITBIS Crédito Fiscal',fmtM(s.totAdel),'g','Disponible para deducir')+
+    kpiCard('ITBIS Crédito Fiscal',fmtM(s.totAdel),'g',s.itbisNoAdmitido?`Ya sin ${fmtM(s.itbisNoAdmitido)} no admitido por la DGII`:'Disponible para deducir')+
+    (s.itbisNoAdmitido?kpiCard('ITBIS no admitido (DGII)',fmtM(s.itbisNoAdmitido),'r','Excluido del crédito · va al IT-1'):'')+
     kpiCard('ITBIS al Costo',fmtM(s.totCosto),'a','No recuperable')+
     kpiCard('ITBIS Retenido',fmtM(s.totRet),'r')+
     kpiCard('Impuesto Selectivo al Consumo',fmtM(s.totIsc||0),'','Informativo · no suma al ITBIS')+
@@ -1894,22 +1895,46 @@ function dgiiDiffSearch(rows,diff,tol){
   out.sort((a,b)=>Math.abs(a.reduce((n,x)=>n+x.v,0)-T)-Math.abs(b.reduce((n,x)=>n+x.v,0)-T)||a.length-b.length);
   return out;
 }
+let DG_FOUND=[];
+function dgiiAdjBanner(d){
+  const a=d&&d.dgiiAdj; if(!a) return '';
+  return `<div class="alert ok" style="margin-bottom:10px"><strong>Ajuste aplicado:</strong> ${fmtM(a.total)} de ITBIS (${a.items.map(x=>escH(x.ncf)).join(', ')}) ya no cuenta como crédito fiscal y aparece en el IT-1 como «no admitido por la DGII». <button class="btn btn-ghost" id="dg-undo" type="button" style="padding:3px 10px;font-size:12px">Quitar ajuste</button></div>`;
+}
+function applyDgiiAdjust(optIx){
+  const d=STATE['606']; const combo=DG_FOUND[optIx]; if(!d||!d.revision||!combo) return;
+  clearDgiiAdjust(true);
+  const sm=d.summary, items=combo.map(x=>({i:x.r.i,ncf:x.r.ncf,fecha:x.r.fecha,rnc:x.r.rnc,adel:x.r.adel,cs:x.r.cs||0}));
+  const total=r2(items.reduce((n,x)=>n+x.adel,0)), serv=r2(items.reduce((n,x)=>n+x.cs,0));
+  d.dgiiAdj={total,serv,items,orig:{totAdel:sm.totAdel,credServ:sm.credServ,credBien:sm.credBien}};
+  sm.totAdel=r2(sm.totAdel-total); sm.credServ=r2(sm.credServ-serv); sm.credBien=r2(sm.totAdel-sm.credServ); sm.itbisNoAdmitido=total;
+  refreshAfterDgiiAdjust(); showToast(`Ajuste aplicado: ${fmtM(total)} fuera del crédito fiscal.`);
+}
+function clearDgiiAdjust(silent){
+  const d=STATE['606']; if(!d||!d.dgiiAdj) return;
+  const o=d.dgiiAdj.orig, sm=d.summary; sm.totAdel=o.totAdel; sm.credServ=o.credServ; sm.credBien=o.credBien; delete sm.itbisNoAdmitido; delete d.dgiiAdj;
+  if(!silent){ refreshAfterDgiiAdjust(); showToast('Ajuste quitado.'); }
+}
+function refreshAfterDgiiAdjust(){
+  const d=STATE['606']; if(!d) return;
+  render606(d,$('tf-606').textContent||'Archivo 606'); updateIT1(); renderDgiiCheck();
+}
+document.addEventListener('click',e=>{ const u=e.target.closest&&e.target.closest('.dg-use'); if(u){ applyDgiiAdjust(Number(u.dataset.opt)); return; } if(e.target.id==='dg-undo') clearDgiiAdjust(); });
 function renderDgiiCheck(){
   const d=STATE['606']; if(d&&!d.revision&&d.allRows)Object.assign(d,process606(d.allRows));
   const out=$('dg-out'); if(!out) return;
   if(!d||!d.revision){ out.innerHTML=''; return; }
   const raw=String($('dg-val').value||'').replace(/[^0-9.,-]/g,'');
   const dg=Number(raw.includes(',')&&raw.includes('.')?raw.replace(/,/g,''):raw.replace(/,/g,'.'));
-  if(!raw||!Number.isFinite(dg)){ out.innerHTML='<div class="field-help">Escribe el monto de la DGII para comparar.</div>'; return; }
-  const mine=d.summary.totAdel, diff=r2(mine-dg);
-  let h=`<div class="field-help"><b>Este 606:</b> ${fmtM(mine)} · <b>DGII:</b> ${fmtM(dg)} · <b>Diferencia:</b> ${fmtM(diff)}</div>`;
+  if(!raw||!Number.isFinite(dg)){ out.innerHTML=dgiiAdjBanner(d)+'<div class="field-help">Escribe el monto de la DGII para comparar.</div>'; return; }
+  const mine=d.dgiiAdj?d.dgiiAdj.orig.totAdel:d.summary.totAdel, diff=r2(mine-dg);
+  let h=dgiiAdjBanner(d)+`<div class="field-help"><b>Este 606:</b> ${fmtM(mine)} · <b>DGII:</b> ${fmtM(dg)} · <b>Diferencia:</b> ${fmtM(diff)}</div>`;
   if(Math.abs(diff)<0.005){ out.innerHTML=h+'<div class="field-help" style="color:#047857"><b>Cuadra.</b> No hay diferencia.</div>'; return; }
   if(diff<0){ out.innerHTML=h+'<div class="field-help" style="color:#B45309">La DGII muestra <b>más</b> ITBIS que este 606: probablemente falta alguna factura en el archivo (o el envío de la DGII incluye otra cosa). Busca facturas del período que no estén aquí.</div>'; return; }
   const found=dgiiDiffSearch(d.revision,diff,0.02);
   if(!found.length){ out.innerHTML=h+'<div class="field-help">No encontré una factura (ni 2 o 3 juntas) que sume exactamente esa diferencia. Puede ser el efecto de varias facturas o de redondeos; revisa en la DGII el «Detalle de validación» y compara NCF por NCF.</div>'; return; }
   h+=`<div class="field-help" style="margin-top:8px"><b>${found.length>=40?'40+':found.length} posible${found.length!==1?'s':''} combinaci${found.length!==1?'ones':'ón'}</b> que suma${found.length!==1?'n':''} ${fmtM(diff)}. Primero las que suman exacto; la DGII suele excluir comprobantes que no valida (NCF no recibido, de otro RNC, repetido…).</div>`;
   h+='<div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>RNC</th><th>NCF</th><th style="text-align:right">ITBIS</th></tr></thead><tbody>';
-  found.forEach((combo,ix)=>{ const sm=combo.reduce((n,x)=>n+x.v,0)/100; combo.forEach((x,k)=>{ h+=`<tr${k===0?' style="border-top:2px solid #94A3B8"':''}><td>${k===0?'Opción '+(ix+1)+(Math.abs(sm-diff)<0.005?' · exacta':' · suma '+fmtM(sm)):''}</td><td>${escH(x.r.fecha)}</td><td>${escH(x.r.rnc)}</td><td>${escH(x.r.ncf)} <small>(fila ${x.r.i+1})</small></td><td style="text-align:right">${fmtM(x.r.adel)}</td></tr>`; }); });
+  DG_FOUND=found; found.forEach((combo,ix)=>{ const sm=combo.reduce((n,x)=>n+x.v,0)/100; combo.forEach((x,k)=>{ h+=`<tr${k===0?' style="border-top:2px solid #94A3B8"':''}><td>${k===0?'Opción '+(ix+1)+(Math.abs(sm-diff)<0.005?' · exacta':' · suma '+fmtM(sm))+`<br><button class="btn btn-primary dg-use" type="button" data-opt="${ix}" style="margin-top:4px;padding:3px 10px;font-size:12px">Usar esta opción</button>`:''}</td><td>${escH(x.r.fecha)}</td><td>${escH(x.r.rnc)}</td><td>${escH(x.r.ncf)} <small>(fila ${x.r.i+1})</small></td><td style="text-align:right">${fmtM(x.r.adel)}</td></tr>`; }); });
   out.innerHTML=h+'</tbody></table></div>';
 }
 (function(){ const go=()=>{ const b=$('dg-go'), i=$('dg-val'); if(b) b.addEventListener('click',renderDgiiCheck); if(i) i.addEventListener('keydown',e=>{ if(e.key==='Enter') renderDgiiCheck(); }); }; if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go(); })();
@@ -2262,6 +2287,7 @@ function updateIT1() {
   const taxRows=[
     {lbl:'ITBIS de ventas',always:true, sign:'+',amt:debito,source:cardItbisNote},
     {lbl:'ITBIS Crédito (compras)',          always:false,sign:'−',amt:credito},
+    {lbl:'ITBIS de compras no admitido por la DGII',always:false,sign:'',amt:s6.itbisNoAdmitido||0,source:'Ajuste del cuadre con la DGII: ya está fuera del crédito, no se resta otra vez',muted:true},
     {lbl:'ITBIS Retenido por clientes (607)',always:false,sign:'−',amt:s7.totRet},
     {lbl:'ITBIS Retenido por tarjetas',always:false,sign:'−',amt:cardRet},
     {lbl:'ITBIS Pagado en Importaciones',  always:false,sign:'−',amt:importaciones},

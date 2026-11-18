@@ -159,6 +159,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Relay — casilla del token por contexto:** si `tokenInput()` no la reconoce, `tokenInputLoose()` toma una casilla visible y vacía dentro de un bloque con ≤2 casillas cuyo texto menciona «token» o «código de seguridad». Ojo: el script del relay vive en una plantilla de JS, las regex deben escribirse con `\\s` (si no, el navegador recibe `s`).
 
+**CAMI — ajuste «no admitido por la DGII»:** `applyDgiiAdjust(opt)`/`clearDgiiAdjust()` (itbis-web.html) restan de `STATE['606'].summary` (`totAdel`, `credServ`, `credBien`) el ITBIS por adelantar de las facturas elegidas (`revision[].adel` y su parte de servicios `cs`), guardan el original en `dgiiAdj.orig` y ponen `summary.itbisNoAdmitido`. El IT-1 (`updateIT1`) y su exportación leen el crédito ya ajustado y muestran una fila informativa; el cuadre compara contra el crédito original. No persiste al recargar el 606.
+
 **CAMI — reportes de tarjeta (607):** `public/cami/itbis-web.html`: cada tarjeta (`cardnet`/`azul`) tiene «Limpiar» (`resetCard(id)` pone `CARD_STATE[id]=null` y recalcula consolidado/IT-1) y «¿Cómo se calculó?» (`cardHowHTML`, usa `columnasUsadas`, `montoReporte` y `esPDF` que ahora devuelve `processCardReport`). Fórmula: retención 2 % del reporte (o monto × 2 %) → `totalSujetoRetencion = retención ÷ 0,02` → `itbisTarjeta = sujeto × 0,18` → total = sujeto + ITBIS.
 
 **CAMI — cuadre con la DGII:** `public/cami/itbis-web.html` (`renderDgiiCheck`/`dgiiDiffSearch`): con el monto de la DGII calcula `totAdel − DGII` y busca subconjuntos de 1–3 facturas (`revision[].adel`, tolerancia ±0,02; triples solo hasta 260 filas) ordenados por cercanía; si la DGII es mayor avisa que faltan facturas. Las filas de revisión llevan ahora `adel`.

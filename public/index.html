@@ -1930,6 +1930,8 @@ function renderPortalGrid() {
       // Con una sola credencial guardada, un clic entra directo (sin elegir empresa).
       const mine=inst.oneClick?getCompanies(key):[];
       if(inst.oneClick && mine.length===1){ trackUsage('portal_view', key); enterCompany(mine[0].id); return; }
+      // Sin credencial todavía: se abre directo el formulario para guardarla una vez (cifrada) y entra al terminar.
+      if(inst.oneClick && mine.length===0){ activePortal=key; openCompanyModal().then(()=>{ const n=document.getElementById('co-name'); if(n&&!n.value) n.value=inst.name; setTimeout(()=>document.getElementById('co-user')?.focus(),50); }); return; }
       inst.openDirect?openDirectPortal(key):inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key);
     });
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
@@ -2772,6 +2774,8 @@ async function saveCompany() {
     await renderCompaniesView();
     renderPortalGrid();
     toast('Empresa guardada','ok');
+    // Portal de un clic (Digisign): al guardar la primera credencial entra de una vez.
+    if (!credId && INST[inst]?.oneClick) enterCompany(id);
   } catch(e) { toast('Error: '+e.message,'err'); }
 }
 

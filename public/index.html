@@ -972,8 +972,8 @@ const INST = {
              url:'https://www.camarasantodomingo.do/solicitudes/FormularioWeb/', openRelay:true,
              uf:'email', pf:'password' },
   digisign:{ name:'Digisign',   desc:'Digisign · Facturación electrónica',          grad:'linear-gradient(135deg,#0c4a6e 0%,#0284c7 100%)', abbr:'DS',
-             // Opens the portal itself for the user to log in; no autofill.
-             url:'https://facturacion.digisign.do/login', openDirect:true },
+             // Entra solo por el relay con la credencial guardada (cifrada) de cada usuario.
+             url:'https://facturacion.digisign.do/login', uf:'email', pf:'password' },
   gdmail:  { name:'Correo GD',   desc:'GD Línea · Correo web (Webmail)',              grad:'linear-gradient(135deg,#334155 0%,#64748b 100%)', abbr:'GD',
              url:'https://mail.gdlinea.com/webmail/', openDirect:true },
   nexo:    { name:'Nexo',        desc:'Nexo · Gestor de pendientes',                 grad:'linear-gradient(135deg,#1e3a8a 0%,#6366f1 100%)', abbr:'NX',

@@ -1,4 +1,6 @@
 const ALLOWED_HOSTS = [
+  // Digisign — Facturación electrónica (inicio de sesión correo + contraseña)
+  'facturacion.digisign.do',
   'oficinavirtual.dgii.gov.do',
   'www.dgii.gov.do',
   'dgii.gov.do',
@@ -848,6 +850,7 @@ export default {
     'www.mt.gob.do':             { user:['usuario','user','username'], pass:['contrasena','clave','password'], tarjeta:['tarjeta','token','codigo'] },
     'www.cardnet.com.do':        { user:['usuario','user','username','login'], pass:['password','clave'] },
     'cardnet.com.do':            { user:['usuario','user','username','login'], pass:['password','clave'] },
+    'facturacion.digisign.do':   { user:['email'], pass:['password'] },
   };
 
   function q(names){

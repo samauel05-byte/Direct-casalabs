@@ -39,7 +39,7 @@ Direct abre cada portal en una pestaña nueva. Según el portal, el acceso es de
 | ONAPI | `onapi` | Auto-login por relay |
 | Formalízate | `formalizate` | Auto-login por relay |
 | Cámara de Comercio (Firma digital) | `camara` | Formulario público por relay |
-| Digisign — Facturación electrónica | `digisign` | Abrir directo |
+| Digisign — Facturación electrónica (`facturacion.digisign.do/login`, correo + contraseña) | `digisign` | Auto-login por relay (credencial cifrada por empresa/usuario) |
 | Correo GD (Webmail) | `gdmail` | Abrir directo |
 | Nexo — Gestor de pendientes (`https://nexo.casalabs.com.do/`) | `nexo` | Solo abre |
 | Citrus — Pagos y servicios | `citrus` | Auto-login por relay |

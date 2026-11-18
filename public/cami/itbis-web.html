@@ -757,6 +757,16 @@ tbody tr:nth-child(even){background:var(--surface-2);}
     <div class="slabel">ITBIS — Desglose</div>
     <div class="kpi-row" id="kpis-itbis-606"></div>
 
+    <div class="slabel">Cuadre con la DGII</div>
+    <div class="manual-card" style="margin-bottom:18px;border-top-color:#0EA5E9;">
+      <div class="field-help">Escribe el <b>Adelanto de ITBIS</b> que muestra la DGII (en «Consulta de envíos»). Si es menor que el ITBIS Crédito Fiscal de este 606, busco qué factura o combinación de facturas (hasta 3) explica la diferencia.</div>
+      <div class="rv-tools">
+        <input class="field-inp" id="dg-val" type="text" inputmode="decimal" placeholder="ITBIS según la DGII, ej. 18110.46" aria-label="ITBIS según la DGII">
+        <button class="btn btn-xl" id="dg-go" type="button">Buscar diferencia</button>
+      </div>
+      <div id="dg-out" style="margin-top:12px"></div>
+    </div>
+
     <div class="slabel">ITBIS Retenido a Proveedores</div>
     <div class="ret-grid" id="ret-606"></div>
 
@@ -1594,7 +1604,7 @@ function process606(rows) {
     const base=Math.abs(p._total);
     if(p._itbis!==0&&base>0&&Math.abs(p._itbis)/base>0.185)flags.push('ITBIS mayor al 18%');
     if(Math.abs(p._ret)>Math.abs(p._itbis)+0.01)flags.push('Retenido mayor al ITBIS');
-    return {i,fecha:val(p,cm.fecha),rnc:val(p,cm.rnc),ncf:ncf||val(p,cm.ncf),tipo:val(p,cm.tipo_comprobante),pago:val(p,cm.forma_pago),total:p._total,itbis:p._itbis,ret:p._ret,flags};
+    return {i,fecha:val(p,cm.fecha),rnc:val(p,cm.rnc),ncf:ncf||val(p,cm.ncf),tipo:val(p,cm.tipo_comprobante),pago:val(p,cm.forma_pago),total:p._total,itbis:p._itbis,adel:p._adel,ret:p._ret,flags};
   });
   return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras,totIsc,totOtrosImp,totPropina}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), revision };
 }
@@ -1859,6 +1869,36 @@ function renderReview606(){
   $('rv-page').textContent=`Página ${RV.page+1} de ${pages}`;
   $('rv-prev').disabled=RV.page===0; $('rv-next').disabled=RV.page>=pages-1;
 }
+/* ── Cuadre con la DGII: busca qué facturas explican la diferencia de ITBIS ── */
+function dgiiDiffSearch(rows,diff,tol){
+  const c=rows.filter(r=>Math.abs(r.adel)>0.004).map(r=>({r,v:Math.round(r.adel*100)}));
+  const T=Math.round(diff*100), tl=Math.round(tol*100), out=[], MAX=40;
+  const push=a=>{ if(out.length<MAX) out.push(a); };
+  for(let i=0;i<c.length&&out.length<MAX;i++) if(Math.abs(c[i].v-T)<=tl) push([c[i]]);
+  for(let i=0;i<c.length&&out.length<MAX;i++) for(let j=i+1;j<c.length&&out.length<MAX;j++) if(Math.abs(c[i].v+c[j].v-T)<=tl) push([c[i],c[j]]);
+  if(c.length<=260) for(let i=0;i<c.length&&out.length<MAX;i++) for(let j=i+1;j<c.length&&out.length<MAX;j++){ const rest=T-c[i].v-c[j].v; if(rest<-tl) continue; for(let k=j+1;k<c.length&&out.length<MAX;k++) if(Math.abs(rest-c[k].v)<=tl) push([c[i],c[j],c[k]]); }
+  out.sort((a,b)=>Math.abs(a.reduce((n,x)=>n+x.v,0)-T)-Math.abs(b.reduce((n,x)=>n+x.v,0)-T)||a.length-b.length);
+  return out;
+}
+function renderDgiiCheck(){
+  const d=STATE['606']; if(d&&!d.revision&&d.allRows)Object.assign(d,process606(d.allRows));
+  const out=$('dg-out'); if(!out) return;
+  if(!d||!d.revision){ out.innerHTML=''; return; }
+  const raw=String($('dg-val').value||'').replace(/[^0-9.,-]/g,'');
+  const dg=Number(raw.includes(',')&&raw.includes('.')?raw.replace(/,/g,''):raw.replace(/,/g,'.'));
+  if(!raw||!Number.isFinite(dg)){ out.innerHTML='<div class="field-help">Escribe el monto de la DGII para comparar.</div>'; return; }
+  const mine=d.summary.totAdel, diff=r2(mine-dg);
+  let h=`<div class="field-help"><b>Este 606:</b> ${fmtM(mine)} · <b>DGII:</b> ${fmtM(dg)} · <b>Diferencia:</b> ${fmtM(diff)}</div>`;
+  if(Math.abs(diff)<0.005){ out.innerHTML=h+'<div class="field-help" style="color:#047857"><b>Cuadra.</b> No hay diferencia.</div>'; return; }
+  if(diff<0){ out.innerHTML=h+'<div class="field-help" style="color:#B45309">La DGII muestra <b>más</b> ITBIS que este 606: probablemente falta alguna factura en el archivo (o el envío de la DGII incluye otra cosa). Busca facturas del período que no estén aquí.</div>'; return; }
+  const found=dgiiDiffSearch(d.revision,diff,0.02);
+  if(!found.length){ out.innerHTML=h+'<div class="field-help">No encontré una factura (ni 2 o 3 juntas) que sume exactamente esa diferencia. Puede ser el efecto de varias facturas o de redondeos; revisa en la DGII el «Detalle de validación» y compara NCF por NCF.</div>'; return; }
+  h+=`<div class="field-help" style="margin-top:8px"><b>${found.length>=40?'40+':found.length} posible${found.length!==1?'s':''} combinaci${found.length!==1?'ones':'ón'}</b> que suma${found.length!==1?'n':''} ${fmtM(diff)}. Primero las que suman exacto; la DGII suele excluir comprobantes que no valida (NCF no recibido, de otro RNC, repetido…).</div>`;
+  h+='<div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>RNC</th><th>NCF</th><th style="text-align:right">ITBIS</th></tr></thead><tbody>';
+  found.forEach((combo,ix)=>{ const sm=combo.reduce((n,x)=>n+x.v,0)/100; combo.forEach((x,k)=>{ h+=`<tr${k===0?' style="border-top:2px solid #94A3B8"':''}><td>${k===0?'Opción '+(ix+1)+(Math.abs(sm-diff)<0.005?' · exacta':' · suma '+fmtM(sm)):''}</td><td>${escH(x.r.fecha)}</td><td>${escH(x.r.rnc)}</td><td>${escH(x.r.ncf)} <small>(fila ${x.r.i+1})</small></td><td style="text-align:right">${fmtM(x.r.adel)}</td></tr>`; }); });
+  out.innerHTML=h+'</tbody></table></div>';
+}
+(function(){ const go=()=>{ const b=$('dg-go'), i=$('dg-val'); if(b) b.addEventListener('click',renderDgiiCheck); if(i) i.addEventListener('keydown',e=>{ if(e.key==='Enter') renderDgiiCheck(); }); }; if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go(); })();
 function tipoLabel(r){return r==='C18'?'18 % Construcción':r===10?'10 % Construcción':r+' %';}
 function renderTipo607(){
   const d=STATE['607']; if(d&&!d.facturas&&d.allRows)Object.assign(d,process607(d.allRows,d.overrides||{}));

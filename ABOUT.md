@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **CAMI (607): botón «Limpiar» en CardNET y Azul, y «¿Cómo se calculó?»**: cada reporte de tarjeta se puede quitar por separado sin tocar el otro, y debajo de sus cifras se despliega el paso a paso con los números reales y la columna del archivo usada: retención del 2 % → monto sujeto (retención ÷ 2 %) → ITBIS al 18 % → total cobrado con ITBIS, más el ITBIS que trae el reporte y cómo se contaron los movimientos.
 - **CAMI (606): «Cuadre con la DGII»**: debajo del desglose de ITBIS hay una casilla para escribir el Adelanto de ITBIS que muestra la DGII. Si es menor que el ITBIS Crédito Fiscal del 606, la herramienta busca qué factura o combinación de hasta 3 facturas explica la diferencia (primero las que suman exacto) y las lista con fecha, RNC y NCF. Si la DGII muestra más, avisa que falta alguna factura en el archivo.
 - **Digisign: guardar la credencial es un solo paso y entra de una vez**: al pulsar «Digisign» sin credencial guardada se abre directamente el formulario (correo y contraseña, cifrados en el navegador); al guardar, abre Digisign y lo llena solo. Desde entonces, un clic basta.
 - **Digisign: un clic y entra llenando todo**: si el usuario tiene una sola credencial de Digisign guardada, al pulsar «Digisign» se abre el sitio y se rellenan correo y contraseña automáticamente (sin pasar por la lista de empresas). Probado contra el sitio real: el relay llena ambos campos y envía el formulario.

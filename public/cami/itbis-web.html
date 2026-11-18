@@ -1442,6 +1442,22 @@ function countPDFMovements(lines) {
   return unique.size;
 }
 
+// Azul: el «Resumen Mensual de Facturación y Certificación de Retención de ITBIS» cierra con una fila de dos
+// importes: ITBIS reportado (el contenido en las ventas que Azul paga) e ITBIS retenido. Se toman de ahí,
+// nunca de una línea donde convivan otras columnas (el estado trae dos columnas de resumen por renglón).
+function azulCertification(lines){
+  let start=-1;
+  lines.forEach((line,i)=>{ if(start<0&&/certificaci[oó]n\s+de\s+retenci[oó]n\s+de\s+itbis/i.test(line.cells.map(c=>c.text).join(' '))) start=i; });
+  if(start<0) return null;
+  let best=null;
+  for(let i=start;i<lines.length;i++){
+    const nums=lines[i].cells.map(c=>String(c.text||'').trim()).filter(t=>t&&/^[\d.,]+$/.test(t.replace(/[RD$\s]/gi,''))&&/[.,]\d{2}$/.test(t)).map(t=>Math.abs(cleanNum(t)));
+    const others=lines[i].cells.filter(c=>String(c.text||'').trim()&&!/^[\d.,\sRD$]+$/i.test(String(c.text))).length;
+    if(nums.length===2&&others===0&&nums[0]>=nums[1]&&nums[0]>0&&(!best||nums[0]>best.reportado)) best={reportado:nums[0],retenido:nums[1]};
+  }
+  return best;
+}
+
 function cardPDFToRows(lines,provider) {
   const isCardNET=/cardnet/i.test(String(provider||''));
   const isAzul=/azul/i.test(String(provider||''));
@@ -1465,9 +1481,11 @@ function cardPDFToRows(lines,provider) {
   if(!facturas)throw new Error(`No se pudo determinar la cantidad de movimientos del reporte de ${provider}.`);
   const monto=bestPDFSummaryValue(lines,[/monto_total_(?:procesado|transacciones|ventas)/,/total_(?:procesado|transacciones|ventas|depositado)/,/monto_bruto/,/importe_total/],{exclude:[/reten|itbis|subtotal/]})||0;
   const retenido=bestPDFSummaryValue(lines,[/itbis_retenido/,/monto_retenido/,/retencion_(?:itbis_)?(?:del_)?2/,/retencion_ley_253_12/,/retencion_aplicada/,/total_retenciones/,/retencion/],{exclude:[/subtotal|cantidad/]})||0;
-  const itbis=bestPDFSummaryValue(lines,[/itbis_reportado/,/total_itbis/,/monto_itbis/],{exclude:[/reten/]})||0;
+  let itbis=bestPDFSummaryValue(lines,[/itbis_reportado/,/total_itbis/,/monto_itbis/],{exclude:[/reten/]})||0;
+  let retenidoFinal=retenido;
+  if(isAzul){ const cert=azulCertification(lines); if(cert){ itbis=cert.reportado; retenidoFinal=cert.retenido; } }
   return [{
-    cantidad_movimientos:facturas,monto_total:monto,itbis_retenido:retenido,itbis_reportado:itbis,
+    cantidad_movimientos:facturas,monto_total:monto,itbis_retenido:retenidoFinal,itbis_reportado:itbis,
     __pdf_report:true,__metodo_conteo:isCardNET?'Cantidad de Ventas → Total Período':isAzul?'Ventas → Cantidad':summaryCount?'total de control del PDF':'movimientos únicos detectados',
     __movimientos_detectados:movementCount,
   }];
@@ -1747,12 +1765,15 @@ function processCardReport(rows, provider) {
   const montoReporte=total(cm.monto);
   let retenido=total(cm.retenido),retencionCalculada=false;
   const retencionAcreditable=retenido;
-  if(!retenido&&montoReporte>0){retenido=r2(montoReporte*0.02);retencionCalculada=true;}
-  const totalSujetoRetencion=r2(retenido/0.02);
-  const montoProcesado=totalSujetoRetencion||montoReporte;
+  if(!retenido&&montoReporte>0&&!(total(cm.itbis_reportado)>0)){retenido=r2(montoReporte*0.02);retencionCalculada=true;}
   const itbisReporte=total(cm.itbis_reportado);
+  // Si el reporte trae el ITBIS certificado (Azul), manda el reporte: las ventas vienen con ITBIS incluido,
+  // la base es ventas − ITBIS reportado y la retención es la certificada (no se deriva de un 2 % supuesto).
+  const modoReporte=itbisReporte>0&&montoReporte>itbisReporte;
+  const totalSujetoRetencion=modoReporte?r2(montoReporte-itbisReporte):r2(retenido/0.02);
+  const montoProcesado=totalSujetoRetencion||montoReporte;
   const baseGravable=montoProcesado;
-  const itbisTarjeta=r2(montoProcesado*.18);
+  const itbisTarjeta=modoReporte?itbisReporte:r2(montoProcesado*.18);
   const itbisEstimado=true;
   return {
     provider,
@@ -1768,6 +1789,7 @@ function processCardReport(rows, provider) {
     itbisEstimado,
     metodoConteo:pdfSummary?.__metodo_conteo||'registros del archivo',
     montoReporte,
+    modoReporte,
     columnasUsadas:{monto:cm.monto||'',retenido:cm.retenido||'',itbis:cm.itbis_reportado||'',cantidad:cm.cantidad||'',factura:cm.factura||''},
     esPDF:!!pdfSummary,
     registros:useful.length,
@@ -2030,9 +2052,9 @@ function renderCardReport(provider, data, filename) {
   $(`${id}-file`).textContent=filename;
   $(`kpis-${id}`).innerHTML=`
     <div class="processor-metric"><span>Movimientos</span><strong>${fmtI(data.facturas)}</strong></div>
-    <div class="processor-metric"><span>${data.retencionAcreditable>0?'Monto sujeto según retención 2%':'Monto procesado'}</span><strong>${fmtM(data.monto)}</strong></div>
-    <div class="processor-metric"><span>${data.retencionCalculada?'Retención calculada (2%)':'Retenido por tarjeta'}</span><strong>${fmtM(data.retenido)}</strong></div>
-    <div class="processor-metric"><span>ITBIS calculado sobre monto sujeto (18%)</span><strong>${fmtM(data.itbisTarjeta)}</strong></div>
+    <div class="processor-metric"><span>${data.modoReporte?'Base sin ITBIS (ventas − ITBIS)':data.retencionAcreditable>0?'Monto sujeto según retención 2%':'Monto procesado'}</span><strong>${fmtM(data.monto)}</strong></div>
+    <div class="processor-metric"><span>${data.modoReporte?'ITBIS retenido por el procesador':data.retencionCalculada?'Retención calculada (2%)':'Retenido por tarjeta'}</span><strong>${fmtM(data.retenido)}</strong></div>
+    <div class="processor-metric"><span>${data.modoReporte?'ITBIS reportado (certificación)':'ITBIS calculado sobre monto sujeto (18%)'}</span><strong>${fmtM(data.itbisTarjeta)}</strong></div>
     <div class="processor-metric"><span>Total cobrado con ITBIS</span><strong>${fmtM(r2(data.monto+data.itbisTarjeta))}</strong></div>
     <div class="processor-metric"><span>ITBIS del reporte</span><strong>${fmtM(data.itbis)}</strong></div>`;
   $(`${id}-file`).title=`Conteo: ${data.metodoConteo}`;
@@ -2043,6 +2065,16 @@ function renderCardReport(provider, data, filename) {
 function cardHowHTML(d){
   const row=(l,v,cls)=>`<div class="hw-row${cls?' '+cls:''}"><span>${l}</span><span>${v}</span></div>`;
   const c=d.columnasUsadas||{};
+  if(d.modoReporte){
+    let h=row('Fuente de los datos',d.esPDF?'PDF (resumen + certificación de retención de ITBIS)':`Archivo (${fmtI(d.registros)} filas)`);
+    h+=row('① Ventas del período (ITBIS incluido)',fmtM(d.montoReporte));
+    h+=row('② ITBIS reportado por el procesador (certificación)',fmtM(d.itbis));
+    h+=row('③ Base sin ITBIS = ① − ②',fmtM(d.totalSujetoRetencion),'');
+    h+=row('④ Total cobrado = ③ + ②',fmtM(r2(d.monto+d.itbisTarjeta)),'hw-tot');
+    h+=row('ITBIS retenido por el procesador (se acredita en el IT-1)',fmtM(d.retenido));
+    h+=row(`Cantidad de movimientos (${escH(d.metodoConteo||'')})`,fmtI(d.facturas));
+    return h+'<div class="hw-note">Aquí el reporte trae el ITBIS certificado, así que no se estima. Las ventas pagadas por terceros (p. ej. American Express) no entran en el ITBIS certificado de Azul.</div>';
+  }
   let h='';
   h+=row('Fuente de los datos',d.esPDF?'PDF (fila resumen del reporte)':`Archivo (${fmtI(d.registros)} filas)`);
   if(c.monto) h+=row(`Monto del reporte · columna «${escH(c.monto)}»`,fmtM(d.montoReporte||0));
@@ -2077,8 +2109,8 @@ function renderCardTotal() {
     kpiCard('Movimientos',fmtI(total('facturas')),'c')+
     kpiCard('Monto procesado',fmtM(total('monto')),'g')+
     kpiCard('Retenido por tarjeta',fmtM(total('retenido')),'r')+
-    kpiCard('Monto sujeto al cálculo',fmtM(total('baseGravable')),'v','Obtenido desde la retención del 2%')+
-    kpiCard('ITBIS calculado al 18%',fmtM(total('itbisTarjeta')),'a','Monto sujeto × 18%')+
+    kpiCard('Monto sujeto al cálculo',fmtM(total('baseGravable')),'v',reports.some(r=>r.modoReporte)?'Ventas − ITBIS reportado (o retención ÷ 2 %)':'Obtenido desde la retención del 2%')+
+    kpiCard(reports.some(r=>r.modoReporte)?'ITBIS de tarjetas':'ITBIS calculado al 18%',fmtM(total('itbisTarjeta')),'a',reports.some(r=>r.modoReporte)?'Certificado por el procesador, o monto sujeto × 18 %':'Monto sujeto × 18%')+
     kpiCard('Total cobrado con ITBIS',fmtM(r2(total('monto')+total('itbisTarjeta'))),'g','Base procesada + ITBIS')+
     kpiCard('ITBIS del reporte',fmtM(total('itbis')),'t');
   $('ret-card-607').innerHTML=

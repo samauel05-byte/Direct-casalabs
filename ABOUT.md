@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Digisign entra solo con la credencial guardada**: Digisign (facturación electrónica) pasó de «abrir directo» a auto-login por el relay, como DGII o TSS. Se guarda el correo y la contraseña dentro de Direct (cifrados en el navegador con la contraseña del usuario) y, al pulsar «Digisign» con un usuario que tenga ese portal habilitado (p. ej. Benson), el relay abre el sitio y llena el inicio de sesión.
 - **Logo de la pantalla de inicio de sesión visible en tema claro y oscuro**: se habían intercambiado las dos versiones del logo (en claro salía el de texto blanco y casi no se veía); ahora cada tema usa la suya y el logo es un poco más grande.
 - **Logo de Direct sin fondo negro**: el logo (nube con llave) ahora es un PNG con transparencia real, en versión para fondo oscuro (texto blanco) y para fondo claro (texto azul marino), recortado a su tamaño. Ya no aparece el recuadro negro sobre páginas claras.
 - **Relay: arreglo del auto-llenado del token en la Oficina Virtual**: una expresión del script llegaba mal escrita al navegador y la pantalla «Código de Seguridad» no se reconocía; además ahora la casilla del Token Digital se detecta por el texto que la rodea (declaraciones, ventanas emergentes).

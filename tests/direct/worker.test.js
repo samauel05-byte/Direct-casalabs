@@ -212,6 +212,15 @@ test('DGII: una pestaña nueva abierta desde el relay (declaración) recibe el t
   assert.match(html, /Date\.now\(\) - ho\.t < 15000/);
 });
 
+test('Digisign (facturación): el relay lo abre y llena correo + contraseña', async () => {
+  const res = await proxied('https://facturacion.digisign.do/login');
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /'facturacion\.digisign\.do':\s*\{ user:\['email'\], pass:\['password'\] \}/);
+  const other = await proxied('https://facturacion.digisign.do.evil.test/login');
+  assert.equal(other.status, 403, 'un dominio parecido no se acepta');
+});
+
 test('descargas que el portal marca como text/html (Excel de DGII) llegan intactas con su nombre de archivo', async () => {
   const res = await proxied('https://www.dgii.gov.do/ofv/consultas/exportar.aspx?id=1');
   assert.match(res.headers.get('content-disposition'), /envios\.xls/);

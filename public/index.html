@@ -973,7 +973,7 @@ const INST = {
              uf:'email', pf:'password' },
   digisign:{ name:'Digisign',   desc:'Digisign · Facturación electrónica',          grad:'linear-gradient(135deg,#0c4a6e 0%,#0284c7 100%)', abbr:'DS',
              // Entra solo por el relay con la credencial guardada (cifrada) de cada usuario.
-             url:'https://facturacion.digisign.do/login', uf:'email', pf:'password' },
+             url:'https://facturacion.digisign.do/login', uf:'email', pf:'password', oneClick:true },
   gdmail:  { name:'Correo GD',   desc:'GD Línea · Correo web (Webmail)',              grad:'linear-gradient(135deg,#334155 0%,#64748b 100%)', abbr:'GD',
              url:'https://mail.gdlinea.com/webmail/', openDirect:true },
   nexo:    { name:'Nexo',        desc:'Nexo · Gestor de pendientes',                 grad:'linear-gradient(135deg,#1e3a8a 0%,#6366f1 100%)', abbr:'NX',
@@ -1927,6 +1927,9 @@ function renderPortalGrid() {
     card.setAttribute('aria-label',`Abrir ${inst.name}`);
     card.addEventListener('click',()=>{
       if(isTool) trackUsage('module_open', key);
+      // Con una sola credencial guardada, un clic entra directo (sin elegir empresa).
+      const mine=inst.oneClick?getCompanies(key):[];
+      if(inst.oneClick && mine.length===1){ trackUsage('portal_view', key); enterCompany(mine[0].id); return; }
       inst.openDirect?openDirectPortal(key):inst.openRelay?openRelayPortal(key):isTool?(TOOL_OPEN[key]||openCami)():openPortal(key);
     });
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);

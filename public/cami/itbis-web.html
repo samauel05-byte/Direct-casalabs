@@ -330,6 +330,13 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
 .processor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
 .processor-card{background:var(--surface);border:1px solid var(--border);border-top:5px solid #1769AA;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
 .processor-card.azul{border-top-color:#00A6D6;}
+.processor-how{margin-top:12px;font-size:12.5px;line-height:1.5}
+.processor-how summary{cursor:pointer;font-weight:700;color:var(--teal,#0EA5E9)}
+.processor-how-body{margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(127,127,127,.12)}
+.processor-how-body .hw-row{display:flex;justify-content:space-between;gap:12px;padding:3px 0;border-bottom:1px dashed rgba(127,127,127,.25)}
+.processor-how-body .hw-row:last-child{border-bottom:0}
+.processor-how-body .hw-tot{font-weight:800}
+.processor-how-body .hw-note{margin-top:6px;opacity:.8}
 .processor-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
 .processor-name{font-size:.88rem;font-weight:800;color:var(--text);}
 .processor-file{font-size:.68rem;color:var(--muted);max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;}
@@ -827,6 +834,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         <div class="processor-head">
           <div class="processor-name">CardNET</div>
           <div class="processor-file" id="cardnet-file">Pendiente</div>
+          <button class="btn btn-ghost" id="rst-cardnet" type="button" hidden style="margin-left:8px;padding:4px 10px;font-size:12px" title="Quitar el reporte de CardNET cargado">Limpiar</button>
         </div>
         <div class="processor-upload">
           <div class="processor-hint">Carga el reporte de transacciones o retenciones.</div>
@@ -839,11 +847,13 @@ tbody tr:nth-child(even){background:var(--surface-2);}
           <div class="processor-metric"><span>Retenido por tarjeta</span><strong>—</strong></div>
           <div class="processor-metric"><span>ITBIS reportado</span><strong>—</strong></div>
         </div>
+        <details class="processor-how" id="how-cardnet" hidden><summary>¿Cómo se calculó?</summary><div class="processor-how-body" id="how-body-cardnet"></div></details>
       </article>
       <article class="processor-card azul">
         <div class="processor-head">
           <div class="processor-name">Azul</div>
           <div class="processor-file" id="azul-file">Pendiente</div>
+          <button class="btn btn-ghost" id="rst-azul" type="button" hidden style="margin-left:8px;padding:4px 10px;font-size:12px" title="Quitar el reporte de Azul cargado">Limpiar</button>
         </div>
         <div class="processor-upload">
           <div class="processor-hint">Carga el reporte de transacciones o retenciones.</div>
@@ -856,6 +866,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
           <div class="processor-metric"><span>Retenido por tarjeta</span><strong>—</strong></div>
           <div class="processor-metric"><span>ITBIS reportado</span><strong>—</strong></div>
         </div>
+        <details class="processor-how" id="how-azul" hidden><summary>¿Cómo se calculó?</summary><div class="processor-how-body" id="how-body-azul"></div></details>
       </article>
     </div>
     <div class="processor-total" id="card-total" hidden>
@@ -1756,6 +1767,9 @@ function processCardReport(rows, provider) {
     retencionCalculada,
     itbisEstimado,
     metodoConteo:pdfSummary?.__metodo_conteo||'registros del archivo',
+    montoReporte,
+    columnasUsadas:{monto:cm.monto||'',retenido:cm.retenido||'',itbis:cm.itbis_reportado||'',cantidad:cm.cantidad||'',factura:cm.factura||''},
+    esPDF:!!pdfSummary,
     registros:useful.length,
     columns:headers,
   };
@@ -1997,9 +2011,38 @@ function renderCardReport(provider, data, filename) {
     <div class="processor-metric"><span>Total cobrado con ITBIS</span><strong>${fmtM(r2(data.monto+data.itbisTarjeta))}</strong></div>
     <div class="processor-metric"><span>ITBIS del reporte</span><strong>${fmtM(data.itbis)}</strong></div>`;
   $(`${id}-file`).title=`Conteo: ${data.metodoConteo}`;
+  $(`rst-${id}`).hidden=false; $(`how-${id}`).hidden=false; $(`how-body-${id}`).innerHTML=cardHowHTML(data);
   renderCardTotal();
 }
 
+function cardHowHTML(d){
+  const row=(l,v,cls)=>`<div class="hw-row${cls?' '+cls:''}"><span>${l}</span><span>${v}</span></div>`;
+  const c=d.columnasUsadas||{};
+  let h='';
+  h+=row('Fuente de los datos',d.esPDF?'PDF (fila resumen del reporte)':`Archivo (${fmtI(d.registros)} filas)`);
+  if(c.monto) h+=row(`Monto del reporte · columna «${escH(c.monto)}»`,fmtM(d.montoReporte||0));
+  if(d.retencionAcreditable>0) h+=row(`① Retención 2 % del reporte · columna «${escH(c.retenido)}»`,fmtM(d.retenido));
+  else h+=row('① Retención 2 % (el reporte no la trae: monto × 2 %)',fmtM(d.retenido));
+  h+=row('② Monto sujeto = retención ÷ 2 %',fmtM(d.totalSujetoRetencion||d.monto));
+  h+=row('③ ITBIS calculado = monto sujeto × 18 %',fmtM(d.itbisTarjeta));
+  h+=row('④ Total cobrado con ITBIS = ② + ③',fmtM(r2(d.monto+d.itbisTarjeta)),'hw-tot');
+  h+=row(c.itbis?`ITBIS que trae el reporte · columna «${escH(c.itbis)}»`:'ITBIS que trae el reporte',fmtM(d.itbis||0));
+  h+=row(`Cantidad de movimientos (${escH(d.metodoConteo||'')})`,fmtI(d.facturas));
+  const note=d.itbis>0
+    ?`El ITBIS del reporte (${fmtM(d.itbis)}) manda en el consolidado; el calculado al 18 % es una referencia.`
+    :'Este reporte no trae ITBIS, por eso se estima: la retención del 2 % que hace el banco equivale al 2 % del monto sujeto, y el ITBIS es el 18 % de ese monto (no se obtiene dividiendo entre 1.18).';
+  return h+`<div class="hw-note">${note}</div>`;
+}
+function resetCard(id){
+  CARD_STATE[id]=null;
+  const name=id==='azul'?'Azul':'CardNET';
+  const fi=$(`fi-${id}`); if(fi) fi.value='';
+  $(`${id}-file`).textContent='Pendiente'; $(`${id}-file`).title='';
+  $(`kpis-${id}`).innerHTML=['Facturas','Monto procesado','Retenido por tarjeta','ITBIS reportado'].map(l=>`<div class="processor-metric"><span>${l}</span><strong>—</strong></div>`).join('');
+  $(`rst-${id}`).hidden=true; $(`how-${id}`).hidden=true; $(`how-body-${id}`).innerHTML='';
+  renderCardTotal(); updateIT1();
+  showToast(`${name} limpiado.`);
+}
 function renderCardTotal() {
   const reports=Object.values(CARD_STATE).filter(Boolean);
   $('card-total').hidden=reports.length===0;
@@ -2699,6 +2742,7 @@ document.querySelectorAll('.nav-item').forEach(el=>{
 });
 
 [['cardnet','CardNET'],['azul','Azul']].forEach(([id,provider])=>{
+  $(`rst-${id}`).addEventListener('click',()=>resetCard(id));
   const fi=$(`fi-${id}`),bs=$(`bs-${id}`);
   bs.addEventListener('click',()=>fi.click());
   fi.addEventListener('change',()=>{if(fi.files[0])handleCardFile(fi.files[0],provider);});

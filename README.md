@@ -159,6 +159,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Relay — casilla del token por contexto:** si `tokenInput()` no la reconoce, `tokenInputLoose()` toma una casilla visible y vacía dentro de un bloque con ≤2 casillas cuyo texto menciona «token» o «código de seguridad». Ojo: el script del relay vive en una plantilla de JS, las regex deben escribirse con `\\s` (si no, el navegador recibe `s`).
 
+**CAMI — reportes de tarjeta (607):** `public/cami/itbis-web.html`: cada tarjeta (`cardnet`/`azul`) tiene «Limpiar» (`resetCard(id)` pone `CARD_STATE[id]=null` y recalcula consolidado/IT-1) y «¿Cómo se calculó?» (`cardHowHTML`, usa `columnasUsadas`, `montoReporte` y `esPDF` que ahora devuelve `processCardReport`). Fórmula: retención 2 % del reporte (o monto × 2 %) → `totalSujetoRetencion = retención ÷ 0,02` → `itbisTarjeta = sujeto × 0,18` → total = sujeto + ITBIS.
+
 **CAMI — cuadre con la DGII:** `public/cami/itbis-web.html` (`renderDgiiCheck`/`dgiiDiffSearch`): con el monto de la DGII calcula `totAdel − DGII` y busca subconjuntos de 1–3 facturas (`revision[].adel`, tolerancia ±0,02; triples solo hasta 260 filas) ordenados por cercanía; si la DGII es mayor avisa que faltan facturas. Las filas de revisión llevan ahora `adel`.
 
 **Login:** en `index.html` `.on-dark` usa `direct-logo.png` y `.on-light` usa `direct-logo-light.png` (antes estaban cruzados); `.auth-logo-img` mide 64 px.

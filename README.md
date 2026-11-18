@@ -159,6 +159,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Relay — casilla del token por contexto:** si `tokenInput()` no la reconoce, `tokenInputLoose()` toma una casilla visible y vacía dentro de un bloque con ≤2 casillas cuyo texto menciona «token» o «código de seguridad». Ojo: el script del relay vive en una plantilla de JS, las regex deben escribirse con `\\s` (si no, el navegador recibe `s`).
 
+**CAMI — cuadre con la DGII:** `public/cami/itbis-web.html` (`renderDgiiCheck`/`dgiiDiffSearch`): con el monto de la DGII calcula `totAdel − DGII` y busca subconjuntos de 1–3 facturas (`revision[].adel`, tolerancia ±0,02; triples solo hasta 260 filas) ordenados por cercanía; si la DGII es mayor avisa que faltan facturas. Las filas de revisión llevan ahora `adel`.
+
 **Login:** en `index.html` `.on-dark` usa `direct-logo.png` y `.on-light` usa `direct-logo-light.png` (antes estaban cruzados); `.auth-logo-img` mide 64 px.
 
 **Logo de Direct:** `public/img/direct-logo.png` (para fondo oscuro) y `direct-logo-light.png` (fondo claro) son PNG con canal alfa real (se quitó el fondo negro; versión clara = blancos pasados a azul marino), recortados y referenciados con `?v=2` para saltar la caché. El tema claro/oscuro elige el archivo (`index.html`, `activar.html`).

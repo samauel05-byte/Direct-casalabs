@@ -2610,15 +2610,25 @@ function exportXLS(mod) {
   const d=STATE[mod];if(!d)return;
   const wb=XLSX.utils.book_new(),s=d.summary;
   if (mod==='606'){
-    const ss=XLSX.utils.aoa_to_sheet([['Métrica','Valor'],['Registros',s.registros],['Total Servicios',s.totServ],['Total Bienes',s.totBien],['Total Facturado',s.totTotal],['ITBIS Facturado',s.totItbis],['ITBIS Crédito Fiscal',s.totAdel],['ITBIS al Costo',s.totCosto],['ITBIS Retenido',s.totRet],['Ret.30% Monto',s.ret30.monto],['Ret.30% Comprobantes',s.ret30.count],['Ret.100% Monto',s.ret100.monto],['Ret.100% Comprobantes',s.ret100.count]]);
-    ss['!cols']=[{wch:36},{wch:20}];XLSX.utils.book_append_sheet(wb,ss,'Resumen 606');
+    const ss=XLSX.utils.aoa_to_sheet([['Métrica','Valor'],['Registros',s.registros],['Total Servicios',s.totServ],['Total Bienes',s.totBien],['Total Facturado',s.totTotal],['ITBIS Facturado',s.totItbis],[d.dgiiAdj?'ITBIS Crédito Fiscal (ajustado según la DGII)':'ITBIS Crédito Fiscal',s.totAdel],...(d.dgiiAdj?[['ITBIS no admitido por la DGII (excluido del crédito)',d.dgiiAdj.total],['ITBIS Crédito Fiscal original (antes del ajuste)',d.dgiiAdj.orig.totAdel]]:[]),['ITBIS al Costo',s.totCosto],['ITBIS Retenido',s.totRet],['Ret.30% Monto',s.ret30.monto],['Ret.30% Comprobantes',s.ret30.count],['Ret.100% Monto',s.ret100.monto],['Ret.100% Comprobantes',s.ret100.count]]);
+    ss['!cols']=[{wch:48},{wch:20}];XLSX.utils.book_append_sheet(wb,ss,'Resumen 606');
+    if(d.dgiiAdj){
+      const aj=XLSX.utils.aoa_to_sheet([['Facturas con ITBIS no admitido por la DGII','','',''],['Fecha','RNC / Cédula','NCF','ITBIS excluido del crédito'],...d.dgiiAdj.items.map(x=>[x.fecha,x.rnc,x.ncf,x.adel]),['','','Total',d.dgiiAdj.total]]);
+      aj['!cols']=[{wch:14},{wch:16},{wch:18},{wch:26}];XLSX.utils.book_append_sheet(wb,aj,'Ajuste DGII');
+    }
   }else{
     const bt=s.byTasa;
     const ss=XLSX.utils.aoa_to_sheet([['Métrica','Valor'],['Registros',s.registros],['Total Facturado',s.totTotal],['Total Gravado',s.totGrav],['Total Exento',s.totExento],['ITBIS Facturado',s.totItbis],['ITBIS Ret. Clientes',s.totRet],['18% Base',bt.t18.monto],['18% ITBIS',bt.t18.itbis],['16% Base',bt.t16.monto],['16% ITBIS',bt.t16.itbis],['9% Base',bt.t9.monto],['9% ITBIS',bt.t9.itbis],['8% Base',bt.t8.monto],['8% ITBIS',bt.t8.itbis],['10% Base',bt.t10.monto],['10% ITBIS',bt.t10.itbis],['Exentos',bt.t0.monto],['Ret.30%',s.ret30.monto],['Ret.100%',s.ret100.monto]]);
     ss['!cols']=[{wch:36},{wch:20}];XLSX.utils.book_append_sheet(wb,ss,'Resumen 607');
   }
-  const ds=XLSX.utils.json_to_sheet(d.allRows,{header:d.columns});
-  ds['!cols']=d.columns.map(()=>({wch:18}));
+  let dataRows=d.allRows, dataCols=d.columns;
+  if(mod==='606'&&d.dgiiAdj&&d.revision){
+    const out=new Set(d.dgiiAdj.items.map(x=>x.i));
+    dataRows=d.allRows.map((r,i)=>({...r,'ITBIS por adelantar (ajustado)':out.has(i)?0:(d.revision[i]?d.revision[i].adel:''),'Estado DGII':out.has(i)?'No admitido por la DGII':''}));
+    dataCols=[...d.columns,'ITBIS por adelantar (ajustado)','Estado DGII'];
+  }
+  const ds=XLSX.utils.json_to_sheet(dataRows,{header:dataCols});
+  ds['!cols']=dataCols.map(()=>({wch:18}));
   XLSX.utils.book_append_sheet(wb,ds,'Datos');
   XLSX.writeFile(wb,`${mod}_analisis.xlsx`);
   showToast(`Excel exportado: ${mod}_analisis.xlsx`);

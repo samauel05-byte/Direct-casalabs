@@ -159,6 +159,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Relay — casilla del token por contexto:** si `tokenInput()` no la reconoce, `tokenInputLoose()` toma una casilla visible y vacía dentro de un bloque con ≤2 casillas cuyo texto menciona «token» o «código de seguridad». Ojo: el script del relay vive en una plantilla de JS, las regex deben escribirse con `\\s` (si no, el navegador recibe `s`).
 
+**CAMI — monedas del escaneo:** `currency()` en `lib/cami-escaneo.js` mapea DOLLAR/US$ → USD, EURO/€ y también «OTROS» → EUR, PESOS/RD$ → DOP; sin pista se asume DOP.
+
 **CAMI — tamaño del modal de revisión:** `SCAN_UI` (`zoom` 0,6–2 con `style.zoom` sobre `#scan-body`, `full` = pantalla completa) con `applyScanUI()`; se guarda en `localStorage['cami-scan-ui']`.
 
 **CAMI — formato compacto de la IA:** `lib/cami-escaneo.js` pide `filas: string[]` con 9 campos separados por `|` (`NCF|FECHA|TOTAL_FACTURADO|MAS_ITBIS|TOTAL_PAGADO|CONDICIONES|MONEDA|NOTA|FACTURA`) y `parseLines()` los vuelve objetos antes de `normalize()`; `max_tokens` 4000. Un objeto JSON por fila excedía los 50 s por página (504).

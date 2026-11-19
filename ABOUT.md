@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **CAMI: en el escaneo del reporte de ventas, la sección «OTROS» se toma como euro**: si el encabezado de moneda del PDF dice «OTROS», esas filas se tratan como EUR y piden la tasa EUR → RD$ al agregarlas al 607.
 - **CAMI: la pantalla de revisión del escaneo B02 se puede agrandar o achicar**: arriba a la derecha tiene **A−** y **A+** (letra del 60 % al 200 %) y **⛶ Pantalla completa**, para ver muchas filas a la vez. Recuerda tu elección en ese navegador.
 - **CAMI: el escaneo B02 ya no da error 504 (lectura 4 veces más corta)**: la IA tardaba más de 50 segundos por página porque escribía cada fila como un bloque largo de datos. Ahora devuelve una sola línea compacta por fila (NCF, fecha, facturado, ITBIS, pagado, condiciones, moneda, nota, factura) y el servidor la convierte y valida igual que antes.
 - **CAMI: el escaneo de reportes B02 ya no se queda en «Procesando archivo…»**: la lectura con IA de un PDF de varias páginas tardaba más de 60 segundos en una sola petición y el servidor la cortaba. Ahora se lee **una página por petición, dos a la vez**, con el avance a la vista («Leyendo el reporte con IA… 2 de 5 páginas»), con un reintento por página y, si alguna falla, se muestran las filas de las demás y se dice cuáles páginas volver a subir.

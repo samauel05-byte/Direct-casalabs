@@ -1174,6 +1174,7 @@ const AL607 = {
   itbis_retenido:   ['itbis_retenido','itbisretenido','retencion_itbis','itbis_ret','itbis_retenido_terceros','itbis_ret_terceros','itbis_retenido_por_terceros'],
   tasa_itbis:       ['tasa_itbis','tasa','porcentaje_itbis','pct_itbis','tasa_impuesto','tasaimpuesto','tasa_gravamen'],
   construccion:     ['construccion','es_construccion','tipo_operacion','operacion_construccion'],
+  propina_legal:    ['monto_propina_legal','propina_legal','propina'],
   pago_efectivo:    ['monto_facturado_en_efectivo','monto_efectivo','efectivo','venta_efectivo','pagado_efectivo'],
   pago_cheque:      ['monto_facturado_en_cheque_transferencia_deposito','monto_facturado_en_cheques_transferencias_depositos','cheque_transferencia_deposito','cheques_transferencias_depositos','cheque_transferencia','transferencia','deposito','monto_transferencia'],
   pago_tarjeta:     ['monto_facturado_en_tarjeta_debito_credito','monto_facturado_por_tarjetas_debito_credito','tarjeta_debito_credito','tarjeta_credito_debito','monto_tarjeta','pago_tarjeta','tarjeta'],
@@ -1668,7 +1669,13 @@ function process607(rows, overrides) {
     // El «Monto Facturado» del 607 de la DGII va SIN ITBIS (el ITBIS es otra columna) y las formas de pago suman
     // monto + ITBIS. Si las formas de pago lo confirman, el total de la factura es monto + ITBIS (no se resta
     // el ITBIS del monto ni se reporta como «diferencia» al cuadrar con las formas de pago).
-    const payTot=p._payCash+p._payTransfer+p._payCard+p._payCredit+p._payBonds+p._paySwap+p._payOther;
+    // Restaurantes: la forma de pago trae también la propina legal (monto + ITBIS + propina). Se separa para que
+    // las formas de pago y el cuadre con las tarjetas se comparen sin la propina.
+    p._propina=cm.propina_legal?Math.abs(cleanNum(r[cm.propina_legal])):0;
+    const payTotRaw=p._payCash+p._payTransfer+p._payCard+p._payCredit+p._payBonds+p._paySwap+p._payOther;
+    p._payPropina=0;
+    if(p._propina>0&&payTotRaw>0&&p._itbis>0&&Math.abs(Math.abs(p._total)+p._itbis+p._propina-payTotRaw)<=Math.max(0.5,payTotRaw*0.0005)) p._payPropina=p._propina;
+    const payTot=payTotRaw-p._payPropina;
     if(payTot>0&&p._itbis>0&&Math.abs(Math.abs(p._total)+p._itbis-payTot)<=Math.max(0.5,payTot*0.0005)&&Math.abs(Math.abs(p._total)-payTot)>Math.max(0.5,payTot*0.0005)){
       p._total=Math.abs(p._total)+p._itbis;
     }
@@ -1725,7 +1732,9 @@ function process607(rows, overrides) {
   const ret100rows=data.filter(r=>r._itbis>0&&r._ret>0&&Math.abs(r._ret/r._itbis-1.0)<0.08);
   const ret30={monto:r2(sum(ret30rows,'_ret')),count:ret30rows.length},ret100={monto:r2(sum(ret100rows,'_ret')),count:ret100rows.length};
   const paymentColumns={cash:!!cm.pago_efectivo,transfer:!!cm.pago_cheque,card:!!cm.pago_tarjeta,credit:!!cm.pago_credito,bonds:!!cm.pago_bonos,swap:!!cm.pago_permuta,other:!!cm.pago_otras};
-  const paymentSummary={cash:r2(sum(data,'_payCash')),transfer:r2(sum(data,'_payTransfer')),card:r2(sum(data,'_payCard')),credit:r2(sum(data,'_payCredit')),bonds:r2(sum(data,'_payBonds')),swap:r2(sum(data,'_paySwap')),other:r2(sum(data,'_payOther')),columns:paymentColumns};
+  const payKeys=[['cash','_payCash'],['transfer','_payTransfer'],['card','_payCard'],['credit','_payCredit'],['bonds','_payBonds'],['swap','_paySwap'],['other','_payOther']];
+  const paymentSummary={columns:paymentColumns,propinaIncluida:r2(sum(data,'_payPropina'))};
+  payKeys.forEach(([k,f])=>{ paymentSummary[k]=r2(data.reduce((n,r)=>{ const tot=payKeys.reduce((a,[,ff])=>a+(r[ff]||0),0); return n+((r[f]||0)-(tot>0?(r._payPropina||0)*(r[f]||0)/tot:0)); },0)); });
   const ncfGroups={credito:{count:0,monto:0},consumo:{count:0,monto:0,cardMonto:0},debito:{count:0,monto:0},notaCredito:{count:0,monto:0},unico:{count:0,monto:0},especial:{count:0,monto:0},gobierno:{count:0,monto:0},exportacion:{count:0,monto:0},otros:{count:0,monto:0},sinClasificar:{count:0,monto:0}};
   data.forEach((r,index)=>{
     const code=r._ncfCode;

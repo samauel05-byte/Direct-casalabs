@@ -806,6 +806,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
     </div>
     <div class="tb-right">
       <span class="tb-file" id="tf-607" hidden></span>
+      <button class="btn btn-ghost" id="btn-scan-607" hidden type="button">📷 Agregar B02 escaneado</button>
       <button class="btn btn-xl" id="btn-xls-607" hidden>Exportar Excel</button>
       <button class="btn btn-ghost" id="btn-rst-607" hidden>Limpiar</button>
     </div>
@@ -825,7 +826,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         <input type="file" id="fi-607" accept=".pdf,.csv,.xlsx,.xls,.xlsm,.xlsb,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
         <button class="btn btn-primary" id="bs-607" style="background:var(--violet);box-shadow:0 2px 8px rgba(124,58,237,.3);">Seleccionar archivo</button>
         <div class="drop-sub" style="margin-top:14px">¿Solo tienes el reporte de ventas B02 impreso?</div>
-        <button class="btn btn-ghost" id="bs-scan" type="button">📷 Escanear reporte B02 (foto o PDF escaneado)</button>
+        <button class="btn btn-primary" id="bs-scan" type="button" style="background:#0D9488;box-shadow:0 2px 8px rgba(13,148,136,.35)">📷 Escanear reporte B02 (foto o PDF escaneado)</button>
         <input type="file" id="fi-scan" accept="image/*,application/pdf" multiple hidden>
       </div>
     </div>
@@ -2063,7 +2064,7 @@ function render607(data, filename) {
   renderTable('th-607','tb-607','tn-607',data.columns,data.preview,data.summary.registros);
   renderTipo607();
   $('tf-607').textContent=filename; $('tf-607').hidden=false;
-  $('btn-xls-607').hidden=false; $('btn-rst-607').hidden=false;
+  $('btn-xls-607').hidden=false; $('btn-rst-607').hidden=false; $('btn-scan-607').hidden=false;
   $('up-607').hidden=true; $('da-607').hidden=false;
   $('badge-607').textContent='✓'; $('badge-607').className='nav-badge ok';
   renderSalesConsolidated();
@@ -2769,6 +2770,7 @@ function addScannedTo607(){
 }
 (function(){ const b=$('bs-scan'),f=$('fi-scan'); if(!b||!f) return;
   b.addEventListener('click',e=>{e.stopPropagation();f.click();});
+  const top=$('btn-scan-607'); if(top) top.addEventListener('click',()=>f.click());
   f.addEventListener('click',e=>e.stopPropagation());
   f.addEventListener('change',()=>scanB02(f.files));
   $('scan-cancel').addEventListener('click',()=>{$('modal-scan').hidden=true;SCAN=null;});
@@ -2930,7 +2932,7 @@ async function handleCardFile(file, provider) {
 function resetMod(mod) {
   STATE[mod]=null;
   if (mod==='606'){$('da-606').hidden=true;$('up-606').hidden=false;$('tf-606').hidden=true;$('btn-xls-606').hidden=true;$('btn-rst-606').hidden=true;$('th-606').innerHTML='';$('tb-606').innerHTML='';$('fi-606').value='';}
-  else{$('da-607').hidden=true;$('up-607').hidden=false;$('tf-607').hidden=true;$('btn-xls-607').hidden=true;$('btn-rst-607').hidden=true;$('th-607').innerHTML='';$('tb-607').innerHTML='';$('fi-607').value='';}
+  else{$('da-607').hidden=true;$('up-607').hidden=false;$('tf-607').hidden=true;$('btn-xls-607').hidden=true;$('btn-rst-607').hidden=true;$('th-607').innerHTML='';$('tb-607').innerHTML='';$('fi-607').value='';$('btn-scan-607').hidden=true;}
   $(`badge-${mod}`).textContent='○';$(`badge-${mod}`).className='nav-badge';
   renderSalesConsolidated();
   updateIT1();

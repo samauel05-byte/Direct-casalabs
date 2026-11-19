@@ -27,6 +27,7 @@ const ROUTES = [
   ['PATCH', /^clients\/([^/]+)$/, (ctx, q, b, m) => core.updateClient(ctx, m[1], b)],
   ['GET', /^rnc\/([^/]+)$/, (ctx, q, b, m) => core.rnc(ctx, decodeURIComponent(m[1]), q)],
   ['GET', /^documents\/([^/]+)\/url$/, (ctx, q, b, m) => core.documentUrl(ctx, m[1])],
+  ['DELETE', /^documents\/([^/]+)$/, (ctx, q, b, m) => batches.removeDocument(ctx, m[1])],
   ['GET', /^batches$/, (ctx, q) => batches.list(ctx, q)],
   ['POST', /^batches$/, (ctx, q, b) => batches.create(ctx, b)],
   ['GET', /^batches\/([^/]+)$/, (ctx, q, b, m) => batches.detail(ctx, m[1])],

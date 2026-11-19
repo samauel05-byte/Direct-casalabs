@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **NALA: botón «Quitar» para sacar un archivo de un lote**: en «Documentos y trabajos» de cada lote, cada archivo tiene un botón rojo **Quitar** (para quien puede reprocesar). Sirve cuando un archivo se subió al formato equivocado (por ejemplo, una factura de compra en ventas): quita ese archivo, los comprobantes que se leyeron de él y el original, y deja una nota en el historial del lote con el nombre, la huella y los NCF. No toca los demás archivos y se niega si algún comprobante ya está en una exportación generada.
 - **CAMI: en el escaneo del reporte de ventas, la sección «OTROS» se toma como euro**: si el encabezado de moneda del PDF dice «OTROS», esas filas se tratan como EUR y piden la tasa EUR → RD$ al agregarlas al 607.
 - **CAMI: la pantalla de revisión del escaneo B02 se puede agrandar o achicar**: arriba a la derecha tiene **A−** y **A+** (letra del 60 % al 200 %) y **⛶ Pantalla completa**, para ver muchas filas a la vez. Recuerda tu elección en ese navegador.
 - **CAMI: el escaneo B02 ya no da error 504 (lectura 4 veces más corta)**: la IA tardaba más de 50 segundos por página porque escribía cada fila como un bloque largo de datos. Ahora devuelve una sola línea compacta por fila (NCF, fecha, facturado, ITBIS, pagado, condiciones, moneda, nota, factura) y el servidor la convierte y valida igual que antes.

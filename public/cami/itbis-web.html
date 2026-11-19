@@ -330,6 +330,7 @@ body{font-family:var(--f-body);background:var(--bg);color:var(--text);min-height
 .processor-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
 .processor-card{background:var(--surface);border:1px solid var(--border);border-top:5px solid #1769AA;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
 .processor-card.azul{border-top-color:#00A6D6;}
+#modal-scan[hidden]{display:none!important}
 .processor-how{margin-top:12px;font-size:12.5px;line-height:1.5}
 .processor-how summary{cursor:pointer;font-weight:700;color:var(--teal,#0EA5E9)}
 .processor-how-body{margin-top:8px;padding:10px 12px;border-radius:10px;background:rgba(127,127,127,.12)}
@@ -823,6 +824,9 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         </div>
         <input type="file" id="fi-607" accept=".pdf,.csv,.xlsx,.xls,.xlsm,.xlsb,application/pdf,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
         <button class="btn btn-primary" id="bs-607" style="background:var(--violet);box-shadow:0 2px 8px rgba(124,58,237,.3);">Seleccionar archivo</button>
+        <div class="drop-sub" style="margin-top:14px">¿Solo tienes el reporte de ventas B02 impreso?</div>
+        <button class="btn btn-ghost" id="bs-scan" type="button">📷 Escanear reporte B02 (foto o PDF escaneado)</button>
+        <input type="file" id="fi-scan" accept="image/*,application/pdf" multiple hidden>
       </div>
     </div>
   </div>
@@ -1124,6 +1128,16 @@ tbody tr:nth-child(even){background:var(--surface-2);}
 </main>
 </div>
 
+<div id="modal-scan" hidden style="position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:14px;max-width:980px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="padding:16px 20px;border-bottom:1px solid var(--border);font-weight:800">Reporte B02 escaneado · revisa antes de agregar al 607</div>
+    <div id="scan-body" style="padding:14px 20px;overflow:auto;flex:1"></div>
+    <div style="padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn btn-ghost" id="scan-cancel" type="button">Cancelar</button>
+      <button class="btn btn-primary" id="scan-ok" type="button">Agregar al 607</button>
+    </div>
+  </div>
+</div>
 <div id="loader" hidden>
   <div class="loader-box">
     <div class="spinner"></div>
@@ -2642,6 +2656,93 @@ function exportXLS(mod) {
   XLSX.writeFile(wb,`${mod}_analisis.xlsx`);
   showToast(`Excel exportado: ${mod}_analisis.xlsx`);
 }
+
+/* ── Reporte B02 escaneado (foto o PDF) → 607 ── */
+let SCAN=null;
+async function camiPost(url,body,retried){
+  let tok=''; try{tok=window.__serpToken||sessionStorage.getItem('dtoken')||'';}catch(_){}
+  let sid=''; try{sid=localStorage.getItem('direct_session_id')||'';}catch(_){}
+  const h={'Content-Type':'application/json'}; if(tok)h.Authorization='Bearer '+tok; if(sid)h['X-Direct-Session']=sid;
+  const res=await fetch(url,{method:'POST',headers:h,body:JSON.stringify(body)}); const j=await res.json().catch(()=>({}));
+  if(res.status===401&&!retried&&window.serpRequestToken){ const t=await window.serpRequestToken(); if(t) return camiPost(url,body,true); }
+  if(!res.ok){const e=new Error(j.error||('Error '+res.status));e.status=res.status;throw e;}
+  return j;
+}
+function fileToBase64(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>bad(new Error('No se pudo leer el archivo.'));r.readAsDataURL(file);});}
+async function shrinkImage(file,max=1900){
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>bad(new Error('No se pudo abrir la foto.'));i.src=url;});
+    const k=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c=document.createElement('canvas');c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    return c.toDataURL('image/jpeg',0.85).split(',')[1];
+  } finally { URL.revokeObjectURL(url); }
+}
+async function scanB02(fileList){
+  const files=Array.from(fileList||[]); if(!files.length) return;
+  if(files.length>6){showToast('Máximo 6 páginas por escaneo.','err');return;}
+  $('loader').hidden=false;
+  try{
+    const parts=[];
+    for(const f of files){
+      if(f.type==='application/pdf'){ if(f.size>3.5*1024*1024) throw new Error('El PDF pesa demasiado (máx. 3.5 MB). Súbelo como fotos o reduce su tamaño.'); parts.push({mimeType:'application/pdf',name:f.name,base64:await fileToBase64(f)}); }
+      else if(/^image\//.test(f.type)) parts.push({mimeType:'image/jpeg',base64:await shrinkImage(f)});
+      else throw new Error('Usa fotos (JPG, PNG) o un PDF escaneado.');
+    }
+    const r=await camiPost('/api/ir2/resumen',{tipo:'cami-escaneo',files:parts});
+    if(!r.filas||!r.filas.length) throw new Error('No encontré filas de comprobantes en la imagen. Toma la foto más de frente y con buena luz.');
+    SCAN=r; renderScanModal();
+  }catch(e){ showToast(e.message||'No se pudo leer el reporte.','err'); }
+  finally{ $('loader').hidden=true; $('fi-scan').value=''; }
+}
+const SCAN_BLOCK=['Sin NCF','Faltan montos','NCF repetido','Base + ITBIS ≠ total pagado','Fecha ilegible','Devolución / anulada','NCF no es B02/E32','NCF dudoso'];
+function renderScanModal(){
+  const r=SCAN, usd=r.monedas.includes('USD');
+  const rows=r.filas.map((f,i)=>{ const bad=f.flags.some(x=>SCAN_BLOCK.includes(x)); return `<tr style="${bad?'background:var(--amber-lt)':''}"><td><input type="checkbox" class="scan-ck" data-i="${i}" ${bad?'':'checked'}></td><td>${f.n}</td><td>${escH(f.ncf)}</td><td>${escH(f.fecha?f.fecha.replace(/(\d{4})(\d{2})(\d{2})/,'$3/$2/$1'):'')}</td><td style="text-align:right">${f.base==null?'—':f.base.toFixed(2)}</td><td style="text-align:right">${f.itbis==null?'—':f.itbis.toFixed(2)}</td><td style="text-align:right">${f.total==null?'—':f.total.toFixed(2)}</td><td>${escH(f.moneda||'')}</td><td style="font-size:12px;color:var(--amber)">${escH(f.flags.join(' · '))}</td></tr>`; }).join('');
+  $('scan-body').innerHTML=`<div class="field-help">${escH(r.titulo||'')} · ${r.filas.length} filas leídas. Las filas con alerta quedan sin marcar: corrígelas o déjalas fuera. <b>Revisa los NCF y montos contra el papel.</b></div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap;margin:10px 0">
+    <label style="font-size:13px">Forma de cobro<br><select class="field-inp" id="scan-pago"><option value="Efectivo">Efectivo</option><option value="Tarjeta Débito/Crédito">Tarjeta</option><option value="Cheque/ Transferencia/ Depósito">Transferencia / cheque</option><option value="Venta a Crédito">Crédito</option></select></label>
+    ${usd?`<label style="font-size:13px">Tasa USD → RD$ (el 607 va en pesos)<br><input class="field-inp" id="scan-tasa" type="number" step="0.0001" min="0" placeholder="Ej. 60.50"></label>`:''}
+  </div>
+  <div class="table-wrap"><table><thead><tr><th></th><th>#</th><th>NCF</th><th>Fecha</th><th style="text-align:right">Base</th><th style="text-align:right">ITBIS</th><th style="text-align:right">Total</th><th>Moneda</th><th>Alertas</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  $('modal-scan').hidden=false;
+}
+function addScannedTo607(){
+  const r=SCAN; if(!r) return;
+  const picked=[...document.querySelectorAll('.scan-ck:checked')].map(c=>r.filas[Number(c.dataset.i)]).filter(Boolean);
+  if(!picked.length){showToast('Marca al menos una fila.','warn');return;}
+  const usd=picked.some(f=>f.moneda==='USD'); const tasa=usd?parseFloat($('scan-tasa')?.value):1;
+  if(usd&&!(tasa>0)){showToast('Escribe la tasa de cambio USD → RD$ para convertir los montos a pesos.','warn');return;}
+  const pago=$('scan-pago').value;
+  const conv=(f,v)=>r2((v||0)*(f.moneda==='USD'?tasa:1));
+  const existing=STATE['607'];
+  const headers=existing?existing.columns:['RNC/Cédula o Pasaporte','Tipo Identificación','Número Comprobante Fiscal','Fecha Comprobante','Monto Facturado','ITBIS Facturado','Efectivo','Cheque/ Transferencia/ Depósito','Tarjeta Débito/Crédito','Venta a Crédito'];
+  const cm=detectCols(headers,AL607);
+  const payCol={'Efectivo':cm.pago_efectivo,'Cheque/ Transferencia/ Depósito':cm.pago_cheque,'Tarjeta Débito/Crédito':cm.pago_tarjeta,'Venta a Crédito':cm.pago_credito}[pago];
+  if(!cm.ncf||!cm.fecha||!(cm.monto_total||cm.monto_bienes||cm.monto_servicios)||!cm.itbis_facturado){showToast('El 607 cargado no tiene columnas de NCF, fecha, monto e ITBIS para agregar las filas.','err');return;}
+  const added=picked.map(f=>{
+    const o={}; headers.forEach(h=>{o[h]='';});
+    o[cm.ncf]=f.ncf; o[cm.fecha]=f.fecha||''; o[cm.monto_total||cm.monto_bienes||cm.monto_servicios]=conv(f,f.base); o[cm.itbis_facturado]=conv(f,f.itbis);
+    if(payCol) o[payCol]=conv(f,f.total);
+    return o;
+  });
+  const have=new Set(existing?existing.allRows.map(x=>String(x[cm.ncf]||'').toUpperCase()):[]);
+  const fresh=added.filter(o=>!have.has(String(o[cm.ncf]).toUpperCase()));
+  const base=existing?existing.allRows.map(x=>{const o={};headers.forEach(h=>{o[h]=x[h]==null?'':x[h];});return o;}):[];
+  try{
+    STATE['607']=process607([...base,...fresh]); render607(STATE['607'],existing?($('tf-607').textContent||'607'):'Reporte B02 escaneado');
+    $('modal-scan').hidden=true; SCAN=null;
+    showToast(`${fresh.length} comprobante${fresh.length!==1?'s':''} B02 agregado${fresh.length!==1?'s':''} al 607${added.length-fresh.length?` (${added.length-fresh.length} ya estaban)`:''}.`);
+  }catch(e){showToast(e.message||'No se pudo agregar al 607.','err');}
+}
+(function(){ const b=$('bs-scan'),f=$('fi-scan'); if(!b||!f) return;
+  b.addEventListener('click',e=>{e.stopPropagation();f.click();});
+  f.addEventListener('click',e=>e.stopPropagation());
+  f.addEventListener('change',()=>scanB02(f.files));
+  $('scan-cancel').addEventListener('click',()=>{$('modal-scan').hidden=true;SCAN=null;});
+  $('scan-ok').addEventListener('click',addScannedTo607);
+})();
 
 /* ── Autollenado desde NALA (606/607 aprobados y auditados) ── */
 async function camiFetch(url,retried){

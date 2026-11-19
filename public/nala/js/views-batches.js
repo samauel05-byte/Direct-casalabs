@@ -335,7 +335,8 @@
         <td class="num">${jobs.length ? `${jobs.filter(j => j.status === 'succeeded').length}/${jobs.length}` : '—'}${attempts > 1 ? ` <span class="badge warn" title="Intentos">${attempts} int.</span>` : ''}</td><td class="num">${dur ? ms(dur) : '—'}</td>
         <td>${doc.status === 'pending_upload'
             ? (NALA.can('upload') ? `<button class="btn sm" data-href="#/lotes/${b.id}?agregar=1">Reintentar subida</button>` : '<span class="muted">Sin subir</span>')
-            : (doc.kind !== 'zip' && !['unsupported', 'purged'].includes(doc.status) ? `<button class="btn sm" data-doc="${doc.id}">Ver original</button>` : '')}</td></tr>`;
+            : (doc.kind !== 'zip' && !['unsupported', 'purged'].includes(doc.status) ? `<button class="btn sm" data-doc="${doc.id}">Ver original</button>` : '')}
+          ${NALA.can('reprocess') && doc.kind !== 'zip' && !['processing', 'queued'].includes(doc.status) ? ` <button class="btn sm danger" data-rmdoc="${doc.id}" data-name="${esc(doc.original_name)}" title="Quitar este archivo del lote">Quitar</button>` : ''}</td></tr>`;
     };
     root.innerHTML = `<div class="stack">
       <div class="card"><h2>${esc(b.name)} ${NALA.badge(b.status)}<span class="spacer"></span>
@@ -369,6 +370,15 @@
     root.querySelectorAll('[data-href]').forEach(el => el.addEventListener('click', () => NALA.go(el.dataset.href)));
     root.querySelectorAll('[data-doc]').forEach(btn => btn.addEventListener('click', async () => {
       try { const r = await NALA.api('GET', `documents/${btn.dataset.doc}/url`); window.open(r.url, '_blank', 'noopener'); } catch (e) { NALA.fail(e); }
+    }));
+    root.querySelectorAll('[data-rmdoc]').forEach(btn => btn.addEventListener('click', async () => {
+      const ok = await NALA.modal({ title: 'Quitar archivo del lote', okText: 'Quitar archivo', okClass: 'danger',
+        body: `<p>Se quitará <b>${esc(btn.dataset.name)}</b> de este lote, junto con los comprobantes que se leyeron de él y el archivo original. Los demás archivos no cambian. Queda una nota en el historial del lote.</p>
+          <p class="muted" style="margin-top:6px">Úselo, por ejemplo, para un archivo subido al formato equivocado (una compra en ventas). Después súbalo en el lote que le corresponde.</p>
+          <label style="display:flex;align-items:center;gap:6px;margin-top:8px"><input type="checkbox" id="confirm-rmdoc"> Entiendo que se quita este archivo</label>`,
+        onOk: m => { if (!m.querySelector('#confirm-rmdoc').checked) throw new Error('Marque la casilla para confirmar.'); return true; } });
+      if (!ok) return;
+      try { const r = await NALA.api('DELETE', `documents/${btn.dataset.rmdoc}`); NALA.toast(`Archivo quitado (${r.invoices} comprobante(s))`, 'ok'); NALA.route(); } catch (e) { NALA.fail(e); }
     }));
     root.querySelector('#refresh')?.addEventListener('click', () => NALA.route());
     root.querySelector('#reproc')?.addEventListener('click', async () => {

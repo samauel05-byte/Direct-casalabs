@@ -163,6 +163,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **CAMI — tamaño del modal de revisión:** `SCAN_UI` (`zoom` 0,6–2 con `style.zoom` sobre `#scan-body`, `full` = pantalla completa) con `applyScanUI()`; se guarda en `localStorage['cami-scan-ui']`.
 
+**NALA — quitar un archivo del lote:** `DELETE /api/nala/documents/:id` → `batches.removeDocument` (lib/nala/api/batches.js; permiso `reprocess`, mismo alcance por empresa que el lote): se niega con 409 si el archivo es un ZIP con hijos o si algún comprobante está en `nala_export_lines`; registra el evento `document_removed` (nombre, sha256, NCF) en el lote, borra el original del almacenamiento, sus `nala_invoices` y el `nala_documents` (los trabajos caen en cascada) y refresca el resumen. Botón «Quitar» en `views-batches.js`. Prueba: `tests/nala/remove-document.test.js` (base en memoria).
+
 **CAMI — formato compacto de la IA:** `lib/cami-escaneo.js` pide `filas: string[]` con 9 campos separados por `|` (`NCF|FECHA|TOTAL_FACTURADO|MAS_ITBIS|TOTAL_PAGADO|CONDICIONES|MONEDA|NOTA|FACTURA`) y `parseLines()` los vuelve objetos antes de `normalize()`; `max_tokens` 4000. Un objeto JSON por fila excedía los 50 s por página (504).
 
 **CAMI — escaneo por página:** `scanB02` envía UNA imagen por petición (2 en paralelo, 1 reintento ante 5xx/429, progreso en `#loader .loader-txt`) para no pasar los 60 s de la función; `lib/cami-escaneo.js` corta la llamada a la IA a los 50 s (`AbortController` → 504 con mensaje claro) y el esquema pidió menos campos (sin subtotal ni descuento) para acortar la respuesta. Las páginas que fallan se avisan y se conservan las leídas.

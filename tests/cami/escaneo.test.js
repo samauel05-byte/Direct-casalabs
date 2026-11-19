@@ -23,7 +23,7 @@ test('marca NCF repetido, base + ITBIS que no cuadra, NCF que no es B02 y devolu
 test('lectura de números, fechas y monedas', () => {
   assert.equal(num('1,234.50'), 1234.5); assert.equal(num('RD$ 20.00'), 20); assert.equal(num(null), null);
   assert.equal(ymd('2/10/2026'), '20261002'); assert.equal(ymd('2026-10-31'), '20261031'); assert.equal(ymd('xx'), null);
-  assert.equal(currency('EURO'), 'EUR'); assert.equal(currency('€'), 'EUR'); assert.equal(currency('DOLLAR'), 'USD'); assert.equal(currency('Pesos'), 'DOP'); assert.equal(currency(''), null);
+  assert.equal(currency('OTROS'), 'EUR'); assert.equal(currency('Otros'), 'EUR'); assert.equal(currency('EURO'), 'EUR'); assert.equal(currency('€'), 'EUR'); assert.equal(currency('DOLLAR'), 'USD'); assert.equal(currency('Pesos'), 'DOP'); assert.equal(currency(''), null);
 });
 
 test('faltan montos o NCF: se marcan, no se inventan', () => {

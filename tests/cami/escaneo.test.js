@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert');
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:1';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'x';
-const { normalize, num, ymd, currency } = require('../../lib/cami-escaneo');
+const { normalize, parseLines, num, ymd, currency } = require('../../lib/cami-escaneo');
 
 const row = (o = {}) => ({ factura: '3676', ncf: 'B0200003531', fecha: '02/10/2026', total_facturado: '122.88', mas_itbis: '22.12', total_pagado: '145.00', condiciones: 'AL CONTADO', moneda_seccion: 'DOLLAR', nota: null, ...o });
 
@@ -29,4 +29,11 @@ test('lectura de números, fechas y monedas', () => {
 test('faltan montos o NCF: se marcan, no se inventan', () => {
   const [r] = normalize([row({ ncf: null, total_facturado: null })]);
   assert.ok(r.flags.includes('Sin NCF') && r.flags.includes('Faltan montos'));
+});
+
+test('formato compacto de la IA: una línea por fila se convierte en fila validable', () => {
+  const rows = normalize(parseLines(['B0200003531|02/10/2026|122.88|22.12|145.00|AL CONTADO|DOLLAR||3676', ' B0200003534 | 03/10/2026 | | | 0.00 | AL CONTADO | DOLLAR | DEV. - 125 | 3679', '']));
+  assert.equal(rows.length, 2);
+  assert.deepEqual({ ncf: rows[0].ncf, base: rows[0].base, itbis: rows[0].itbis, total: rows[0].total, moneda: rows[0].moneda, factura: rows[0].factura }, { ncf: 'B0200003531', base: 122.88, itbis: 22.12, total: 145, moneda: 'USD', factura: '3676' });
+  assert.ok(rows[1].flags.includes('Faltan montos') && rows[1].flags.includes('Devolución / anulada'));
 });

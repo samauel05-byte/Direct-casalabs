@@ -5,7 +5,7 @@ process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'http://localhost:1';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'x';
 const { normalize, num, ymd, currency } = require('../../lib/cami-escaneo');
 
-const row = (o = {}) => ({ factura: '3676', ncf: 'B0200003531', fecha: '02/10/2026', subtotal: '145.00', descuento: '0.00', total_facturado: '122.88', mas_itbis: '22.12', total_pagado: '145.00', condiciones: 'AL CONTADO', moneda_seccion: 'DOLLAR', nota: null, ...o });
+const row = (o = {}) => ({ factura: '3676', ncf: 'B0200003531', fecha: '02/10/2026', total_facturado: '122.88', mas_itbis: '22.12', total_pagado: '145.00', condiciones: 'AL CONTADO', moneda_seccion: 'DOLLAR', nota: null, ...o });
 
 test('una fila del reporte (USD, ITBIS incluido) cuadra: base + ITBIS = total pagado', () => {
   const [r] = normalize([row()]);

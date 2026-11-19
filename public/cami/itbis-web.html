@@ -2670,7 +2670,7 @@ async function camiPost(url,body,retried){
   return j;
 }
 function fileToBase64(file){return new Promise((ok,bad)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(',')[1]||'');r.onerror=()=>bad(new Error('No se pudo leer el archivo.'));r.readAsDataURL(file);});}
-async function shrinkImage(file,max=1900){
+async function shrinkImage(file,max=1800){
   const url=URL.createObjectURL(file);
   try{
     const img=await new Promise((ok,bad)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>bad(new Error('No se pudo abrir la foto.'));i.src=url;});
@@ -2684,7 +2684,7 @@ async function pdfToImages(file,maxPages=12){
   const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
   const out=[]; const n=Math.min(pdf.numPages,maxPages);
   for(let i=1;i<=n;i++){
-    const page=await pdf.getPage(i); const vp0=page.getViewport({scale:1}); const k=Math.min(2.4,2000/Math.max(vp0.width,vp0.height));
+    const page=await pdf.getPage(i); const vp0=page.getViewport({scale:1}); const k=Math.min(2.2,1800/Math.max(vp0.width,vp0.height));
     const vp=page.getViewport({scale:k}); const c=document.createElement('canvas'); c.width=Math.round(vp.width); c.height=Math.round(vp.height);
     const ctx=c.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,c.width,c.height);
     await page.render({canvasContext:ctx,viewport:vp}).promise;
@@ -2712,20 +2712,35 @@ async function scanB02(fileList){
       else throw new Error('Usa fotos (JPG, PNG) o un PDF.');
     }
     if(!imgs.length) throw new Error('No se pudo leer el archivo.');
-    // Lotes de 3 páginas para no pasar el límite de la petición; las filas se juntan en orden.
+    // Una página por petición (cada lectura con IA tarda; el servidor corta a los 60 s), dos a la vez, con progreso.
+    // Si alguna página falla, se conservan las que sí se leyeron y se avisa cuáles faltaron.
+    const lt=document.querySelector('#loader .loader-txt'); const setTxt=t=>{ if(lt) lt.textContent=t; };
+    const results=new Array(imgs.length).fill(null), failed=[]; let done=0, next=0;
+    setTxt(`Leyendo el reporte con IA… 0 de ${imgs.length} páginas`);
+    const worker=async()=>{
+      while(next<imgs.length){
+        const i=next++; let r=null,err=null;
+        for(let attempt=0;attempt<2&&!r;attempt++){
+          try{ r=await camiPost('/api/ir2/resumen',{tipo:'cami-escaneo',files:[imgs[i]]}); }
+          catch(e){ err=e; if(e.status&&e.status<500&&e.status!==429) break; }
+        }
+        if(r) results[i]=r; else failed.push({page:i+1,msg:(err&&err.message)||'sin respuesta'});
+        done++; setTxt(`Leyendo el reporte con IA… ${done} de ${imgs.length} páginas`);
+      }
+    };
+    await Promise.all([worker(),worker()]);
     let filas=[],monedas=new Set(),titulo='';
-    for(let i=0;i<imgs.length;i+=3){
-      const r=await camiPost('/api/ir2/resumen',{tipo:'cami-escaneo',files:imgs.slice(i,i+3)});
-      if(!titulo) titulo=r.titulo||''; (r.monedas||[]).forEach(m=>monedas.add(m)); filas.push(...(r.filas||[]));
-    }
+    results.forEach(r=>{ if(!r) return; if(!titulo) titulo=r.titulo||''; (r.monedas||[]).forEach(m=>monedas.add(m)); filas.push(...(r.filas||[])); });
+    if(!filas.length&&failed.length) throw new Error(failed[0].msg);
     // El mismo NCF no puede repetirse entre páginas (p. ej. una fila cortada al final de una página).
     const seen=new Map(); filas.forEach(f=>{ if(f.ncf) seen.set(f.ncf,(seen.get(f.ncf)||0)+1); });
     filas=filas.map((f,i)=>{ const flags=f.flags.filter(x=>x!=='NCF repetido'); if(f.ncf&&seen.get(f.ncf)>1) flags.push('NCF repetido'); return {...f,n:i+1,flags}; });
     if(!filas.length) throw new Error('No encontré filas de comprobantes en el documento. Si es una foto, tómala de frente y con buena luz.');
     SCAN={titulo,filas,monedas:[...monedas]}; renderScanModal();
-    if(cut) showToast(`Solo se leyeron las primeras ${imgs.length} páginas (${cut} más sin leer).`,'warn');
+    if(failed.length) showToast(`No se pudo leer la${failed.length>1?'s':''} página${failed.length>1?'s':''} ${failed.map(f=>f.page).sort((x,y)=>x-y).join(', ')}. Sube ${failed.length>1?'esas páginas':'esa página'} otra vez para completarlo.`,'warn');
+    else if(cut) showToast(`Solo se leyeron las primeras ${imgs.length} páginas (${cut} más sin leer).`,'warn');
   }catch(e){ showToast(e.message||'No se pudo leer el reporte.','err'); }
-  finally{ $('loader').hidden=true; $('fi-scan').value=''; }
+  finally{ $('loader').hidden=true; $('fi-scan').value=''; const lt=document.querySelector('#loader .loader-txt'); if(lt) lt.textContent='Procesando archivo…'; }
 }
 const SCAN_BLOCK=['Sin NCF','Faltan montos','NCF repetido','Base + ITBIS ≠ total pagado','Fecha ilegible','Devolución / anulada','NCF no es B02/E32','NCF dudoso'];
 function renderScanModal(){

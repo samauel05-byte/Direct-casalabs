@@ -883,7 +883,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
   <div class="dash" id="da-607" hidden>
     <div class="slabel">Tipo de ITBIS por factura</div>
     <div class="manual-card" id="tipo-card" style="margin-bottom:24px;border-top-color:var(--violet);">
-      <div class="field-help">Elige el tipo de ITBIS de cada factura (por ejemplo <strong>18 % Construcción</strong>, que es el 18 % aplicado solo a la parte gravada de la obra). CAMI toma el ITBIS facturado, calcula la base gravada con esa tasa y deja el resto como exento; los totales, las tarjetas por tasa y el IT-1 se recalculan al instante. «Automático» deja la tasa que CAMI deduce del archivo.</div>
+      <div class="field-help">Elige el tipo de ITBIS de cada factura (por ejemplo <strong>18 % Construcción</strong>, que es el 18 % aplicado solo a la parte gravada de la obra). CAMI toma el ITBIS facturado, calcula la base gravada con esa tasa y deja el resto como exento; los totales, las tarjetas por tasa y el IT-1 se recalculan al instante. «Automático» deja la tasa que CAMI deduce del archivo. Si una factura tiene parte exenta, escribe su <b>monto gravado</b> en la columna «Monto gravado»: la tasa sale de ITBIS ÷ gravado y el resto queda como exento.</div>
       <div class="rv-tools">
         <input class="field-inp" id="tipo-q" type="search" placeholder="Buscar por NCF, RNC o fecha…" aria-label="Buscar facturas del 607">
         <select class="field-inp" id="tipo-f" aria-label="Filtrar facturas del 607"><option value="">Todas las facturas</option><option value="set">Con tipo asignado</option><option value="auto">Sin tipo asignado</option></select>
@@ -892,7 +892,7 @@ tbody tr:nth-child(even){background:var(--surface-2);}
         <button class="btn btn-ghost" id="tipo-clear">Quitar todos los tipos</button>
         <span class="rv-count" id="tipo-count"></span>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>RNC / Cédula</th><th>NCF</th><th style="text-align:right">Monto</th><th style="text-align:right">ITBIS</th><th>Tasa detectada</th><th>Tipo de ITBIS</th></tr></thead><tbody id="tipo-tb"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>#</th><th>Fecha</th><th>RNC / Cédula</th><th>NCF</th><th style="text-align:right">Monto</th><th style="text-align:right">ITBIS</th><th>Tasa detectada</th><th>Tipo de ITBIS</th><th style="text-align:right">Monto gravado</th><th style="text-align:right">Exento</th></tr></thead><tbody id="tipo-tb"></tbody></table></div>
       <div class="rv-pager"><button class="btn btn-ghost" id="tipo-prev">← Anterior</button><span id="tipo-page"></span><button class="btn btn-ghost" id="tipo-next">Siguiente →</button></div>
     </div>
     <div class="manual-card" style="margin-bottom:24px;border-top-color:var(--violet);">
@@ -1662,9 +1662,10 @@ function process606(rows) {
   return { summary:{registros:data.length,totServ,totBien,totTotal,totItbis,totAdel,totCosto,totRet,credServ,credBien,ret30,ret100,compras,totIsc,totOtrosImp,totPropina}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), revision };
 }
 
-function process607(rows, overrides) {
+function process607(rows, overrides, gravOverrides) {
   if (!rows.length) throw new Error('Archivo vacío.');
   const ov = overrides || {};
+  const ovg = gravOverrides || {}; // monto gravado puesto a mano por factura (índice → monto)
   const headers = Object.keys(rows[0]);
   const cm = detectCols(headers, AL607);
   const keyField = cm.monto_total || cm.monto_servicios || cm.monto_bienes || cm.itbis_facturado || cm.ncf;
@@ -1734,6 +1735,15 @@ function process607(rows, overrides) {
       const base=gravAbs>net+1?Math.abs(p._total):Math.max(net,0);
       p._constr18=constr18; p._tasa=ovRate; p._gravado=gravAbs*p._fiscalSign; p._exento=r2(Math.max(base-gravAbs,0))*p._fiscalSign;
     }
+    // Monto GRAVADO puesto a mano (p. ej. facturas con parte exenta): manda sobre lo deducido. La tasa sale de
+    // ITBIS ÷ gravado (se ajusta a 18/16/10/9/8 si está cerca) y el resto de la factura queda como exento.
+    const manualGrav=Math.abs(Number(ovg[idx])||0); p._gravManual=0;
+    if (manualGrav>0 && itbisAbs>0) {
+      const net=Math.abs(p._total)-itbisAbs;
+      const base=manualGrav>net+1?Math.abs(p._total):Math.max(net,0);
+      const rawRate=itbisAbs/manualGrav*100, snap=[18,16,10,9,8].find(t=>Math.abs(rawRate-t)<0.6);
+      p._gravManual=manualGrav; p._tasa=snap||r2(rawRate); p._gravado=manualGrav*p._fiscalSign; p._exento=r2(Math.max(base-manualGrav,0))*p._fiscalSign; p._constr18=false;
+    }
     if (cm.construccion) { const v=String(r[cm.construccion]||'').toLowerCase(); p._constr=v==='si'||v==='sí'||v==='1'||v==='true'||v==='construccion'; }
     else { p._constr=p._tasa===10; }
     if (ovRate>0 && itbisAbs>0) p._constr=constr18||ovRate===10;
@@ -1776,8 +1786,8 @@ function process607(rows, overrides) {
   const cleanRow = r => { const o={}; headers.forEach(h=>{o[h]=r[h];}); return o; };
   const cRows=data.filter(r=>r._constr18);
   const constr={count:cRows.length,facturado:r2(cRows.reduce((n,r)=>n+(Math.abs(r._total)-Math.abs(r._itbis))*r._fiscalSign,0)),gravado:r2(sum(cRows,'_gravado')),exento:r2(sum(cRows,'_exento')),itbis:r2(sum(cRows,'_itbis'))};
-  const facturas=data.map((p,i)=>({i,ncf:p._ncfRaw,fecha:cm.fecha?String(p[cm.fecha]==null?'':p[cm.fecha]):'',rnc:cm.rnc?String(p[cm.rnc]==null?'':p[cm.rnc]):'',total:p._total,itbis:p._itbis,auto:p._tasaAuto,tasa:(ov[i]==='C18'||Number(ov[i])>0)&&Math.abs(p._itbis)>0?ov[i]:0}));
-  return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,constr,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), facturas, overrides:ov };
+  const facturas=data.map((p,i)=>({i,ncf:p._ncfRaw,fecha:cm.fecha?String(p[cm.fecha]==null?'':p[cm.fecha]):'',rnc:cm.rnc?String(p[cm.rnc]==null?'':p[cm.rnc]):'',total:p._total,itbis:p._itbis,auto:p._tasaAuto,grav:Math.abs(p._gravado||0),exento:Math.abs(p._exento||0),gravManual:p._gravManual||0,tasa:(ov[i]==='C18'||Number(ov[i])>0)&&Math.abs(p._itbis)>0?ov[i]:0}));
+  return { summary:{registros:data.length,totTotal,totGrav,totExento,totItbis,totRet,byTasa,constr,ncfGroups,paymentSummary,ret30,ret100,audit:{invalidNCF,duplicateNCF}}, columns:headers, preview:data.slice(0,200).map(cleanRow), allRows:data.map(cleanRow), facturas, overrides:ov, gravOverrides:ovg };
 }
 
 function processCardReport(rows, provider) {
@@ -1994,7 +2004,7 @@ function renderDgiiCheck(){
 (function(){ const go=()=>{ const b=$('dg-go'), i=$('dg-val'); if(b) b.addEventListener('click',renderDgiiCheck); if(i) i.addEventListener('keydown',e=>{ if(e.key==='Enter') renderDgiiCheck(); }); }; if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go(); })();
 function tipoLabel(r){return r==='C18'?'18 % Construcción':r===10?'10 % Construcción':r+' %';}
 function renderTipo607(){
-  const d=STATE['607']; if(d&&!d.facturas&&d.allRows)Object.assign(d,process607(d.allRows,d.overrides||{}));
+  const d=STATE['607']; if(d&&!d.facturas&&d.allRows)Object.assign(d,process607(d.allRows,d.overrides||{},d.gravOverrides||{}));
   if(!d||!d.facturas)return;
   const q=TIPO.q.trim().toLowerCase();
   const all=d.facturas, asg=all.filter(r=>r.tasa).length;
@@ -2002,7 +2012,7 @@ function renderTipo607(){
   const pages=Math.max(1,Math.ceil(list.length/RV_PAGE)); TIPO.page=Math.min(TIPO.page,pages-1);
   const rows=list.slice(TIPO.page*RV_PAGE,(TIPO.page+1)*RV_PAGE);
   const opts=cur=>[['','Automático'],[18,'18 %'],['C18','18 % Construcción'],[16,'16 %'],[9,'9 %'],[8,'8 %'],...(cur===10?[[10,'10 % Construcción']]:[])].map(([v,l])=>`<option value="${v}"${String(v)===String(cur||'')?' selected':''}>${l}</option>`).join('');
-  $('tipo-tb').innerHTML=rows.map(r=>`<tr><td>${r.i+1}</td><td>${escH(r.fecha)}</td><td>${escH(r.rnc)}</td><td>${escH(r.ncf)}</td><td style="text-align:right">${fmtM(r.total)}</td><td style="text-align:right">${fmtM(r.itbis)}</td><td>${Math.abs(r.itbis)>0?(r.auto?escH(r.auto)+' %':'—'):'Exento'}</td><td>${Math.abs(r.itbis)>0?`<select class="field-inp tipo-sel" data-i="${r.i}" style="min-width:150px;padding:5px 8px;">${opts(r.tasa)}</select>`:'<span style="color:var(--muted)">Sin ITBIS</span>'}</td></tr>`).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--muted)">No hay facturas con ese filtro.</td></tr>';
+  $('tipo-tb').innerHTML=rows.map(r=>`<tr><td>${r.i+1}</td><td>${escH(r.fecha)}</td><td>${escH(r.rnc)}</td><td>${escH(r.ncf)}</td><td style="text-align:right">${fmtM(r.total)}</td><td style="text-align:right">${fmtM(r.itbis)}</td><td>${Math.abs(r.itbis)>0?(r.auto?escH(r.auto)+' %':'—'):'Exento'}</td><td>${Math.abs(r.itbis)>0?`<select class="field-inp tipo-sel" data-i="${r.i}" style="min-width:150px;padding:5px 8px;">${opts(r.tasa)}</select>`:'<span style="color:var(--muted)">Sin ITBIS</span>'}</td><td style="text-align:right">${Math.abs(r.itbis)>0?`<input class="field-inp grav-inp" data-i="${r.i}" type="text" inputmode="decimal" value="${r.gravManual?r.gravManual.toFixed(2):''}" placeholder="${r.grav.toFixed(2)}" title="Escribe el monto gravado de esta factura; vacío = automático" style="width:130px;text-align:right;padding:5px 8px;${r.gravManual?'border-color:var(--violet)':''}">`:'<span style="color:var(--muted)">—</span>'}</td><td style="text-align:right">${fmtM(r.exento)}</td></tr>`).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--muted)">No hay facturas con ese filtro.</td></tr>';
   $('tipo-count').textContent=`${fmtI(all.length)} facturas · ${fmtI(asg)} con tipo asignado · mostrando ${fmtI(list.length)}`;
   $('tipo-page').textContent=`Página ${TIPO.page+1} de ${pages}`;
   $('tipo-prev').disabled=TIPO.page===0; $('tipo-next').disabled=TIPO.page>=pages-1;
@@ -2012,7 +2022,15 @@ function setTipo607(changes){
   const cur=STATE['607']; if(!cur||!cur.allRows)return;
   const ov={...(cur.overrides||{})};
   changes.forEach(([i,r])=>{ if(r)ov[i]=r; else delete ov[i]; });
-  const nd=Object.assign({},cur,process607(cur.allRows,ov));
+  const nd=Object.assign({},cur,process607(cur.allRows,ov,cur.gravOverrides||{}));
+  STATE['607']=nd; render607(nd,$('tf-607').textContent||'Archivo 607');
+}
+// Pone (o quita, con 0/vacío) el monto GRAVADO de una factura y recalcula tasa, exento, totales, tarjetas e IT-1.
+function setGravado607(i,value){
+  const cur=STATE['607']; if(!cur||!cur.allRows)return;
+  const g={...(cur.gravOverrides||{})}; const v=Math.abs(parseFloat(String(value).replace(/,/g,''))||0);
+  if(v>0)g[i]=v; else delete g[i];
+  const nd=Object.assign({},cur,process607(cur.allRows,cur.overrides||{},g));
   STATE['607']=nd; render607(nd,$('tf-607').textContent||'Archivo 607');
 }
 function filteredTipo607(){
@@ -2031,6 +2049,7 @@ function filteredTipo607(){
   on('tipo-prev','click',()=>{TIPO.page=Math.max(0,TIPO.page-1);renderTipo607();});
   on('tipo-next','click',()=>{TIPO.page++;renderTipo607();});
   on('tipo-tb','change',e=>{const sel=e.target.closest('.tipo-sel'); if(!sel)return; setTipo607([[Number(sel.dataset.i),sel.value==='C18'?'C18':(Number(sel.value)||0)]]);});
+  on('tipo-tb','change',e=>{const g=e.target.closest('.grav-inp'); if(!g)return; setGravado607(Number(g.dataset.i),g.value);});
   on('tipo-bulk-btn','click',()=>{
     const bv=$('tipo-bulk').value, rate=bv==='C18'?'C18':(Number(bv)||0); if(!rate){showToast('Elige primero el tipo de ITBIS.','err');return;}
     const list=filteredTipo607().filter(r=>Math.abs(r.itbis)>0); if(!list.length){showToast('No hay facturas con ITBIS en este filtro.','err');return;}
@@ -2038,9 +2057,9 @@ function filteredTipo607(){
     setTipo607(list.map(r=>[r.i,rate]));
   });
   on('tipo-clear','click',()=>{
-    const d=STATE['607']; if(!d||!Object.keys(d.overrides||{}).length){showToast('No hay tipos asignados.','err');return;}
-    if(!confirm('¿Quitar todos los tipos de ITBIS asignados a mano?'))return;
-    setTipo607(Object.keys(d.overrides).map(i=>[Number(i),0]));
+    const d=STATE['607']; if(!d||(!Object.keys(d.overrides||{}).length&&!Object.keys(d.gravOverrides||{}).length)){showToast('No hay tipos ni montos gravados asignados.','err');return;}
+    if(!confirm('¿Quitar todos los tipos de ITBIS y montos gravados asignados a mano?'))return;
+    const nd=Object.assign({},d,process607(d.allRows,{},{})); STATE['607']=nd; render607(nd,$('tf-607').textContent||'Archivo 607');
   });
 })();
 
@@ -2786,7 +2805,7 @@ function addScannedTo607(){
   const fresh=added.filter(o=>!have.has(String(o[cm.ncf]).toUpperCase()));
   const base=existing?existing.allRows.map(x=>{const o={};headers.forEach(h=>{o[h]=x[h]==null?'':x[h];});return o;}):[];
   try{
-    STATE['607']=process607([...base,...fresh]); render607(STATE['607'],existing?($('tf-607').textContent||'607'):'Reporte B02 escaneado');
+    STATE['607']=process607([...base,...fresh],existing?existing.overrides:undefined,existing?existing.gravOverrides:undefined); render607(STATE['607'],existing?($('tf-607').textContent||'607'):'Reporte B02 escaneado');
     $('modal-scan').hidden=true; SCAN=null;
     showToast(`${fresh.length} comprobante${fresh.length!==1?'s':''} B02 agregado${fresh.length!==1?'s':''} al 607${added.length-fresh.length?` (${added.length-fresh.length} ya estaban)`:''}.`);
   }catch(e){showToast(e.message||'No se pudo agregar al 607.','err');}

@@ -159,6 +159,8 @@ Contraseña del usuario (solo en memoria del navegador)
 
 **Relay — casilla del token por contexto:** si `tokenInput()` no la reconoce, `tokenInputLoose()` toma una casilla visible y vacía dentro de un bloque con ≤2 casillas cuyo texto menciona «token» o «código de seguridad». Ojo: el script del relay vive en una plantilla de JS, las regex deben escribirse con `\\s` (si no, el navegador recibe `s`).
 
+**CAMI — gravado manual (607):** `process607(rows, overrides, gravOverrides)` recibe un 3.er mapa índice → monto gravado; con `ITBIS>0` fija `_gravado`, `_tasa = ITBIS ÷ gravado` (ajustada a 18/16/10/9/8 si |dif| < 0,6) y `_exento = máx(base − gravado, 0)`, con `base` calculada igual que en el tipo manual. `setGravado607(i, valor)` y la columna «Monto gravado» de `#tipo-tb`; `facturas[]` expone `grav`, `exento`, `gravManual`. Prueba: `tests/cami/gravado-manual.test.js`.
+
 **CAMI — monedas del escaneo:** `currency()` en `lib/cami-escaneo.js` mapea DOLLAR/US$ → USD, EURO/€ y también «OTROS» → EUR, PESOS/RD$ → DOP; sin pista se asume DOP.
 
 **CAMI — tamaño del modal de revisión:** `SCAN_UI` (`zoom` 0,6–2 con `style.zoom` sobre `#scan-body`, `full` = pantalla completa) con `applyScanUI()`; se guarda en `localStorage['cami-scan-ui']`.

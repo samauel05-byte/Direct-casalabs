@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **CAMI (607): monto gravado manual por factura (para facturas con parte exenta, como las de GARBO)**: en el cuadro «Tipo de ITBIS por factura» hay dos columnas nuevas, **Monto gravado** (casilla para escribirlo) y **Exento**. Al escribir el monto gravado de una factura, CAMI calcula la tasa (ITBIS ÷ gravado, ajustada a 18/16/10/9/8 si está cerca), deja el resto de la factura como exento y recalcula totales, tarjetas e IT-1 al instante. Vacío vuelve a lo automático, y «Quitar todos los tipos» también limpia los gravados.
 - **NALA: botón «Quitar» para sacar un archivo de un lote**: en «Documentos y trabajos» de cada lote, cada archivo tiene un botón rojo **Quitar** (para quien puede reprocesar). Sirve cuando un archivo se subió al formato equivocado (por ejemplo, una factura de compra en ventas): quita ese archivo, los comprobantes que se leyeron de él y el original, y deja una nota en el historial del lote con el nombre, la huella y los NCF. No toca los demás archivos y se niega si algún comprobante ya está en una exportación generada.
 - **CAMI: en el escaneo del reporte de ventas, la sección «OTROS» se toma como euro**: si el encabezado de moneda del PDF dice «OTROS», esas filas se tratan como EUR y piden la tasa EUR → RD$ al agregarlas al 607.
 - **CAMI: la pantalla de revisión del escaneo B02 se puede agrandar o achicar**: arriba a la derecha tiene **A−** y **A+** (letra del 60 % al 200 %) y **⛶ Pantalla completa**, para ver muchas filas a la vez. Recuerda tu elección en ese navegador.

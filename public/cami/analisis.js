@@ -96,9 +96,9 @@
       if (snap.currency && CURRENCIES[snap.currency] && snap.currency !== DISPLAY_CURRENCY) { DISPLAY_CURRENCY = snap.currency; $('currency-select').value = snap.currency; }
       const n = snap.names || {}, S = snap.STATE || {}, C = snap.CARD_STATE || {};
       // Los análisis guardados se recalculan con las reglas actuales (a partir de las filas originales).
-      const fresh = (d, fn) => { try { return d && d.allRows && d.allRows.length ? Object.assign({}, d, fn(d.allRows, d.overrides || {})) : d; } catch (e) { return d; } };
+      const fresh = (d, fn) => { try { return d && d.allRows && d.allRows.length ? Object.assign({}, d, fn(d.allRows, d.overrides || {}, d.gravOverrides || {})) : d; } catch (e) { return d; } };
       if (S['606']) { STATE['606'] = fresh(S['606'], rows => process606(rows)); render606(STATE['606'], n['606'] || 'Archivo 606'); }
-      if (S['607']) { STATE['607'] = fresh(S['607'], (rows, ov) => process607(rows, ov)); render607(STATE['607'], n['607'] || 'Archivo 607'); }
+      if (S['607']) { STATE['607'] = fresh(S['607'], (rows, ov, gov) => process607(rows, ov, gov)); render607(STATE['607'], n['607'] || 'Archivo 607'); }
       if (C.cardnet) { CARD_STATE.cardnet = C.cardnet; renderCardReport('CardNET', CARD_STATE.cardnet, n.cardnet || 'Reporte CardNET'); }
       if (C.azul) { CARD_STATE.azul = C.azul; renderCardReport('Azul', CARD_STATE.azul, n.azul || 'Reporte Azul'); }
       if (snap.IR2_STATE) {
@@ -255,7 +255,7 @@
     ['cardnet', 'azul'].forEach(id => { const el = $('kpis-' + id); if (el) AN.cardHtml[id] = el.innerHTML; });
     buildUI();
     // engancha los puntos donde cambia el trabajo (sin tocar la lógica existente)
-    ['handleFile', 'handleCardFile', 'handleIR2File', 'resetMod', 'resetIR2'].forEach(name => {
+    ['handleFile', 'handleCardFile', 'handleIR2File', 'resetMod', 'resetIR2', 'setTipo607', 'setGravado607', 'addScannedTo607', 'applyDgiiAdjust', 'clearDgiiAdjust'].forEach(name => {
       const f = window[name]; if (typeof f !== 'function') return;
       window[name] = function () { const was = AN.restoring; const r = f.apply(this, arguments); if (!was) Promise.resolve(r).then(schedule, schedule); return r; };
     });

@@ -54,7 +54,7 @@ td{padding:8px 10px;border-top:1px solid var(--bdr);vertical-align:top}
 let TOKEN='', SESSION_ID='', TAB='resumen';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const TABS=[['resumen','Resumen'],['clientes','Clientes'],['cobros','Cobros'],['promos','Promociones'],['historial','Historial']];
+const TABS=[['resumen','Resumen'],['clientes','Clientes'],['cotizaciones','Cotizaciones'],['cobros','Cobros'],['promos','Promociones'],['historial','Historial']];
 const sid=()=>SESSION_ID||localStorage.getItem('direct_session_id')||'';
 async function api(route,opts={}){
   const h={Authorization:'Bearer '+TOKEN}; if(sid()) h['X-Direct-Session']=sid(); if(opts.body) h['Content-Type']='application/json';
@@ -74,10 +74,10 @@ const f=(label,inner)=>`<label class="f">${label}${inner}</label>`;
 
 async function load(){
   renderTabs(); $('view').innerHTML='<p class="mut">Cargando…</p>';
-  try{ await ({resumen:vResumen,clientes:vClientes,cobros:vCobros,promos:vPromos,historial:vHistorial})[TAB](); }
+  try{ await ({resumen:vResumen,clientes:vClientes,cotizaciones:vCotizaciones,cobros:vCobros,promos:vPromos,historial:vHistorial})[TAB](); }
   catch(e){ $('view').innerHTML=''; flash(e.message,'err'); }
 }
-const TIPO={reminder:'Recordatorio',promo:'Promoción',invoice:'Cobro',receipt:'Comprobante'}, CH={email:'Correo',whatsapp:'WhatsApp'};
+const TIPO={reminder:'Recordatorio',promo:'Promoción',invoice:'Cobro',receipt:'Comprobante',quote:'Cotización',factura:'Factura'}, CH={email:'Correo',whatsapp:'WhatsApp'};
 const logRows=(rows,full)=>rows.map(m=>`<tr><td>${dt(m.created_at)}</td>${full?`<td>${esc(m.client_name)}</td>`:''}<td>${CH[m.channel]}</td><td>${TIPO[m.kind]||''}</td><td>${esc(m.recipient)}</td><td class="${m.status==='failed'?'bad':'okc'}">${m.status==='failed'?'Fallido':'Enviado'}${m.error?`<div class="mut">${esc(m.error)}</div>`:''}</td>${full?`<td class="mut" title="${esc(m.body)}">${esc((m.body||'').slice(0,80))}</td>`:''}</tr>`).join('');
 
 async function vResumen(){
@@ -118,9 +118,36 @@ async function vCobros(){
       const late=i.status==='pending'&&i.due_date<d.today, open=i.status==='pending'||i.status==='overdue';
       return `<tr><td>${esc(i.client_name)}</td><td>${esc(i.concept)}${i.payment_link&&/^https?:\/\//i.test(i.payment_link)?` <a href="${esc(i.payment_link)}" target="_blank" rel="noopener noreferrer">enlace</a>`:''}</td><td style="white-space:nowrap"><b>${money(i.amount,i.currency)}</b></td><td style="white-space:nowrap">${dd(i.due_date)}</td>
       <td class="${i.status==='overdue'||late?'bad':i.status==='paid'?'okc':''}">${late?'Vencido':ST[i.status]}</td><td class="mut">${open?`<div>Avisa: ${(i.remind_days&&i.remind_days.length?i.remind_days:[3,1]).join(', ')} día(s) antes</div>`:''}${i.reminder_count}${i.last_reminder_at?' · '+dd(i.last_reminder_at):''}${i.paypal_usd_amount?`<div>PayPal: ${money(i.paypal_usd_amount,'USD')}</div>`:''}${i.status==='paid'&&i.receipt_sent_at?'<div class="okc">Comprobante enviado</div>':''}</td>
-      <td>${open?`<div class="acts">${!i.payment_link?`<button class="btn sm" data-pplink="${i.id}" data-cur="${i.currency}">Enlace PayPal</button>`:''}${i.paypal_invoice_id?`<button class="btn sm" data-ppcheck="${i.id}">Verificar pago</button>`:''}<button class="btn sm" data-ndays="${i.id}" data-cur="${esc((i.remind_days||[]).join(', '))}">Días de aviso</button><button class="btn sm" data-remind="${i.id}">Recordar</button><button class="btn sm" data-paid="${i.id}">Marcar pagado</button></div>`:''}</td></tr>`; }).join('')||'<tr><td colspan="7" class="mut">Aún no hay cobros.</td></tr>'}</tbody></table></div>`;
+      <td><div class="acts"><button class="btn sm" data-fact="${i.id}" title="Envía la factura comercial (PDF) al cliente">${i.factura_seq?'Reenviar '+('FAC-'+String(i.factura_seq).padStart(4,'0')):'Facturar'}</button><button class="btn sm" data-fpdf="${i.id}">PDF</button>${open?`${!i.payment_link?`<button class="btn sm" data-pplink="${i.id}" data-cur="${i.currency}">Enlace PayPal</button>`:''}${i.paypal_invoice_id?`<button class="btn sm" data-ppcheck="${i.id}">Verificar pago</button>`:''}<button class="btn sm" data-ndays="${i.id}" data-cur="${esc((i.remind_days||[]).join(', '))}">Días de aviso</button><button class="btn sm" data-remind="${i.id}">Recordar</button><button class="btn sm" data-paid="${i.id}">Marcar pagado</button>`:''}</div></td></tr>`; }).join('')||'<tr><td colspan="7" class="mut">Aún no hay cobros.</td></tr>'}</tbody></table></div>`;
   $('f-inv').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
     try{ const r=await api('invoices',{method:'POST',body:{client_id:fd.get('client_id'),concept:fd.get('concept'),amount:fd.get('amount'),currency:fd.get('currency'),due_date:fd.get('due_date'),payment_link:fd.get('payment_link'),rate:fd.get('rate'),remind_count:fd.get('remind_count'),remind_from:fd.get('remind_from'),paypal:fd.get('paypal')==='on',notify:fd.get('notify')==='on'}}); await load(); flash(r.message); }
+    catch(er){ flash(er.message,'err'); } };
+}
+
+async function vCotizaciones(){
+  const d=await api('quotes'); const ST={draft:'Borrador',sent:'Enviada',accepted:'Aceptada',rejected:'Rechazada'};
+  const row=()=>`<div class="grid qrow" style="grid-template-columns:3fr 1fr 1fr 40px;align-items:end;margin-bottom:8px"><label class="f">Descripción<input data-k="desc"></label><label class="f">Cantidad<input data-k="qty" type="number" min="0" step="0.01" value="1"></label><label class="f">Precio<input data-k="price" type="number" min="0" step="0.01"></label><button type="button" class="btn sm bad" data-rmline title="Quitar línea">✕</button></div>`;
+  $('view').innerHTML=providerWarn(d.providers)+`<form class="card" id="f-quote"><div class="grid">
+    ${f('Cliente *',`<select name="client_id" required><option value="">Selecciona…</option>${d.clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>`)}
+    ${f('Título *','<input name="title" required placeholder="Página web corporativa">')}
+    ${f('Moneda','<select name="currency"><option value="DOP">RD$ (pesos)</option><option value="USD">US$ (dólares)</option></select>')}
+    ${f('Válida hasta','<input name="valid_until" type="date">')}</div>
+    <h2 style="font-size:14px;margin:14px 0 8px">Líneas <span class="mut">(sin ITBIS)</span></h2><div id="qlines">${row()}</div>
+    <div style="display:flex;gap:12px;align-items:center;margin-top:6px"><button type="button" class="btn sm" id="q-add">+ Agregar línea</button><b id="q-total" style="margin-left:auto"></b></div>
+    <div style="margin-top:12px">${f('Notas (condiciones, forma de pago…)','<textarea name="notes" rows="2"></textarea>')}</div>
+    <label class="chk" style="margin-top:10px"><input type="checkbox" name="send"> Enviar al cliente por correo al guardar</label>
+    <div class="right" style="margin-top:10px"><button class="btn pri">Crear cotización</button></div></form>
+    <div class="tw"><table><thead><tr><th>Número</th><th>Cliente</th><th>Título</th><th>Total</th><th>Válida hasta</th><th>Estado</th><th></th></tr></thead><tbody>${d.quotes.map(q=>{ const conv=!!q.invoice_id; return `<tr><td><b>${esc(q.number)}</b></td><td>${esc(q.client_name)}</td><td>${esc(q.title)}</td><td style="white-space:nowrap"><b>${money(q.total,q.currency)}</b></td><td>${q.valid_until?dd(q.valid_until):'—'}</td><td>${conv?'<span class="okc">Convertida en cobro</span>':ST[q.status]}</td>
+    <td><div class="acts"><button class="btn sm" data-qsend="${q.id}">${q.sent_at?'Reenviar':'Enviar'}</button><button class="btn sm" data-qpdf="${q.id}">PDF</button>${!conv?`<button class="btn sm" data-qconv="${q.id}">Convertir en cobro</button>${q.status!=='accepted'?`<button class="btn sm" data-qstatus="${q.id}" data-st="accepted">Aceptada</button>`:''}${q.status!=='rejected'?`<button class="btn sm" data-qstatus="${q.id}" data-st="rejected">Rechazada</button>`:''}`:''}<button class="btn sm bad" data-qdel="${q.id}" data-n="${esc(q.number)}">Eliminar</button></div></td></tr>`; }).join('')||'<tr><td colspan="7" class="mut">Aún no hay cotizaciones.</td></tr>'}</tbody></table></div>`;
+  const form=$('f-quote'), lines=$('qlines'); window.__qprov=d.providers;
+  const readItems=()=>[...lines.querySelectorAll('.qrow')].map(r=>({desc:r.querySelector('[data-k=desc]').value,qty:r.querySelector('[data-k=qty]').value,price:r.querySelector('[data-k=price]').value}));
+  const tot=()=>{ const t=readItems().reduce((a,i)=>a+(Number(i.qty)||0)*(Number(i.price)||0),0); $('q-total').textContent='Total: '+money(t,form.currency.value); };
+  form.addEventListener('input',tot); tot();
+  $('q-add').onclick=()=>{ lines.insertAdjacentHTML('beforeend',row()); };
+  lines.addEventListener('click',e=>{ if(e.target.closest('[data-rmline]')&&lines.querySelectorAll('.qrow').length>1){ e.target.closest('.qrow').remove(); tot(); } });
+  form.onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(form);
+    try{ const r=await api('quotes',{method:'POST',body:{client_id:fd.get('client_id'),title:fd.get('title'),currency:fd.get('currency'),valid_until:fd.get('valid_until'),notes:fd.get('notes'),items:readItems().filter(i=>i.desc||i.price)}});
+      let msg=r.message; if(fd.get('send')==='on'){ const s=await api('quotes/'+r.quote.id+'/send',{method:'POST',body:{}}); msg+=' '+s.message; } await load(); flash(msg); }
     catch(er){ flash(er.message,'err'); } };
 }
 
@@ -144,6 +171,8 @@ async function vHistorial(){
   $('view').innerHTML=`<div class="tw"><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Canal</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Mensaje</th></tr></thead><tbody>${logRows(log,true)||'<tr><td colspan="7" class="mut">Sin envíos todavía.</td></tr>'}</tbody></table></div>`;
 }
 
+async function download(route){ const r=await api(route); const bin=atob(r.base64), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
+  const url=URL.createObjectURL(new Blob([u8],{type:'application/pdf'})), a=document.createElement('a'); a.href=url; a.download=r.filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000); }
 // Acciones de las tablas (delegadas)
 document.addEventListener('click',async e=>{
   const t=e.target.closest('button'); if(!t) return;
@@ -154,6 +183,15 @@ document.addEventListener('click',async e=>{
     else if(t.dataset.paid){ if(!confirm('¿Marcar como pagado? Se enviará el comprobante de pago al cliente.')) return; t.disabled=true; const r=await api('invoices/'+t.dataset.paid+'/paid',{method:'POST',body:{}}); await load(); flash(r.message); }
     else if(t.dataset.pplink){ let rate=''; if(t.dataset.cur==='DOP'){ const a=await api('fx').catch(()=>null); rate=prompt('PayPal cobra en US$. Tasa RD$ por US$ (automática, puedes cambiarla):',a&&a.rate?a.rate:''); if(!rate) return; } t.disabled=true; const r=await api('invoices/'+t.dataset.pplink+'/paypal',{method:'POST',body:{rate}}); await load(); flash(r.message); }
     else if(t.dataset.ndays){ const v=prompt('¿Cuándo avisar antes del vencimiento? Escribe los días separados por coma (ej. 7, 3, 1) o «N desde D» (ej. 3 desde 9 = tres avisos desde 9 días antes). Vacío = 3 y 1.',t.dataset.cur||''); if(v===null) return; const r=await api('invoices/'+t.dataset.ndays+'/notice-days',{method:'POST',body:{days:v}}); await load(); flash(r.message); }
+    else if(t.dataset.qsend){ t.disabled=true; const r=await api('quotes/'+t.dataset.qsend+'/send',{method:'POST',body:{}}); await load(); flash(r.message,r.sent?'ok':'err'); }
+    else if(t.dataset.qpdf){ await download('quotes/'+t.dataset.qpdf+'/pdf'); }
+    else if(t.dataset.qstatus){ const r=await api('quotes/'+t.dataset.qstatus+'/status',{method:'POST',body:{status:t.dataset.st}}); await load(); flash(r.message); }
+    else if(t.dataset.qdel){ if(!confirm('¿Eliminar la cotización '+t.dataset.n+'?')) return; await api('quotes/'+t.dataset.qdel,{method:'DELETE'}); await load(); flash('Cotización eliminada.'); }
+    else if(t.dataset.qconv){ const d=new Date(Date.now()+15*864e5).toLocaleDateString('en-CA',{timeZone:TZ}); const due=prompt('Fecha de vencimiento del cobro (AAAA-MM-DD):',d); if(!due) return;
+      const pp=window.__qprov&&window.__qprov.paypal&&confirm('¿Generar también el enlace de pago con PayPal?'); t.disabled=true;
+      const r=await api('quotes/'+t.dataset.qconv+'/convert',{method:'POST',body:{due_date:due,paypal:!!pp}}); await load(); flash(r.message); }
+    else if(t.dataset.fact){ if(!confirm('¿Enviar la factura al cliente por correo (con PDF)?')) return; t.disabled=true; const r=await api('invoices/'+t.dataset.fact+'/factura',{method:'POST',body:{}}); await load(); flash(r.message,r.sent?'ok':'err'); }
+    else if(t.dataset.fpdf){ await download('invoices/'+t.dataset.fpdf+'/pdf'); await load(); }
     else if(t.dataset.ppcheck){ t.disabled=true; const r=await api('invoices/'+t.dataset.ppcheck+'/paypal-check',{method:'POST',body:{}}); await load(); flash(r.message); }
   }catch(er){ flash(er.message,'err'); t.disabled=false; }
 });

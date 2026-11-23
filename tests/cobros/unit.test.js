@@ -218,3 +218,54 @@ test('avisos por cantidad: «N desde D» reparte los días; tasa automática con
   const ui = read('public/cobros/index.html');
   assert.match(ui, /name="remind_count"/); assert.match(ui, /name="remind_from"/); assert.match(read('api/cobros.js'), /\^fx\$/);
 });
+
+test('cotizaciones y factura: líneas sin ITBIS, numeración, PDF válido y envío con adjunto', async () => {
+  assert.throws(() => L.cleanItems([]), /al menos una línea/);
+  assert.throws(() => L.cleanItems([{ desc: '', qty: 1, price: 5 }]), /descripción/);
+  assert.throws(() => L.cleanItems([{ desc: 'x', qty: 0, price: 5 }]), /cantidad/);
+  assert.throws(() => L.cleanItems([{ desc: 'x', qty: 1, price: -1 }]), /negativo/);
+  const items = L.cleanItems([{ desc: 'Diseño web', qty: 1, price: 25000 }, { desc: 'Hosting', qty: '2', price: '3500.505' }, { desc: '', qty: '', price: '' }]);
+  assert.equal(items.length, 2);
+  assert.equal(L.itemsTotal(items), 32001.02);              // suma de líneas (precio 3500.505 → 3500.51), sin ITBIS
+  assert.equal(L.docNumber('COT', 7), 'COT-0007'); assert.equal(L.docNumber('FAC', 123), 'FAC-0123');
+
+  const docs = require('../../lib/cobros/docs');
+  const pdf = await docs.buildPdf({ kind: 'FACTURA', number: 'FAC-0001', date: '23 nov 2026', client: { name: 'Ana Ñandú' }, items, currency: 'USD', total: 32001.02, notes: 'Gracias — «ok» ✓', business: 'Casa Labs', footer: 'sin valor fiscal' });
+  assert.equal(pdf.slice(0, 5).toString(), '%PDF-');          // el símbolo ✓ (fuera de WinAnsi) no tumba la generación
+
+  // Envío de la factura: por correo, con el PDF adjunto, número asignado una sola vez y registro del envío
+  const state = { inv: { id: 'i1', tenant_id: 't', client_id: 'c1', concept: 'Hosting', amount: 100, currency: 'USD', due_date: '2026-12-01', status: 'pending', created_at: '2026-11-23T10:00:00Z', factura_seq: null, items: null, payment_link: 'https://pago.example/x' }, sends: [], updates: [] };
+  const client = { id: 'c1', name: 'Ana', email: 'a@x.co', phone: null, opt_in_email: true, opt_in_whatsapp: false };
+  const q = table => { const o = { _u: null }; const self = o;
+    o.select = () => o; o.eq = () => o; o.is = () => o; o.not = () => o; o.order = () => o; o.limit = () => o;
+    o.single = async () => ({ data: { ...state.inv, ...(o._u || {}) }, error: null });
+    o.maybeSingle = async () => ({ data: table === 'cobros_invoices' ? { ...state.inv } : client, error: null });
+    o.update = u => { o._u = u; Object.assign(state.inv, u); state.updates.push(u); return o; };
+    o.then = res => res({ data: table === 'cobros_invoices' ? [{ factura_seq: state.inv.factura_seq }] : null, error: null });
+    return self; };
+  require.cache[require.resolve('../../lib/supabase')] = { id: 's', filename: 's', loaded: true, exports: { from: q } };
+  require.cache[require.resolve('../../lib/cobros/messaging')] = { id: 'm', filename: 'm', loaded: true, exports: { providers: () => ({}), dispatch: async o => { state.sends.push(o); return { ok: true }; } } };
+  delete require.cache[require.resolve('../../lib/cobros/api')];
+  const api = require('../../lib/cobros/api');
+  const r = await api.facturar({ tenantId: 't' }, '11111111-1111-4111-8111-111111111111');
+  assert.equal(r.sent, true); assert.equal(r.number, 'FAC-0001');
+  const s = state.sends[0];
+  assert.equal(s.kind, 'factura'); assert.equal(s.channel, 'email');
+  assert.equal(s.attachments[0].filename, 'FAC-0001.pdf'); assert.equal(s.attachments[0].content.slice(0, 5).toString(), '%PDF-');
+  assert.match(s.body, /https:\/\/pago\.example\/x/);
+  assert.ok(state.updates.some(u => u.factura_sent_at));
+  const pdfOnly = await api.facturaPdf({ tenantId: 't' }, '11111111-1111-4111-8111-111111111111');
+  assert.equal(pdfOnly.filename, 'FAC-0001.pdf');            // el número ya asignado no cambia
+  assert.equal(Buffer.from(pdfOnly.base64, 'base64').slice(0, 5).toString(), '%PDF-');
+});
+
+test('integración: pestaña Cotizaciones, botones de factura, rutas y migración (sin ITBIS)', () => {
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /\['cotizaciones','Cotizaciones'\]/); assert.match(ui, /data-fact/); assert.match(ui, /data-qconv/); assert.match(ui, /data-fpdf/);
+  assert.doesNotMatch(ui, /name="itbis"|ITBIS \(18/i);           // este sistema no maneja ITBIS
+  const a = read('api/cobros.js');
+  for (const r of ['quotes\\\\/', 'factura', 'pdf']) assert.ok(a.includes(r.replace(/\\\\/g, '\\')), r);
+  const sql = read('supabase/migrations/202611250002_cobros_cotizaciones.sql');
+  assert.match(sql, /cobros_quotes/); assert.match(sql, /factura_seq/); assert.match(sql, /'quote','factura'/);
+  assert.match(read('lib/mail.js'), /attachments/);
+});

@@ -1949,7 +1949,7 @@ function renderPortalGrid() {
     });
     const logoHtml=logoMarkup(key,inst,'p-logo','4px',['9px','10px','12px']);
     const nominaLabel=nominaCount==null?'Cargando…':`${nominaCount} empresa${nominaCount===1?'':'s'}`;
-    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='estados'?'3 modalidades':key==='nomina'?nominaLabel:key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='monitor'?'Estado DGII':key==='conciliacion'?'Banco vs libros':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:'606/607 · IT-1';
+    const toolLabel=inst.openDirect?'Abrir':inst.openRelay?'Solicitud en línea':key==='nala'?'Agente IA':key==='estados'?'3 modalidades':key==='nomina'?nominaLabel:key==='ir2'?'Renta':key==='dgii-modulos'?'6 módulos':key==='monitor'?'Estado DGII':key==='conciliacion'?'Banco vs libros':key==='clients'?`${clients.length} cliente${clients.length===1?'':'s'}`:key==='cobros'?'Recordatorios y promos':'606/607 · IT-1';
     const countHtml=isTool
       ?`<div class="p-count"${key==='nomina'?' id="nomina-count"':''}>${toolLabel}</div>`
       :`<div class="p-count${cos.length?'':' empty'}">${cos.length?`${cos.length} empresa${cos.length>1?'s':''}`:'Sin empresas'}</div>`;

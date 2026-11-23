@@ -53,7 +53,7 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') {
       const { data: profiles } = await supabase
         .from('direct_profiles')
-        .select('id, role, access_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_mora, access_clientes, portals_direct, companies_direct, created_at')
+        .select('id, role, access_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_mora, access_cobros, access_clientes, portals_direct, companies_direct, created_at')
         .eq('tenant_id', session.tenantId)
         .order('created_at');
 
@@ -71,6 +71,7 @@ module.exports = async (req, res) => {
         access_estimacion: p.access_estimacion,
         access_estados: p.access_estados === true,
         access_mora: p.access_mora === true,
+        access_cobros: p.access_cobros === true,
         access_clientes: p.access_clientes !== false,
         portals_direct: p.portals_direct,
         companies_direct: Array.isArray(p.companies_direct) ? p.companies_direct : null,
@@ -81,7 +82,7 @@ module.exports = async (req, res) => {
     }
 
     if (req.method === 'POST') {
-      const { username, password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_mora, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { username, password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_mora, access_cobros, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
       if (!username || !password) return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
       const email = username.toLowerCase().trim() + '@direct.local';
 
@@ -111,6 +112,7 @@ module.exports = async (req, res) => {
         access_estimacion: access_estimacion || false,
         access_estados: access_estados === true,
         access_mora: access_mora === true,
+        access_cobros: access_cobros === true,
         // Client records are isolated by the tenant, not by a module checkbox.
         access_clientes: true,
         portals_direct: portals_direct || ['dgii', 'tss', 'trabajo', 'sirla', 'carnet', 'azul'],

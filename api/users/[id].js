@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     if (targetError) throw targetError;
     if (!target) return res.status(404).json({ error: 'Usuario no encontrado en tu empresa' });
     if (req.method === 'PUT') {
-      const { password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_mora, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
+      const { password, role, access_direct, portals_direct, companies_direct, access_cami, access_nala, access_nomina, access_ir2, access_estimacion, access_estados, access_mora, access_cobros, userSalt, vaultKeyIv, vaultKeyCt } = req.body || {};
 
       if (password) {
         const { error } = await supabase.auth.admin.updateUserById(id, { password });
@@ -34,6 +34,7 @@ module.exports = async (req, res) => {
       if (access_estimacion !== undefined) update.access_estimacion = access_estimacion;
       if (access_estados !== undefined) update.access_estados = access_estados === true;
       if (access_mora !== undefined) update.access_mora = access_mora === true;
+      if (access_cobros !== undefined) update.access_cobros = access_cobros === true;
       if (userSalt && vaultKeyIv && vaultKeyCt) {
         update.user_key_salt = userSalt;
         update.vault_key_iv = vaultKeyIv;

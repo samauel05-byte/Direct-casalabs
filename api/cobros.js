@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { authenticate } = require('../lib/auth');
 const { HttpError, fail } = require('../lib/nala/http');
 const api = require('../lib/cobros/api');
+const { allow } = require('../lib/rate-limit');
 
 // El cron diario de Vercel envía Authorization: Bearer CRON_SECRET; no lleva sesión de usuario.
 function cronAuthorized(req) {
@@ -61,6 +62,12 @@ module.exports = async (req, res) => {
     if (route === 'cron' && ['GET', 'POST'].includes(req.method)) {
       if (!cronAuthorized(req)) return res.status(401).json({ error: 'No autorizado' });
       return res.json({ ok: true, ...(await api.runDaily()) });
+    }
+    // Baja pública desde el enlace del correo: sin sesión; el token firmado es la autorización.
+    if (route === 'unsubscribe' && ['GET', 'POST'].includes(req.method)) {
+      if (!(await allow(req, 'cobros-baja', 40, 15 * 60 * 1000))) return res.status(429).json({ error: 'Demasiados intentos. Espera unos minutos.' });
+      const token = String(req.query?.t || (req.body && req.body.t) || '');
+      return res.json({ ok: true, ...(req.method === 'GET' ? await api.unsubscribeInfo(token) : await api.unsubscribeDo(token)) });
     }
     const match = ROUTES.map(([method, re, fn]) => ({ method, m: re.exec(route), fn })).filter(r => r.m);
     if (!match.length) return res.status(404).json({ error: 'Ruta no encontrada' });

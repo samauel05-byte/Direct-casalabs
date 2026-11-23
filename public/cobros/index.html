@@ -151,19 +151,61 @@ async function vCotizaciones(){
     catch(er){ flash(er.message,'err'); } };
 }
 
+// Lista de correos: acepta una columna pegada de Excel (correo [tab] nombre), una línea con comas, o un archivo.
+const EMAIL_RX=/[^\s@,;<>()"'\t]+@[^\s@,;<>()"'\t]+\.[^\s@,;<>()"'\t]{2,}/g;
+function parseList(text){
+  const seen=new Set(), rows=[]; let bad=0, dups=0;
+  for(const line of String(text||'').split(/\r?\n/)){
+    const found=line.match(EMAIL_RX)||[]; if(!found.length){ if(/@/.test(line)) bad++; continue; }
+    const rest=found.reduce((l,e)=>l.replace(e,' '),line).replace(/mailto:/gi,'').split(/[\t;,]+/).map(x=>x.trim()).filter(Boolean);
+    const name=found.length===1?rest.join(' ').slice(0,120):'';
+    for(const e of found){ const k=e.toLowerCase(); if(seen.has(k)){ dups++; continue; } seen.add(k); rows.push({email:k,name}); }
+  }
+  return {rows,bad,dups};
+}
+async function fileToText(file){
+  if(/\.(xlsx|xls)$/i.test(file.name)){
+    if(typeof XLSX==='undefined') await new Promise((ok,no)=>{ const el=document.createElement('script'); el.src='/cami/vendor/xlsx.full.min.js'; el.onload=ok; el.onerror=()=>no(new Error('No se pudo cargar el lector de Excel.')); document.head.appendChild(el); });
+    const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}); const ws=wb.Sheets[wb.SheetNames[0]];
+    return XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}).map(r=>r.join('\t')).join('\n');
+  }
+  return await file.text();
+}
+
 async function vPromos(){
   const d=await api('campaigns'); const CHN={both:'Correo + WhatsApp',email:'Correo',whatsapp:'WhatsApp'};
   $('view').innerHTML=providerWarn(d.providers)+`<form class="card" id="f-camp"><div class="grid">
     ${f('Nombre interno *','<input name="name" required>')}${f('Canal','<select name="channel"><option value="email">Correo</option><option value="whatsapp">WhatsApp</option><option value="both">Ambos</option></select>')}
-    ${f('Audiencia',`<select name="tag"><option value="">Todos los clientes</option>${d.tags.map(t=>`<option value="${esc(t)}">Etiqueta: ${esc(t)}</option>`).join('')}</select>`)}</div>
+    ${f('Audiencia',`<select name="tag" id="aud"><option value="">Todos los clientes</option><option value="__list">📋 Lista de correos (pegar o subir de Excel)</option>${d.tags.map(t=>`<option value="${esc(t)}">Etiqueta: ${esc(t)}</option>`).join('')}</select>`)}</div>
+    <div id="listbox" hidden style="margin-top:12px;border:1px dashed var(--bdr);border-radius:12px;padding:12px">
+      <label class="f">Correos a los que quieres ofrecer tus servicios — pega la columna de Excel (correo y, si quieres, el nombre al lado) o separa con comas
+        <textarea id="list-text" rows="6" placeholder="ana@empresa.com&#9;Ana Pérez&#10;luis@otra.com&#9;Luis Soto"></textarea></label>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px"><label class="btn sm" style="cursor:pointer">📂 Subir Excel o CSV<input id="list-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label>
+        <span id="list-count" class="mut"></span></div>
+      <p class="mut" style="margin:8px 0 0">Se quitan los repetidos, los inválidos y los correos de la lista de bajas. Solo canal Correo, hasta 150 por envío: envía en tandas, porque muchos correos de golpe a personas que no te conocen pueden hacer que bloqueen el buzón corporativo. Usa <b>{{nombre}}</b> solo si pegaste el nombre junto al correo.</p>
+    </div>
     <div style="margin-top:12px">${f('Asunto (correo)','<input name="subject">')}</div>
     <div style="margin-top:12px">${f('Mensaje * — variables: {{nombre}} {{empresa}} {{negocio}}','<textarea name="body" rows="5" required></textarea>')}</div>
-    <label class="chk" style="margin-top:12px;align-items:flex-start"><input type="checkbox" name="confirm" style="margin-top:3px"><span>Confirmo que envío solo a quienes aceptaron promociones. Se respeta el consentimiento de cada cliente y se añade al final el aviso para responder BAJA.</span></label>
+    <label class="chk" style="margin-top:12px;align-items:flex-start"><input type="checkbox" name="confirm" style="margin-top:3px"><span>Confirmo que puedo contactar a estos destinatarios. Se respeta el consentimiento de cada cliente, se omiten los correos en bajas y se añade al final el aviso para responder BAJA.</span></label>
     <div class="right" style="margin-top:12px"><button class="btn pri">Enviar campaña</button></div></form>
     <div class="tw"><table><thead><tr><th>Fecha</th><th>Campaña</th><th>Canal</th><th>Audiencia</th><th>Enviados</th><th>Fallidos</th></tr></thead><tbody>${d.campaigns.map(c=>`<tr><td>${dt(c.created_at)}</td><td>${esc(c.name)}</td><td>${CHN[c.channel]}</td><td>${esc(c.audience_tag||'Todos')}</td><td>${c.sent_count}</td><td>${c.failed_count}</td></tr>`).join('')||'<tr><td colspan="6" class="mut">Sin campañas todavía.</td></tr>'}</tbody></table></div>`;
+  const aud=$('aud'), chan=document.querySelector('#f-camp [name=channel]'), box=$('listbox'), ta=$('list-text');
+  const upd=()=>{ const isList=aud.value==='__list'; box.hidden=!isList; if(isList){ chan.value='email'; } [...chan.options].forEach(o=>{ if(o.value!=='email') o.disabled=isList; });
+    if(isList){ const r=parseList(ta.value); $('list-count').textContent=r.rows.length?`${r.rows.length} correo(s) válidos${r.dups?` · ${r.dups} repetidos`:''}${r.bad?` · ${r.bad} inválidos`:''}`:'Aún no hay correos.'; } };
+  aud.onchange=upd; ta.oninput=upd; upd();
+  $('list-file').onchange=async e=>{ const file=e.target.files[0]; if(!file) return; try{ ta.value=await fileToText(file); upd(); }catch(er){ flash(er.message,'err'); } e.target.value=''; };
   $('f-camp').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target), btn=e.target.querySelector('button.pri'); btn.disabled=true; btn.textContent='Enviando…';
-    try{ const r=await api('campaigns/send',{method:'POST',body:{name:fd.get('name'),channel:fd.get('channel'),tag:fd.get('tag'),subject:fd.get('subject'),body:fd.get('body'),confirm:fd.get('confirm')==='on'}}); await load(); flash(r.message); }
+    const isList=fd.get('tag')==='__list';
+    try{ const r=await api('campaigns/send',{method:'POST',body:{name:fd.get('name'),channel:fd.get('channel'),tag:isList?'':fd.get('tag'),audience:isList?'list':'',emails:isList?parseList(ta.value).rows:undefined,subject:fd.get('subject'),body:fd.get('body'),confirm:fd.get('confirm')==='on'}}); await load(); flash(r.message); }
     catch(er){ btn.disabled=false; btn.textContent='Enviar campaña'; flash(er.message,'err'); } };
+  // Bajas
+  const ob=await api('optouts').catch(()=>({optouts:[]}));
+  $('view').insertAdjacentHTML('beforeend',`<div class="card" style="margin-top:14px"><h2 style="margin:0 0 6px;font-size:15px">Bajas (no volver a escribirles)</h2>
+    <p class="mut" style="margin:0 0 8px">Cuando alguien responda BAJA, pega aquí su correo. Nunca recibirá promociones, aunque vuelva a estar en una lista.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><textarea id="ob-text" rows="2" style="flex:1;min-width:220px" placeholder="correo1@x.com, correo2@y.com"></textarea><button class="btn" id="ob-add">Agregar a bajas</button></div>
+    <p class="mut" style="margin:10px 0 4px"><b>${ob.optouts.length}</b> correo(s) en bajas</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${ob.optouts.slice(0,60).map(o=>`<span class="btn sm" style="cursor:default">${esc(o.email)} <a href="#" data-obdel="${esc(o.email)}" title="Quitar de bajas" style="margin-left:6px;text-decoration:none">✕</a></span>`).join('')}</div></div>`);
+  $('ob-add').onclick=async()=>{ try{ const r=await api('optouts',{method:'POST',body:{emails:$('ob-text').value}}); await load(); flash(r.message); }catch(er){ flash(er.message,'err'); } };
 }
 
 async function vHistorial(){
@@ -173,6 +215,8 @@ async function vHistorial(){
 
 async function download(route){ const r=await api(route); const bin=atob(r.base64), u8=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u8[i]=bin.charCodeAt(i);
   const url=URL.createObjectURL(new Blob([u8],{type:'application/pdf'})), a=document.createElement('a'); a.href=url; a.download=r.filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),4000); }
+document.addEventListener('click',async e=>{ const a=e.target.closest('[data-obdel]'); if(!a) return; e.preventDefault();
+  try{ await api('optouts/remove',{method:'POST',body:{email:a.dataset.obdel}}); await load(); flash('Correo quitado de bajas.'); }catch(er){ flash(er.message,'err'); } });
 // Acciones de las tablas (delegadas)
 document.addEventListener('click',async e=>{
   const t=e.target.closest('button'); if(!t) return;

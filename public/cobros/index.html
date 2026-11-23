@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="/css/mobile-base.css">
+<link rel="icon" type="image/svg+xml" href="/img/favicon-cobros.svg?v=1">
+<link rel="icon" type="image/png" sizes="32x32" href="/img/favicon-cobros-32.png?v=1">
+<link rel="icon" type="image/png" sizes="48x48" href="/img/favicon-cobros-48.png?v=1">
+<link rel="shortcut icon" href="/img/favicon-cobros-32.png?v=1">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="/serp-host.js"></script>
+<title>Cobros</title>
+<style>
+:root{--bg:#f3f7f4;--surf:#fff;--surf2:#eaf2ed;--bdr:rgba(20,60,40,.14);--fg:#14241b;--fg2:#5a6e62;--acc:#0f8a5f;--ok:#15924a;--bad:#dc2626;--r:14px}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#070d1a;--surf:#0f1e38;--surf2:#162440;--bdr:rgba(30,90,200,.28);--fg:#e8f0ff;--fg2:#7a9bc0;--acc:#10b981;--ok:#20BD5A;--bad:#ef4444}}
+:root[data-theme="dark"]{--bg:#070d1a;--surf:#0f1e38;--surf2:#162440;--bdr:rgba(30,90,200,.28);--fg:#e8f0ff;--fg2:#7a9bc0;--acc:#10b981;--ok:#20BD5A;--bad:#ef4444}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:'Poppins',system-ui,sans-serif;font-size:14px}
+h1,h2{font-family:'Josefin Sans','Poppins',sans-serif}
+.hdr{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--bdr);background:var(--surf);position:sticky;top:0;z-index:5}
+.hdr h1{margin:0;font-size:18px;flex:1}
+.back,.btn{border:1px solid var(--bdr);background:var(--surf2);color:var(--fg);border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer}
+.btn.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.btn.sm{padding:5px 9px;font-size:12px}.btn.bad{color:var(--bad);border-color:var(--bad);background:transparent}
+.btn:disabled{opacity:.5;cursor:default}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px 0;max-width:1100px;margin:0 auto}
+.tab{border:1px solid var(--bdr);background:var(--surf);color:var(--fg2);border-radius:999px;padding:7px 14px;cursor:pointer;font:inherit}
+.tab.on{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+.card{background:var(--surf);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--fg2);font-weight:600}
+input,select,textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:9px 10px;width:100%}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--fg);font-weight:500}.chk input{width:auto}
+.msg{border-radius:10px;padding:9px 12px;margin-bottom:12px;font-weight:500}
+.msg.ok{background:rgba(21,146,74,.12);color:var(--ok)}.msg.err{background:rgba(220,38,38,.12);color:var(--bad)}.msg.warn{background:rgba(245,158,11,.14);color:#92400e}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--surf2);border-radius:12px;padding:12px}.kpi b{display:block;font-size:18px;margin-top:2px}.kpi span{font-size:12px;color:var(--fg2)}
+.tw{overflow:auto;border:1px solid var(--bdr);border-radius:12px}
+table{border-collapse:collapse;width:100%}th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--fg2);text-align:left;padding:8px 10px;background:var(--surf2)}
+td{padding:8px 10px;border-top:1px solid var(--bdr);vertical-align:top}
+.bad{color:var(--bad)}.okc{color:var(--ok)}.mut{color:var(--fg2);font-size:12px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.right{text-align:right}
+@media(max-width:640px){.wrap{padding:10px}}
+</style>
+</head>
+<body>
+<div class="hdr"><button class="back" onclick="serpBack()">← Volver</button><h1>Cobros</h1></div>
+<div class="tabs" id="tabs"></div>
+<div class="wrap"><div id="msg"></div><div id="view"><p class="mut">Cargando…</p></div></div>
+<script>
+let TOKEN='', SESSION_ID='', TAB='resumen';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TABS=[['resumen','Resumen'],['clientes','Clientes'],['cobros','Cobros'],['promos','Promociones'],['historial','Historial']];
+const sid=()=>SESSION_ID||localStorage.getItem('direct_session_id')||'';
+async function api(route,opts={}){
+  const h={Authorization:'Bearer '+TOKEN}; if(sid()) h['X-Direct-Session']=sid(); if(opts.body) h['Content-Type']='application/json';
+  let r; try{ r=await fetch('/api/cobros?route='+route,{headers:h,method:opts.method||'GET',body:opts.body?JSON.stringify(opts.body):undefined}); }
+  catch(e){ throw new Error('Sin conexión con el servidor.'); }
+  const d=await r.json().catch(()=>({})); if(!r.ok) throw new Error(d.error||('Error '+r.status)); return d;
+}
+const money=(a,c)=>new Intl.NumberFormat('es-DO',{style:'currency',currency:c==='USD'?'USD':'DOP'}).format(Number(a)||0);
+const TZ='America/Santo_Domingo';
+const dt=iso=>iso?new Intl.DateTimeFormat('es-DO',{dateStyle:'short',timeStyle:'short',timeZone:TZ}).format(new Date(iso)):'—';
+const dd=iso=>iso?new Intl.DateTimeFormat('es-DO',{dateStyle:'medium',timeZone:'UTC'}).format(new Date(String(iso).slice(0,10)+'T12:00:00Z')):'—';
+function flash(text,kind){ $('msg').innerHTML=text?`<div class="msg ${kind||'ok'}">${esc(text)}</div>`:''; }
+function renderTabs(){ $('tabs').innerHTML=TABS.map(([k,l])=>`<button class="tab${k===TAB?' on':''}" data-tab="${k}">${l}</button>`).join(''); }
+$('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(b){ TAB=b.dataset.tab; flash(''); load(); } });
+const providerWarn=p=>{ const w=[]; if(p&&!p.email) w.push('correo (Resend)'); if(p&&!p.whatsapp) w.push('WhatsApp (Twilio)'); return w.length?`<div class="msg warn">Falta configurar ${w.join(' y ')} en el servidor: los envíos por ese canal fallarán y quedarán registrados en el historial.</div>`:''; };
+const f=(label,inner)=>`<label class="f">${label}${inner}</label>`;
+
+async function load(){
+  renderTabs(); $('view').innerHTML='<p class="mut">Cargando…</p>';
+  try{ await ({resumen:vResumen,clientes:vClientes,cobros:vCobros,promos:vPromos,historial:vHistorial})[TAB](); }
+  catch(e){ $('view').innerHTML=''; flash(e.message,'err'); }
+}
+const TIPO={reminder:'Recordatorio',promo:'Promoción',invoice:'Cobro'}, CH={email:'Correo',whatsapp:'WhatsApp'};
+const logRows=(rows,full)=>rows.map(m=>`<tr><td>${dt(m.created_at)}</td>${full?`<td>${esc(m.client_name)}</td>`:''}<td>${CH[m.channel]}</td><td>${TIPO[m.kind]||''}</td><td>${esc(m.recipient)}</td><td class="${m.status==='failed'?'bad':'okc'}">${m.status==='failed'?'Fallido':'Enviado'}${m.error?`<div class="mut">${esc(m.error)}</div>`:''}</td>${full?`<td class="mut" title="${esc(m.body)}">${esc((m.body||'').slice(0,80))}</td>`:''}</tr>`).join('');
+
+async function vResumen(){
+  const d=await api('dashboard'); const t=d.totals;
+  const box=(c,name)=>`<div class="card"><h2 style="margin:0 0 10px;font-size:15px">${name}</h2><div class="kpis"><div class="kpi"><span>Por cobrar</span><b>${money(t[c].receivable,c)}</b></div><div class="kpi"><span>Vencido</span><b class="bad">${money(t[c].overdue,c)}</b></div><div class="kpi"><span>Cobrado este mes</span><b class="okc">${money(t[c].paid,c)}</b></div></div></div>`;
+  $('view').innerHTML=providerWarn(d.providers)+box('DOP','Pesos dominicanos (RD$)')+box('USD','Dólares (US$)')+
+   `<p class="mut">Clientes registrados: <b>${d.clients}</b></p><div class="card"><h2 style="margin:0 0 10px;font-size:15px">Últimos mensajes</h2><div class="tw"><table><thead><tr><th>Fecha</th><th>Canal</th><th>Tipo</th><th>Destino</th><th>Estado</th></tr></thead><tbody>${logRows(d.recent,false)||'<tr><td colspan="5" class="mut">Aún no hay mensajes.</td></tr>'}</tbody></table></div></div>`;
+}
+
+async function vClientes(){
+  const {clients}=await api('clients');
+  $('view').innerHTML=`<form class="card" id="f-cli"><div class="grid">
+    ${f('Nombre *','<input name="name" required>')}${f('Correo','<input name="email" type="email">')}${f('WhatsApp (+1809…)','<input name="phone" placeholder="+18095551234">')}
+    ${f('Empresa','<input name="company">')}${f('Etiquetas (separadas por coma)','<input name="tags" placeholder="web, mantenimiento">')}${f('Notas','<input name="notes">')}
+    </div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;align-items:center">
+    <label class="chk"><input type="checkbox" name="opt_in_email" checked> Acepta correos</label><label class="chk"><input type="checkbox" name="opt_in_whatsapp"> Acepta WhatsApp</label>
+    <button class="btn pri" style="margin-left:auto">Agregar cliente</button></div></form>
+    <div class="tw"><table><thead><tr><th>Nombre</th><th>Contacto</th><th>Etiquetas</th><th>Consentimiento</th><th></th></tr></thead><tbody>${clients.map(c=>`<tr><td><b>${esc(c.name)}</b><div class="mut">${esc(c.company)}</div></td><td>${esc(c.email)}<div class="mut">${esc(c.phone)}</div></td><td>${esc((c.tags||[]).join(', '))}</td>
+    <td><div class="acts" style="justify-content:flex-start">${c.opt_in_email?`<button class="btn sm" data-optout="${c.id}" data-ch="email" title="Dar de baja del correo">Correo ✓ · baja</button>`:''}${c.opt_in_whatsapp?`<button class="btn sm" data-optout="${c.id}" data-ch="whatsapp" title="Dar de baja de WhatsApp">WhatsApp ✓ · baja</button>`:''}${!c.opt_in_email&&!c.opt_in_whatsapp?'<span class="mut">Sin consentimiento</span>':''}</div></td>
+    <td class="right"><button class="btn sm bad" data-delcli="${c.id}" data-name="${esc(c.name)}">Eliminar</button></td></tr>`).join('')||'<tr><td colspan="5" class="mut">Aún no hay clientes.</td></tr>'}</tbody></table></div>`;
+  $('f-cli').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
+    try{ await api('clients',{method:'POST',body:{name:fd.get('name'),email:fd.get('email'),phone:fd.get('phone'),company:fd.get('company'),tags:fd.get('tags'),notes:fd.get('notes'),opt_in_email:fd.get('opt_in_email')==='on',opt_in_whatsapp:fd.get('opt_in_whatsapp')==='on'}}); await load(); flash('Cliente guardado.'); }
+    catch(er){ flash(er.message,'err'); } };
+}
+
+async function vCobros(){
+  const d=await api('invoices'); const ST={pending:'Pendiente',paid:'Pagado',overdue:'Vencido',cancelled:'Cancelado'};
+  $('view').innerHTML=`<form class="card" id="f-inv"><div class="grid">
+    ${f('Cliente *',`<select name="client_id" required><option value="">Selecciona…</option>${d.clients.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select>`)}
+    ${f('Concepto *','<input name="concept" required>')}${f('Monto *','<input name="amount" type="number" step="0.01" min="0.01" required>')}
+    ${f('Moneda','<select name="currency"><option value="DOP">RD$ (pesos)</option><option value="USD">US$ (dólares)</option></select>')}
+    ${f('Vence *','<input name="due_date" type="date" required>')}${f('Enlace de pago (Azul, CardNET, Fygaro, PayPal…)','<input name="payment_link" type="url">')}
+    </div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;align-items:center"><label class="chk"><input type="checkbox" name="notify"> Avisar al cliente al crear</label><button class="btn pri" style="margin-left:auto">Crear cobro</button></div></form>
+    <div class="tw"><table><thead><tr><th>Cliente</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Estado</th><th>Avisos</th><th></th></tr></thead><tbody>${d.invoices.map(i=>{
+      const late=i.status==='pending'&&i.due_date<d.today, open=i.status==='pending'||i.status==='overdue';
+      return `<tr><td>${esc(i.client_name)}</td><td>${esc(i.concept)}${i.payment_link&&/^https?:\/\//i.test(i.payment_link)?` <a href="${esc(i.payment_link)}" target="_blank" rel="noopener noreferrer">enlace</a>`:''}</td><td style="white-space:nowrap"><b>${money(i.amount,i.currency)}</b></td><td style="white-space:nowrap">${dd(i.due_date)}</td>
+      <td class="${i.status==='overdue'||late?'bad':i.status==='paid'?'okc':''}">${late?'Vencido':ST[i.status]}</td><td class="mut">${i.reminder_count}${i.last_reminder_at?' · '+dd(i.last_reminder_at):''}</td>
+      <td>${open?`<div class="acts"><button class="btn sm" data-remind="${i.id}">Recordar</button><button class="btn sm" data-paid="${i.id}">Marcar pagado</button></div>`:''}</td></tr>`; }).join('')||'<tr><td colspan="7" class="mut">Aún no hay cobros.</td></tr>'}</tbody></table></div>`;
+  $('f-inv').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
+    try{ const r=await api('invoices',{method:'POST',body:{client_id:fd.get('client_id'),concept:fd.get('concept'),amount:fd.get('amount'),currency:fd.get('currency'),due_date:fd.get('due_date'),payment_link:fd.get('payment_link'),notify:fd.get('notify')==='on'}}); await load(); flash(r.message); }
+    catch(er){ flash(er.message,'err'); } };
+}
+
+async function vPromos(){
+  const d=await api('campaigns'); const CHN={both:'Correo + WhatsApp',email:'Correo',whatsapp:'WhatsApp'};
+  $('view').innerHTML=providerWarn(d.providers)+`<form class="card" id="f-camp"><div class="grid">
+    ${f('Nombre interno *','<input name="name" required>')}${f('Canal','<select name="channel"><option value="email">Correo</option><option value="whatsapp">WhatsApp</option><option value="both">Ambos</option></select>')}
+    ${f('Audiencia',`<select name="tag"><option value="">Todos los clientes</option>${d.tags.map(t=>`<option value="${esc(t)}">Etiqueta: ${esc(t)}</option>`).join('')}</select>`)}</div>
+    <div style="margin-top:12px">${f('Asunto (correo)','<input name="subject">')}</div>
+    <div style="margin-top:12px">${f('Mensaje * — variables: {{nombre}} {{empresa}} {{negocio}}','<textarea name="body" rows="5" required></textarea>')}</div>
+    <label class="chk" style="margin-top:12px;align-items:flex-start"><input type="checkbox" name="confirm" style="margin-top:3px"><span>Confirmo que envío solo a quienes aceptaron promociones. Se respeta el consentimiento de cada cliente y se añade al final el aviso para responder BAJA.</span></label>
+    <div class="right" style="margin-top:12px"><button class="btn pri">Enviar campaña</button></div></form>
+    <div class="tw"><table><thead><tr><th>Fecha</th><th>Campaña</th><th>Canal</th><th>Audiencia</th><th>Enviados</th><th>Fallidos</th></tr></thead><tbody>${d.campaigns.map(c=>`<tr><td>${dt(c.created_at)}</td><td>${esc(c.name)}</td><td>${CHN[c.channel]}</td><td>${esc(c.audience_tag||'Todos')}</td><td>${c.sent_count}</td><td>${c.failed_count}</td></tr>`).join('')||'<tr><td colspan="6" class="mut">Sin campañas todavía.</td></tr>'}</tbody></table></div>`;
+  $('f-camp').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target), btn=e.target.querySelector('button.pri'); btn.disabled=true; btn.textContent='Enviando…';
+    try{ const r=await api('campaigns/send',{method:'POST',body:{name:fd.get('name'),channel:fd.get('channel'),tag:fd.get('tag'),subject:fd.get('subject'),body:fd.get('body'),confirm:fd.get('confirm')==='on'}}); await load(); flash(r.message); }
+    catch(er){ btn.disabled=false; btn.textContent='Enviar campaña'; flash(er.message,'err'); } };
+}
+
+async function vHistorial(){
+  const {log}=await api('log');
+  $('view').innerHTML=`<div class="tw"><table><thead><tr><th>Fecha</th><th>Cliente</th><th>Canal</th><th>Tipo</th><th>Destino</th><th>Estado</th><th>Mensaje</th></tr></thead><tbody>${logRows(log,true)||'<tr><td colspan="7" class="mut">Sin envíos todavía.</td></tr>'}</tbody></table></div>`;
+}
+
+// Acciones de las tablas (delegadas)
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('button'); if(!t) return;
+  try{
+    if(t.dataset.optout){ await api('clients/'+t.dataset.optout+'/optout',{method:'POST',body:{channel:t.dataset.ch}}); await load(); flash('Baja registrada.'); }
+    else if(t.dataset.delcli){ if(!confirm('¿Eliminar a '+t.dataset.name+'? También se eliminan sus cobros.')) return; await api('clients/'+t.dataset.delcli,{method:'DELETE'}); await load(); flash('Cliente eliminado.'); }
+    else if(t.dataset.remind){ t.disabled=true; const r=await api('invoices/'+t.dataset.remind+'/remind',{method:'POST',body:{}}); await load(); flash(r.message,r.sent?'ok':'err'); }
+    else if(t.dataset.paid){ await api('invoices/'+t.dataset.paid+'/paid',{method:'POST',body:{}}); await load(); flash('Cobro marcado como pagado.'); }
+  }catch(er){ flash(er.message,'err'); t.disabled=false; }
+});
+
+window.addEventListener('message',e=>{
+  if(e.origin!==location.origin||!e.data) return;
+  if(e.data.action==='cobros-init'){
+    TOKEN=e.data.token||''; SESSION_ID=e.data.sessionId||'';
+    if(e.data.sessionId){ try{ localStorage.setItem('direct_session_id',e.data.sessionId); }catch(_){} }
+    if(!e.data.allowed){ $('view').innerHTML=''; flash('No tienes acceso a este módulo.','err'); return; }
+    load();
+  }
+});
+renderTabs();
+try{ const h=serpHost(); if(h) h.postMessage({action:'cobros-ready'},location.origin); else $('view').innerHTML='<p class="mut">Abre Cobros desde Direct (Otros accesos).</p>'; }catch(e){}
+</script>
+</body>
+</html>

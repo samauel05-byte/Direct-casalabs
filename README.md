@@ -538,12 +538,22 @@ Detalle en `docs/nala/README.md` y `docs/nala/dgii-606-607.md`.
 
 ---
 
-## Panel de cobros (`cobros-admin/`)
+## Cobros (módulo restringido · «Otros accesos»)
 
-Proyecto independiente de Direct, dentro del mismo repositorio: panel en español para gestionar clientes, cobros (RD$ y US$ por separado),
-recordatorios automáticos por cron diario (3 días antes, 1 día antes, el día y cada 3 días en mora) y promociones por correo (Resend) y WhatsApp (Twilio),
-con consentimiento por canal e historial de envíos. Tiene su propio `package.json`, migración SQL, `.env.example` y README con la puesta en marcha
-y las limitaciones. **No afecta a Direct**: se despliega como otro proyecto de Vercel con *Root Directory* `cobros-admin`.
+Módulo de Direct para gestionar clientes, cobros, recordatorios de pago y promociones por correo y WhatsApp. Aparece como la tarjeta **Cobros** en
+«Otros accesos» y es **restringido**: solo lo ven quienes tengan el permiso `access_cobros` (sin atajo para administradores). La migración
+`202611230001_cobros.sql` lo concede a **camila** y **root**; al resto se le da marcando «Cobros» en *Usuarios*.
+
+- **Pantalla:** `public/cobros/index.html` (pestaña propia como Nómina/Monitor; recibe el token de Direct por `postMessage`, `cobros-ready` → `cobros-init`). Pestañas: Resumen, Clientes, Cobros, Promociones, Historial.
+- **API:** `api/cobros.js` (una sola función; `/api/cobros/<ruta>` por rewrite) + `lib/cobros/{api,logic,messaging}.js`. Todo se filtra por `tenant_id` en el servidor.
+- **Tablas:** `cobros_clients`, `cobros_invoices` (moneda `DOP`/`USD` con check), `cobros_campaigns`, `cobros_log`; RLS cerrada, solo service role.
+- **Resumen:** por cobrar, vencido y cobrado del mes **separados por moneda** (RD$ y US$ nunca se suman).
+- **Recordatorios:** manual (botón «Recordar») y automático con el cron diario `/api/cobros/cron` (`0 12 * * *` UTC, `Authorization: Bearer CRON_SECRET`): marca vencidos y avisa 3 días antes, 1 día antes, el día del vencimiento y cada 3 días en mora, máximo uno por día por cobro (hora `America/Santo_Domingo`).
+- **Promociones:** correo, WhatsApp o ambos, a todos o a una etiqueta; variables `{{nombre}}` `{{empresa}}` `{{negocio}}`. Respeta siempre `opt_in_email`/`opt_in_whatsapp` (los recordatorios también). Cada promoción lleva «responde BAJA» y el botón **baja** por canal en *Clientes* apaga el consentimiento.
+- **Registro:** cada envío, también el fallido, queda en `cobros_log` con su error. Si falta una credencial el envío falla de forma controlada y se registra; nada se cae.
+- **Variables de entorno (Vercel):** `RESEND_API_KEY`, `RESEND_FROM`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` (ej. `whatsapp:+14155238886`), `BUSINESS_NAME` (valor de `{{negocio}}`; por defecto «Casa Labs») y `CRON_SECRET` (ya usado por NALA/Nómina; también acepta `COBROS_CRON_SECRET`).
+- **Limitaciones:** WhatsApp fuera de la ventana de 24 h exige plantillas aprobadas por Meta (no incluidas); el cobro ocurre en el enlace de pago externo (Azul, CardNET, Fygaro, PayPal): el sistema registra y recuerda, **no procesa pagos**; los envíos masivos van sin cola (lotes de 5, máximo 150 destinatarios por campaña); la baja es manual (cuando el cliente responde BAJA se pulsa «baja»), un enlace de baja automático requeriría una ruta pública.
+- **Pruebas:** `npm run test:cobros`.
 
 ## Estructura del proyecto
 
@@ -555,9 +565,9 @@ SERP/
 │   ├── activar.html       — Alta de una firma nueva con el enlace de licencia
 │   ├── index.html         — App Direct (HTML + CSS + JS)
 │   ├── js/                — direct-extras (inicio, historial, tarjetas, permisos)
+│   ├── cobros/            — Cobros (clientes, recordatorios y promociones; restringido)
 │   ├── nala/              — App NALA (módulos + asistente)
 │   └── nomina/            — App Nómina (empleados, columnas, períodos)
-├── cobros-admin/          — Proyecto aparte (Next.js 14 + Supabase): panel de cobros, recordatorios y promociones; su propio README
 ├── worker.js              — Relay Cloudflare Worker de los portales
 ├── supabase/migrations/   — Migraciones SQL (tenants, sesión única, NALA, Nómina, eventos Direct, …)
 ├── tests/                 — Pruebas Node (test:direct, test:nala, test:nomina)

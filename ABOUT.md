@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Cobros: elige cuántas veces y desde cuándo avisar, y la tasa se llena sola**: en cada cobro indicas «cuántas veces avisar antes del vencimiento» y «desde cuántos días antes» (3 veces desde 9 días = 9, 5 y 1 días antes), y puedes cambiarlo después con «Días de aviso». Para cobrar en RD$ con PayPal la tasa RD$ por US$ se trae automática (tasa de mercado de hoy, redondeada hacia arriba; con un margen opcional para igualar la tasa más cara de los bancos) y se puede editar.
 - **Cobros: enlace de PayPal automático y comprobante de pago**: al crear un cobro se puede generar solo el enlace de pago con PayPal (en RD$ se factura en US$ con la tasa que indiques, porque PayPal no admite pesos) y viaja en los recordatorios; el pago se detecta con «Verificar pago» o cada día. Cuando un cobro se paga, Cobros envía solo al cliente un **comprobante de pago** (una vez). No es un comprobante fiscal con NCF.
 - **Cobros envía el correo por el buzón corporativo de Direct**: igual que las licencias y el Monitor (SMTP, con copia en «Enviados»); se quitó Resend, que no debía usarse. Solo falta Twilio para WhatsApp.
 - **Cobros: la tarjeta ya no dice «606/607 · IT-1»**: esa etiqueta era la de CAMI y salía por error; ahora dice «Clientes y avisos» (corto, para que quepa en la tarjeta).

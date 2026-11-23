@@ -172,3 +172,49 @@ test('integración: botones de PayPal y comprobante en la pantalla, migraciones 
   assert.match(read('supabase/migrations/202611240002_cobros_recibos.sql'), /receipt_sent_at/);
   assert.match(read('supabase/migrations/202611240002_cobros_recibos.sql'), /'receipt'/);
 });
+
+test('días de aviso por cobro: lista elegida, por defecto 3 y 1, el vencimiento y la mora siguen igual', () => {
+  const today = '2026-11-23';
+  const inv = (due, days) => ({ due_date: due, last_reminder_at: null, remind_days: days });
+  assert.deepEqual(L.parseDays('7, 3,1'), [7, 3, 1]);
+  assert.deepEqual(L.parseDays('1;7 7'), [7, 1]);
+  assert.equal(L.parseDays(''), null);
+  assert.equal(L.parseDays(undefined), null);
+  for (const bad of ['0', '61', 'a', '2.5', '1,2,3,4,5,6,7']) assert.throws(() => L.parseDays(bad), /días|Máximo/);
+  assert.equal(L.shouldRemindToday(inv('2026-11-30', [7, 2]), today), true);   // 7 días antes
+  assert.equal(L.shouldRemindToday(inv('2026-11-25', [7, 2]), today), true);   // 2 días antes
+  assert.equal(L.shouldRemindToday(inv('2026-11-26', [7, 2]), today), false);  // 3 ya no avisa si se eligió otra lista
+  assert.equal(L.shouldRemindToday(inv('2026-11-26', null), today), true);     // por defecto: 3
+  assert.equal(L.shouldRemindToday(inv('2026-11-24', null), today), true);     // por defecto: 1
+  assert.equal(L.shouldRemindToday(inv('2026-11-23', [7]), today), true);      // el día del vencimiento siempre
+  assert.equal(L.shouldRemindToday(inv('2026-11-20', [7]), today), true);      // mora: cada 3 días
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /data-ndays/);
+  assert.match(read('api/cobros.js'), /notice-days/);
+});
+
+test('avisos por cantidad: «N desde D» reparte los días; tasa automática con margen y redondeo hacia arriba', async () => {
+  assert.deepEqual(L.spreadDays(2, 3), [3, 1]);          // valores por defecto = 3 y 1 antes
+  assert.deepEqual(L.spreadDays(3, 9), [9, 5, 1]);
+  assert.deepEqual(L.spreadDays(1, 7), [7]);
+  assert.deepEqual(L.spreadDays(6, 3), [3, 2, 1]);       // no más avisos que días disponibles
+  assert.deepEqual(L.parseSchedule('3 desde 9'), [9, 5, 1]);
+  assert.deepEqual(L.parseSchedule('7, 3, 1'), [7, 3, 1]);
+  assert.equal(L.parseSchedule(''), null);
+  assert.throws(() => L.parseSchedule('9 desde 5'), /1 a 6 avisos/);
+  const fx = require('../../lib/cobros/fx');
+  assert.equal(fx.withMarkup(60.039, 0), 60.04);
+  assert.equal(fx.withMarkup(60, 1.5), 60.9);
+  delete process.env.COBROS_RATE_MARKUP_PCT;
+  const ok = await fx.getRate(async () => ({ ok: true, json: async () => ({ rates: { DOP: 60.03921 }, time_last_update_utc: 'hoy' }) }));
+  assert.equal(ok.rate, 60.04); assert.equal(ok.source, 'open.er-api.com');
+  process.env.COBROS_RATE_MARKUP_PCT = '2';             // cambia el margen: se recalcula (la caché no lo ignora)
+  const mk = await fx.getRate(async () => ({ ok: true, json: async () => ({ rates: { DOP: 60 } }) }));
+  assert.equal(mk.rate, 61.2);
+  delete process.env.COBROS_RATE_MARKUP_PCT;
+  process.env.COBROS_RATE_MARKUP_PCT = '3';
+  await assert.rejects(() => fx.getRate(async () => { throw new Error('red'); }), /escríbela a mano/);
+  delete process.env.COBROS_RATE_MARKUP_PCT;
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /name="remind_count"/); assert.match(ui, /name="remind_from"/); assert.match(read('api/cobros.js'), /\^fx\$/);
+});

@@ -278,3 +278,34 @@ test('integración: pestaña Cotizaciones, botones de factura, rutas y migració
   assert.match(sql, /cobros_quotes/); assert.match(sql, /factura_seq/); assert.match(sql, /'quote','factura'/);
   assert.match(read('lib/mail.js'), /attachments/);
 });
+
+test('lista de correos pegada: se limpia, respeta bajas y clientes sin consentimiento, solo correo, y personaliza', async () => {
+  const n = L.normalizeRecipients([{ email: ' Ana@Empresa.com ', name: 'Ana' }, { email: 'ana@empresa.com' }, { email: 'malo@' }, { email: 'sin-arroba' }, { email: 'luis@otra.co', name: 'Luis' }, { email: 'baja@x.com' }, { email: '' }]);
+  assert.deepEqual(n.valid.map(r => r.email), ['ana@empresa.com', 'luis@otra.co', 'baja@x.com']);
+  assert.equal(n.invalid, 2); assert.equal(n.duplicates, 1);
+  assert.equal(L.fillVars('Hola {{nombre}}, somos {{negocio}}', { name: '' }), 'Hola, somos ' + L.businessName());   // sin nombre no queda «Hola ,»
+
+  const sent = [], tables = {};
+  const data = { cobros_optouts: [{ email: 'baja@x.com' }], cobros_clients: [{ email: 'luis@otra.co', opt_in_email: false }] };
+  const q = table => { const o = {}; ['select', 'eq', 'in', 'contains', 'order', 'limit'].forEach(k => { o[k] = () => o; });
+    o.insert = row => { tables[table] = row; return o; }; o.update = () => o; o.single = async () => ({ data: { id: 'camp1' }, error: null });
+    o.then = res => res({ data: data[table] || [], error: null }); return o; };
+  require.cache[require.resolve('../../lib/supabase')] = { id: 's', filename: 's', loaded: true, exports: { from: q } };
+  require.cache[require.resolve('../../lib/cobros/messaging')] = { id: 'm', filename: 'm', loaded: true, exports: { providers: () => ({}), dispatch: async o => { sent.push(o); return { ok: true }; } } };
+  delete require.cache[require.resolve('../../lib/cobros/api')];
+  const api = require('../../lib/cobros/api');
+  const emails = [{ email: 'ana@empresa.com', name: 'Ana' }, { email: 'ANA@empresa.com' }, { email: 'luis@otra.co', name: 'Luis' }, { email: 'baja@x.com' }, { email: 'roto@' }];
+  const base = { name: 'Oferta', subject: 'Hola', body: 'Hola {{nombre}}, te ofrecemos páginas web.', confirm: true, audience: 'list', emails };
+  await assert.rejects(() => api.sendCampaign({ tenantId: 't' }, { ...base, channel: 'whatsapp' }), /solo admite el canal Correo/);
+  await assert.rejects(() => api.sendCampaign({ tenantId: 't' }, { ...base, channel: 'email', confirm: false }), /Confirma/);
+  const r = await api.sendCampaign({ tenantId: 't' }, { ...base, channel: 'email' });
+  assert.deepEqual(sent.map(s => s.client.email), ['ana@empresa.com']);          // fuera: repetido, inválido, baja y cliente sin consentimiento
+  assert.equal(sent[0].kind, 'promo'); assert.equal(sent[0].channel, 'email');
+  assert.match(sent[0].body, /^Hola Ana, te ofrecemos/); assert.match(sent[0].body, /responde BAJA/);
+  assert.deepEqual(r.skipped, { invalid: 1, duplicates: 1, optout: 2 });
+  assert.equal(r.sent, 1);
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /id="list-text"/); assert.match(ui, /id="list-file"/); assert.match(ui, /__list/); assert.match(ui, /data-obdel/);
+  assert.match(read('api/cobros.js'), /optouts/);
+  assert.match(read('supabase/migrations/202611250003_cobros_bajas.sql'), /cobros_optouts/);
+});

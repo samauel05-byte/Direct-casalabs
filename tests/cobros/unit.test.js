@@ -230,8 +230,17 @@ test('cotizaciones y factura: líneas sin ITBIS, numeración, PDF válido y env�
   assert.equal(L.docNumber('COT', 7), 'COT-0007'); assert.equal(L.docNumber('FAC', 123), 'FAC-0123');
 
   const docs = require('../../lib/cobros/docs');
-  const pdf = await docs.buildPdf({ kind: 'FACTURA', number: 'FAC-0001', date: '23 nov 2026', client: { name: 'Ana Ñandú' }, items, currency: 'USD', total: 32001.02, notes: 'Gracias — «ok» ✓', business: 'Casa Labs', footer: 'sin valor fiscal' });
+  const pdf = await docs.buildPdf({ kind: 'FACTURA', number: 'FAC-0001', date: '2026-11-23', extra: 'Vence: 30/11/2026', client: { name: 'Ana Ñandú' }, items, currency: 'USD', total: 32001.02, notes: ['Gracias — «ok» ✓'],
+    payment: { paid: true, method: 'PayPal', txId: 'INV2-X', amountLabel: 'US$32,001.02', currency: 'USD', paidDate: '2026-11-23', ref: 'Factura FAC-0001' } });
   assert.equal(pdf.slice(0, 5).toString(), '%PDF-');          // el símbolo ✓ (fuera de WinAnsi) no tumba la generación
+  assert.ok((pdf.toString('latin1').match(/\/Subtype\s*\/Image/g) || []).length >= 2, 'lleva el logo y la firma de CaSa Labs');
+  const cot = await docs.buildPdf({ kind: 'COTIZACIÓN', number: 'COT-0001', date: '2026-11-23', validUntil: '2026-11-30', client: { name: 'Ana' }, items, currency: 'DOP', total: 32001.02 });
+  assert.equal(cot.slice(0, 5).toString(), '%PDF-');
+  const many = L.cleanItems(Array.from({ length: 40 }, (_, i) => ({ desc: 'Línea ' + i + ' con un texto largo para que ocupe varias líneas dentro de la celda de la tabla de detalle', qty: 1, price: 10 })));
+  const multi = await docs.buildPdf({ kind: 'FACTURA', number: 'FAC-0002', date: '2026-11-23', client: { name: 'Ana' }, items: many, currency: 'DOP', total: 400 });
+  const { PDFDocument } = require('pdf-lib');
+  assert.ok((await PDFDocument.load(multi)).getPageCount() >= 2, 'una factura larga pasa a una segunda página');
+  assert.equal((await PDFDocument.load(pdf)).getPageCount(), 1);
 
   // Envío de la factura: por correo, con el PDF adjunto, número asignado una sola vez y registro del envío
   const state = { inv: { id: 'i1', tenant_id: 't', client_id: 'c1', concept: 'Hosting', amount: 100, currency: 'USD', due_date: '2026-12-01', status: 'pending', created_at: '2026-11-23T10:00:00Z', factura_seq: null, items: null, payment_link: 'https://pago.example/x' }, sends: [], updates: [] };

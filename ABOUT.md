@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Cobros: enlace de PayPal automático y comprobante de pago**: al crear un cobro se puede generar solo el enlace de pago con PayPal (en RD$ se factura en US$ con la tasa que indiques, porque PayPal no admite pesos) y viaja en los recordatorios; el pago se detecta con «Verificar pago» o cada día. Cuando un cobro se paga, Cobros envía solo al cliente un **comprobante de pago** (una vez). No es un comprobante fiscal con NCF.
 - **Cobros envía el correo por el buzón corporativo de Direct**: igual que las licencias y el Monitor (SMTP, con copia en «Enviados»); se quitó Resend, que no debía usarse. Solo falta Twilio para WhatsApp.
 - **Cobros: la tarjeta ya no dice «606/607 · IT-1»**: esa etiqueta era la de CAMI y salía por error; ahora dice «Clientes y avisos» (corto, para que quepa en la tarjeta).
 - **Nuevo módulo: Cobros (en «Otros accesos», solo Camila y root por ahora)**: clientes con etiquetas y consentimiento por correo/WhatsApp, cobros en RD$ o US$ (los totales nunca mezclan monedas), recordatorios manuales y automáticos cada día (3 días antes, 1 día antes, el día y cada 3 días en mora), promociones por correo y WhatsApp con {{nombre}}, {{empresa}} y {{negocio}}, e historial de todos los envíos con su error. Es restringido: para dárselo a otra persona se marca «Cobros» en Usuarios. El correo sale por el buzón corporativo de Direct y WhatsApp necesita las claves de Twilio en el servidor; sin ellas fallan de forma controlada y quedan registrados. No procesa pagos: registra y recuerda.

@@ -50,11 +50,11 @@ test('envío sin credenciales falla de forma controlada y respeta el consentimie
   const stub = { from: () => ({ insert: async row => { logged.push(row); return { error: null }; } }) };
   require.cache[require.resolve('../../lib/supabase')] = { id: 'x', filename: 'x', loaded: true, exports: stub };
   delete require.cache[require.resolve('../../lib/cobros/messaging')];
-  for (const k of ['RESEND_API_KEY', 'RESEND_FROM', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']) delete process.env[k];
+  for (const k of ['MAIL_SMTP_HOST', 'MAIL_SMTP_USER', 'MAIL_SMTP_PASS', 'LICENSE_SMTP_HOST', 'LICENSE_SMTP_USER', 'LICENSE_SMTP_PASS', 'MONITOR_SMTP_HOST', 'MONITOR_SMTP_USER', 'MONITOR_SMTP_PASS', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']) delete process.env[k];
   const { dispatch } = require('../../lib/cobros/messaging');
   const client = { id: 'c1', email: 'a@b.co', phone: '+18095551234', opt_in_email: true, opt_in_whatsapp: false };
   const r = await dispatch({ tenantId: 't', channel: 'email', kind: 'promo', client, subject: 's', body: 'b' });
-  assert.equal(r.ok, false); assert.match(r.error, /RESEND_API_KEY/);
+  assert.equal(r.ok, false); assert.match(r.error, /buzón corporativo/);
   assert.equal(logged.length, 1); assert.equal(logged[0].status, 'failed'); assert.ok(logged[0].error);
   const none = await dispatch({ tenantId: 't', channel: 'whatsapp', kind: 'promo', client, subject: 's', body: 'b' });
   assert.equal(none, null);                 // no aceptó WhatsApp: no se envía

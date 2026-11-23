@@ -538,6 +538,13 @@ Detalle en `docs/nala/README.md` y `docs/nala/dgii-606-607.md`.
 
 ---
 
+## Panel de cobros (`cobros-admin/`)
+
+Proyecto independiente de Direct, dentro del mismo repositorio: panel en español para gestionar clientes, cobros (RD$ y US$ por separado),
+recordatorios automáticos por cron diario (3 días antes, 1 día antes, el día y cada 3 días en mora) y promociones por correo (Resend) y WhatsApp (Twilio),
+con consentimiento por canal e historial de envíos. Tiene su propio `package.json`, migración SQL, `.env.example` y README con la puesta en marcha
+y las limitaciones. **No afecta a Direct**: se despliega como otro proyecto de Vercel con *Root Directory* `cobros-admin`.
+
 ## Estructura del proyecto
 
 ```
@@ -550,6 +557,7 @@ SERP/
 │   ├── js/                — direct-extras (inicio, historial, tarjetas, permisos)
 │   ├── nala/              — App NALA (módulos + asistente)
 │   └── nomina/            — App Nómina (empleados, columnas, períodos)
+├── cobros-admin/          — Proyecto aparte (Next.js 14 + Supabase): panel de cobros, recordatorios y promociones; su propio README
 ├── worker.js              — Relay Cloudflare Worker de los portales
 ├── supabase/migrations/   — Migraciones SQL (tenants, sesión única, NALA, Nómina, eventos Direct, …)
 ├── tests/                 — Pruebas Node (test:direct, test:nala, test:nomina)

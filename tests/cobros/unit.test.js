@@ -51,11 +51,11 @@ test('envío sin credenciales falla de forma controlada y respeta el consentimie
   const stub = { from: () => ({ insert: async row => { logged.push(row); return { error: null }; } }) };
   require.cache[require.resolve('../../lib/supabase')] = { id: 'x', filename: 'x', loaded: true, exports: stub };
   delete require.cache[require.resolve('../../lib/cobros/messaging')];
-  for (const k of ['MAIL_SMTP_HOST', 'MAIL_SMTP_USER', 'MAIL_SMTP_PASS', 'LICENSE_SMTP_HOST', 'LICENSE_SMTP_USER', 'LICENSE_SMTP_PASS', 'MONITOR_SMTP_HOST', 'MONITOR_SMTP_USER', 'MONITOR_SMTP_PASS', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']) delete process.env[k];
+  for (const k of ['COBROS_SMTP_USER', 'COBROS_SMTP_PASS', 'MAIL_SMTP_HOST', 'MAIL_SMTP_USER', 'MAIL_SMTP_PASS', 'LICENSE_SMTP_HOST', 'LICENSE_SMTP_USER', 'LICENSE_SMTP_PASS', 'MONITOR_SMTP_HOST', 'MONITOR_SMTP_USER', 'MONITOR_SMTP_PASS', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_WHATSAPP_FROM']) delete process.env[k];
   const { dispatch } = require('../../lib/cobros/messaging');
   const client = { id: 'c1', email: 'a@b.co', phone: '+18095551234', opt_in_email: true, opt_in_whatsapp: false };
   const r = await dispatch({ tenantId: 't', channel: 'email', kind: 'promo', client, subject: 's', body: 'b' });
-  assert.equal(r.ok, false); assert.match(r.error, /buzón corporativo/);
+  assert.equal(r.ok, false); assert.match(r.error, /correo de Cobros/);
   assert.equal(logged.length, 1); assert.equal(logged[0].status, 'failed'); assert.ok(logged[0].error);
   const none = await dispatch({ tenantId: 't', channel: 'whatsapp', kind: 'promo', client, subject: 's', body: 'b' });
   assert.equal(none, null);                 // no aceptó WhatsApp: no se envía
@@ -351,4 +351,50 @@ test('baja automática: token firmado a prueba de manipulación, página públic
   assert.match(read('vercel.json'), /"\/baja"/);
   const page = read('public/baja.html');
   assert.match(page, /method:'POST'/); assert.match(page, /noindex/);
+});
+
+test('correo propio de Cobros: mismo servidor SMTP, otro usuario; NUNCA cae al buzón compartido', async () => {
+  const mail = require('../../lib/mail');
+  const shared = { MONITOR_SMTP_HOST: 'smtp.gdlinea.com', MONITOR_SMTP_PORT: '465', MONITOR_SMTP_USER: 'soporte@saveconsult.net', MONITOR_SMTP_PASS: 'clave-compartida', MAIL_IMAP_HOST: 'mail.gdlinea.com' };
+
+  // Solo existe el buzón compartido: Cobros NO está listo (no puede usar soporte@)
+  const sinPropio = mail.accountConfig('COBROS', shared);
+  assert.equal(sinPropio.smtp.ok, false); assert.equal(sinPropio.smtp.user, ''); assert.equal(sinPropio.imap, null);
+  assert.equal(mail.accountConfig('COBROS', { ...shared, COBROS_SMTP_USER: 'cobros@saveconsult.net' }).smtp.ok, false);   // falta la clave
+
+  // Con usuario y clave propios: hereda servidor y puerto, usa su usuario, nombre visible y copia en Enviados
+  const e = { ...shared, COBROS_SMTP_USER: 'cobros@casalabs.com.do', COBROS_SMTP_PASS: 'clave-cobros', BUSINESS_NAME: 'CaSa Labs' };
+  const c = mail.accountConfig('COBROS', e);
+  assert.equal(c.smtp.ok, true);
+  assert.deepEqual([c.smtp.host, c.smtp.port, c.smtp.user, c.smtp.pass], ['smtp.gdlinea.com', 465, 'cobros@casalabs.com.do', 'clave-cobros']);
+  assert.deepEqual(c.from, { name: 'CaSa Labs', address: 'cobros@casalabs.com.do' });
+  assert.deepEqual([c.imap.host, c.imap.user, c.imap.pass], ['mail.gdlinea.com', 'cobros@casalabs.com.do', 'clave-cobros']);
+  const o = mail.accountConfig('COBROS', { ...e, COBROS_SMTP_HOST: 'otro.host', COBROS_SMTP_PORT: '587', COBROS_FROM_NAME: 'Cobros CaSa', COBROS_IMAP_USER: 'imap@x.com', COBROS_IMAP_PASS: 'ip' });
+  assert.deepEqual([o.smtp.host, o.smtp.port, o.from.name, o.imap.user, o.imap.pass], ['otro.host', 587, 'Cobros CaSa', 'imap@x.com', 'ip']);
+
+  // El buzón compartido (licencias, Monitor) sigue igual y no se ve afectado
+  const comp = mail.config(shared);
+  assert.equal(comp.smtp.user, 'soporte@saveconsult.net');
+
+  // Envío real de Cobros: autentica con su usuario, no con el compartido
+  const nodemailer = require('nodemailer'); const orig = nodemailer.createTransport; const seen = [];
+  nodemailer.createTransport = opts => { seen.push(opts); return { sendMail: async m => { seen.push(m); } }; };
+  Object.assign(process.env, e);
+  try {
+    delete require.cache[require.resolve('../../lib/cobros/messaging')];
+    const { sendEmail, providers } = require('../../lib/cobros/messaging');
+    assert.equal(providers().email, true);
+    const r = await sendEmail('cliente@x.co', 'Asunto', 'Texto');
+    assert.equal(r.ok, true);
+    assert.equal(seen[0].auth.user, 'cobros@casalabs.com.do'); assert.equal(seen[0].auth.pass, 'clave-cobros'); assert.equal(seen[0].host, 'smtp.gdlinea.com');
+    assert.deepEqual(seen[1].from, { name: 'CaSa Labs', address: 'cobros@casalabs.com.do' });
+    // Sin cuenta propia (aunque exista la compartida): falla de forma controlada y sin conectarse a nada
+    delete process.env.COBROS_SMTP_USER; delete process.env.COBROS_SMTP_PASS; seen.length = 0;
+    assert.equal(providers().email, false);
+    const f = await sendEmail('cliente@x.co', 'Asunto', 'Texto');
+    assert.equal(f.ok, false); assert.match(f.error, /COBROS_SMTP_USER/); assert.equal(seen.length, 0);
+  } finally {
+    nodemailer.createTransport = orig;
+    for (const k of Object.keys(e)) delete process.env[k];
+  }
 });

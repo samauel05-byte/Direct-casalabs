@@ -86,6 +86,7 @@ test('integración con Direct: tarjeta en «Otros accesos», permiso por usuario
   assert.match(html, /id="u-access-cobros"/);
   assert.match(html, /cobros:openCobros/);
   assert.match(html, /cobros-ready/);
+  assert.match(html, /key==='cobros'\?'Recordatorios y promos':'606\/607 · IT-1'/); // la tarjeta no hereda la etiqueta de CAMI
   assert.match(read('api/users/index.js'), /access_cobros: access_cobros === true/);
   assert.match(read('api/users/[id].js'), /update\.access_cobros/);
   assert.match(read('lib/auth.js'), /access_cobros: profile\.access_cobros === true/);

@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Cobros: baja automática con enlace**: cada correo de promoción trae un enlace «darme de baja» (y el botón «Cancelar suscripción» de Gmail/Outlook). La persona confirma en una página pública y queda en la lista de bajas sola, sin que nadie pegue su correo; nunca más recibe promociones. El enlace está firmado: no se puede dar de baja a otra persona.
 - **Cobros: promociones a una lista de correos pegada o subida de Excel**: en «Audiencia» eliges «Lista de correos», pegas la columna (correo y nombre) o subes el Excel, y se envía la oferta de tus servicios por correo. Se limpian repetidos y errores, se respetan las **bajas** (nueva tarjeta para registrar a quien responda BAJA) y se envía en tandas de hasta 150.
 - **Cobros: las facturas y cotizaciones salen con el formato de CaSa Labs**: logo, «Facturado a», tabla de detalle, notas, bloque «Pago recibido» (monto y fecha de pago), términos y condiciones, y «Aceptación» con la firma de CaSa Labs y la del cliente, igual que la factura de muestra.
 - **Cobros: cotizaciones y factura comercial**: nueva pestaña **Cotizaciones** (COT-0001, con líneas, validez y notas) que se envía por correo con el PDF, se acepta y **se convierte en cobro**; y en Cobros el botón **Facturar** envía la factura (FAC-0001) con el PDF adjunto. Sin ITBIS: son documentos comerciales sin NCF (la factura fiscal se sigue emitiendo en Digisign).

@@ -11,7 +11,8 @@
     { "source": "/api/monitor/:path*", "destination": "/api/monitor?route=:path*" },
     { "source": "/api/ai/:path*", "destination": "/api/ai?route=:path*" },
     { "source": "/api/licenses/:path*", "destination": "/api/licenses?route=:path*" },
-    { "source": "/activar", "destination": "/activar.html" }
+    { "source": "/activar", "destination": "/activar.html" },
+    { "source": "/baja", "destination": "/baja.html" }
   ],
   "headers": [
     {

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('fs');
 const path = require('path');
 const L = require('../../lib/cobros/logic');
+process.env.COBROS_UNSUB_SECRET = 'prueba-secreta-de-baja-1234567890';
 const ROOT = path.join(__dirname, '../..');
 const read = f => fs.readFileSync(path.join(ROOT, f), 'utf8');
 
@@ -301,11 +302,53 @@ test('lista de correos pegada: se limpia, respeta bajas y clientes sin consentim
   const r = await api.sendCampaign({ tenantId: 't' }, { ...base, channel: 'email' });
   assert.deepEqual(sent.map(s => s.client.email), ['ana@empresa.com']);          // fuera: repetido, inválido, baja y cliente sin consentimiento
   assert.equal(sent[0].kind, 'promo'); assert.equal(sent[0].channel, 'email');
-  assert.match(sent[0].body, /^Hola Ana, te ofrecemos/); assert.match(sent[0].body, /responde BAJA/);
+  assert.match(sent[0].body, /^Hola Ana, te ofrecemos/); assert.match(sent[0].body, /darte de baja aquí: https:\/\/app\.casalabs\.com\.do\/baja\?t=/);
+  assert.match(sent[0].headers['List-Unsubscribe'], /api\/cobros\/unsubscribe\?t=/); assert.equal(sent[0].headers['List-Unsubscribe-Post'], 'List-Unsubscribe=One-Click');
   assert.deepEqual(r.skipped, { invalid: 1, duplicates: 1, optout: 2 });
   assert.equal(r.sent, 1);
   const ui = read('public/cobros/index.html');
   assert.match(ui, /id="list-text"/); assert.match(ui, /id="list-file"/); assert.match(ui, /__list/); assert.match(ui, /data-obdel/);
   assert.match(read('api/cobros.js'), /optouts/);
   assert.match(read('supabase/migrations/202611250003_cobros_bajas.sql'), /cobros_optouts/);
+});
+
+test('baja automática: token firmado a prueba de manipulación, página pública sin sesión, y registro de la baja', async () => {
+  const unsub = require('../../lib/cobros/unsub');
+  const tok = unsub.sign('tenant-1', ' Ana@Empresa.com ');
+  assert.deepEqual(unsub.verify(tok), { tenantId: 'tenant-1', email: 'ana@empresa.com' });
+  const [payload, sig] = tok.split('.');
+  const forged = Buffer.from(JSON.stringify({ t: 'tenant-1', e: 'otro@x.com' })).toString('base64url') + '.' + sig;
+  assert.equal(unsub.verify(forged), null);                                 // no se puede dar de baja a otro cambiando el correo
+  assert.equal(unsub.verify(payload + '.' + sig.slice(0, -2) + 'xx'), null);
+  assert.equal(unsub.verify('basura'), null); assert.equal(unsub.verify(''), null);
+  assert.equal(unsub.maskEmail('ana@empresa.com'), 'an*@empresa.com');
+  assert.match(unsub.pageLink(tok), /^https:\/\/app\.casalabs\.com\.do\/baja\?t=/);
+
+  const calls = [];
+  const q = table => { const o = {}; ['select', 'eq', 'in', 'order', 'limit'].forEach(k => { o[k] = () => o; });
+    o.upsert = (rows, opt) => { calls.push({ table, op: 'upsert', rows, opt }); return o; };
+    o.update = u => { calls.push({ table, op: 'update', u }); return o; };
+    o.then = res => res({ data: [], error: null }); return o; };
+  require.cache[require.resolve('../../lib/supabase')] = { id: 's', filename: 's', loaded: true, exports: { from: q } };
+  require.cache[require.resolve('../../lib/auth')] = { id: 'a', filename: 'a', loaded: true, exports: { authenticate: async () => null } };   // nadie con sesión
+  require.cache[require.resolve('../../lib/rate-limit')] = { id: 'r', filename: 'r', loaded: true, exports: { allow: async () => true } };
+  delete require.cache[require.resolve('../../lib/cobros/api')]; delete require.cache[require.resolve('../../api/cobros')];
+  const handler = require('../../api/cobros');
+  const call = async (method, query, body) => { const out = {}; const res = { setHeader() {}, status(c) { out.code = c; return this; }, json(b) { out.body = b; return this; } };
+    await handler({ method, query: { route: 'unsubscribe', ...query }, headers: {}, body: body || {} }, res); return out; };
+
+  const info = await call('GET', { t: tok });
+  assert.equal(info.code || 200, 200); assert.equal(info.body.email, 'an*@empresa.com');
+  assert.equal(calls.length, 0);                                            // mirar el enlace NO da de baja (los filtros de correo lo abren)
+  assert.equal((await call('GET', { t: 'x.y' })).code, 400);
+  assert.equal((await call('POST', { t: forged })).code, 400);
+  const done = await call('POST', { t: tok }, 'List-Unsubscribe=One-Click');
+  assert.equal(done.code || 200, 200); assert.match(done.body.message, /no recibirás más/i);
+  const up = calls.find(c => c.op === 'upsert');
+  assert.equal(up.table, 'cobros_optouts'); assert.deepEqual(up.rows, [{ tenant_id: 'tenant-1', email: 'ana@empresa.com' }]);
+  assert.ok(calls.some(c => c.table === 'cobros_clients' && c.u && c.u.opt_in_email === false));   // y si es cliente, se apaga su correo
+
+  assert.match(read('vercel.json'), /"\/baja"/);
+  const page = read('public/baja.html');
+  assert.match(page, /method:'POST'/); assert.match(page, /noindex/);
 });

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Darme de baja</title>
+<style>
+:root{--bg:#f3f7f4;--card:#fff;--text:#14241b;--text2:#5a6e62;--border:#d6e2da;--acc:#0f8a5f;--bad:#dc2626}
+@media(prefers-color-scheme:dark){:root{--bg:#070d1a;--card:#0f1e38;--text:#e8f0ff;--text2:#9fb0d0;--border:#22324f;--acc:#10b981}}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text)}
+.card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:32px 28px;box-shadow:0 10px 40px rgba(0,0,0,.08);text-align:center}
+h1{font-size:21px;margin:0 0 8px}
+p{margin:0 0 20px;color:var(--text2);font-size:14.5px;line-height:1.55}
+button{font:inherit;font-weight:600;background:var(--acc);color:#fff;border:0;border-radius:12px;padding:12px 22px;cursor:pointer}
+button:disabled{opacity:.6;cursor:default}
+.ok{color:var(--acc);font-weight:600}.err{color:var(--bad);font-weight:600}
+</style>
+</head>
+<body>
+<main class="card" id="c"><h1>Cargando…</h1></main>
+<script>
+(function(){
+  var c=document.getElementById('c'), t=new URLSearchParams(location.search).get('t')||'';
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];});}
+  function fail(m){ c.innerHTML='<h1>Enlace no válido</h1><p class="err">'+esc(m||'El enlace de baja no es válido o está incompleto.')+'</p>'; }
+  if(!t) return fail();
+  fetch('/api/cobros/unsubscribe?t='+encodeURIComponent(t)).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});}).then(function(x){
+    if(!x.ok) return fail(x.d&&x.d.error);
+    c.innerHTML='<h1>¿Quieres dejar de recibir nuestros correos?</h1><p>Se dará de baja <b>'+esc(x.d.email)+'</b> de las promociones de '+esc(x.d.business)+'. No volverás a recibirlas.</p><button id="b">Sí, darme de baja</button><div id="m"></div>';
+    document.getElementById('b').onclick=function(){
+      var b=this; b.disabled=true;
+      fetch('/api/cobros/unsubscribe?t='+encodeURIComponent(t),{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+        .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+        .then(function(y){ if(!y.ok){ b.disabled=false; document.getElementById('m').innerHTML='<p class="err" style="margin-top:14px">'+esc(y.d&&y.d.error||'No se pudo completar la baja.')+'</p>'; return; }
+          c.innerHTML='<h1>Listo ✓</h1><p class="ok">'+esc(y.d.message)+'</p><p>Gracias por avisarnos.</p>'; })
+        .catch(function(){ b.disabled=false; document.getElementById('m').innerHTML='<p class="err" style="margin-top:14px">Sin conexión. Inténtalo de nuevo.</p>'; });
+    };
+  }).catch(function(){ fail('Sin conexión. Inténtalo de nuevo.'); });
+})();
+</script>
+</body>
+</html>

@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Cobros envía el correo con su propio usuario**: mismo servidor SMTP de Direct, pero con una cuenta propia de Cobros (`COBROS_SMTP_USER` / `COBROS_SMTP_PASS`), separada de `soporte@saveconsult.net` que usan las licencias y el Monitor. Si no está configurada, Cobros no envía (nunca usa el correo compartido) y lo avisa en pantalla.
 - **Cobros: baja automática con enlace**: cada correo de promoción trae un enlace «darme de baja» (y el botón «Cancelar suscripción» de Gmail/Outlook). La persona confirma en una página pública y queda en la lista de bajas sola, sin que nadie pegue su correo; nunca más recibe promociones. El enlace está firmado: no se puede dar de baja a otra persona.
 - **Cobros: promociones a una lista de correos pegada o subida de Excel**: en «Audiencia» eliges «Lista de correos», pegas la columna (correo y nombre) o subes el Excel, y se envía la oferta de tus servicios por correo. Se limpian repetidos y errores, se respetan las **bajas** (nueva tarjeta para registrar a quien responda BAJA) y se envía en tandas de hasta 150.
 - **Cobros: las facturas y cotizaciones salen con el formato de CaSa Labs**: logo, «Facturado a», tabla de detalle, notas, bloque «Pago recibido» (monto y fecha de pago), términos y condiciones, y «Aceptación» con la firma de CaSa Labs y la del cliente, igual que la factura de muestra.

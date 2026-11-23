@@ -69,7 +69,7 @@ const dd=iso=>iso?new Intl.DateTimeFormat('es-DO',{dateStyle:'medium',timeZone:'
 function flash(text,kind){ $('msg').innerHTML=text?`<div class="msg ${kind||'ok'}">${esc(text)}</div>`:''; }
 function renderTabs(){ $('tabs').innerHTML=TABS.map(([k,l])=>`<button class="tab${k===TAB?' on':''}" data-tab="${k}">${l}</button>`).join(''); }
 $('tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(b){ TAB=b.dataset.tab; flash(''); load(); } });
-const providerWarn=p=>{ const w=[]; if(p&&!p.email) w.push('correo (buzón corporativo)'); if(p&&!p.whatsapp) w.push('WhatsApp (Twilio)'); return w.length?`<div class="msg warn">Falta configurar ${w.join(' y ')} en el servidor: los envíos por ese canal fallarán y quedarán registrados en el historial.</div>`:''; };
+const providerWarn=p=>{ const w=[]; if(p&&!p.email) w.push('correo de Cobros'); if(p&&!p.whatsapp) w.push('WhatsApp (Twilio)'); return w.length?`<div class="msg warn">Falta configurar ${w.join(' y ')} en el servidor: los envíos por ese canal fallarán y quedarán registrados en el historial.</div>`:''; };
 const f=(label,inner)=>`<label class="f">${label}${inner}</label>`;
 
 async function load(){

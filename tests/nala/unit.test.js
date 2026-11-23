@@ -482,3 +482,28 @@ test('ventas607: reporte con RNC entre paréntesis y tipo de cobro', () => {
   const f = v.parse(t).rows[0].fields;
   assert.equal(f.receptor_id, '131310151'); assert.equal(f.receptor_nombre, 'DEBEPESA SRL'); assert.equal(f.monto_facturado, '13950.00'); assert.equal(f.pago_tarjeta, '16461.00');
 });
+
+test('ventas607: «Ingresos según terceros» de la DGII sin encabezado reconocible (RNC, Nombre, Año, Período, NCF, Fecha mm/dd, Tipo, Monto, ITBIS retenido, ITBIS)', () => {
+  const v = require('../../lib/nala/ventas607');
+  const rows = [
+    ['122010106', 'CONSTRUCTORA DUPLA SRL', '2026', '202610', 'E310000000006', '10/01/2026', 'FACTURA DE CRÉDITO FISCAL ELECTRÓNICO', '2', '60078.30', '3244.32', '10814.09'],
+    ['132310764', 'CONSTRUCTORA SCHIFFINO VARGAS SRL', '2026', '202610', 'E310000000009', '10/01/2026', 'FACTURA DE CRÉDITO FISCAL ELECTRÓNICO', '2', '33000', '', '5940'],
+    ['130390452', 'PORTO VALENCIA S A', '2026', '202610', 'E310000000012', '10/26/2026', 'FACTURA DE CRÉDITO FISCAL ELECTRÓNICO', '2', '1000', '', '180'],
+  ];
+  const r = v.parse(['Ingresos Según Terceros', '', ...rows.map(x => x.join('\t'))].join('\n'), { period: '202610' });
+  assert.deepEqual(r.errors, []); assert.equal(r.rows.length, 3);
+  const f = r.rows[0].fields;
+  assert.equal(f.ncf, 'E310000000006'); assert.equal(f.receptor_id, '122010106'); assert.equal(f.receptor_nombre, 'CONSTRUCTORA DUPLA SRL');
+  assert.equal(f.fecha_comprobante, '2026-10-01', '10/01/2026 con período 202610 es 1 de octubre (mm/dd)');
+  assert.equal(f.monto_facturado, '60078.30'); assert.equal(f.itbis, '10814.09', 'el ITBIS es la columna ≈ 18 %, no la retención');
+  assert.equal(r.rows[2].fields.fecha_comprobante, '2026-10-26');
+});
+
+test('ventas607: encabezado con «ITBIS Retenido» no se confunde con el ITBIS facturado; fecha dd/mm sigue igual sin período', () => {
+  const v = require('../../lib/nala/ventas607');
+  const t = 'Número Comprobante Fiscal\tRNC\tNombre\tFecha\tMonto Facturado\tITBIS Retenido\tITBIS Facturado\nB0100000001\t131000001\tCLIENTE SRL\t05/10/2026\t1000\t54\t180';
+  const r = v.parse(t);
+  assert.deepEqual(r.errors, []);
+  assert.equal(r.rows[0].fields.itbis, '180.00'); assert.equal(r.rows[0].fields.monto_facturado, '1000.00');
+  assert.equal(r.rows[0].fields.fecha_comprobante, '2026-10-05');
+});

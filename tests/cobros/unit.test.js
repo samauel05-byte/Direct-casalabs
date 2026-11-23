@@ -99,3 +99,76 @@ test('integración con Direct: tarjeta en «Otros accesos», permiso por usuario
   assert.match(sql, /'camila@direct\.local'/);
   assert.match(sql, /check \(currency in \('DOP','USD'\)\)/);
 });
+
+test('PayPal: RD$ se factura en US$ con la tasa; sin tasa o sin correo se rechaza; devuelve el enlace del pagador', async () => {
+  const calls = [];
+  const stub = {
+    hasCredentials: () => true,
+    api: async (p, init = {}) => {
+      calls.push({ p, body: init.body ? JSON.parse(init.body) : null });
+      if (p.endsWith('generate-next-invoice-number')) return { invoice_number: '0001' };
+      if (p === '/v2/invoicing/invoices') return { href: 'https://api-m.paypal.com/v2/invoicing/invoices/INV2-AAA' };
+      if (p.endsWith('/send')) return { href: 'https://www.paypal.com/invoice/p/#INV2-AAA' };
+      return { status: 'PAID' };
+    },
+  };
+  require.cache[require.resolve('../../lib/paypal')] = { id: 'p', filename: 'p', loaded: true, exports: stub };
+  delete require.cache[require.resolve('../../lib/cobros/paypal')];
+  const pp = require('../../lib/cobros/paypal');
+  const inv = { concept: 'Hosting', amount: 6050, currency: 'DOP', due_date: '2026-12-01' };
+  const client = { name: 'Ana', email: 'ana@x.co' };
+  assert.equal(pp.toUsd(6050, 60.5), 100);
+  await assert.rejects(() => pp.createInvoiceLink(inv, client, ''), /tasa/);
+  await assert.rejects(() => pp.createInvoiceLink(inv, { name: 'Ana' }, 60.5), /correo/);
+  const r = await pp.createInvoiceLink(inv, client, 60.5);
+  assert.equal(r.id, 'INV2-AAA'); assert.equal(r.url, 'https://www.paypal.com/invoice/p/#INV2-AAA'); assert.equal(r.usd, 100); assert.equal(r.rate, 60.5);
+  const created = calls.find(c => c.p === '/v2/invoicing/invoices').body;
+  assert.equal(created.detail.currency_code, 'USD');
+  assert.equal(created.items[0].unit_amount.value, '100.00');
+  assert.equal(created.primary_recipients[0].billing_info.email_address, 'ana@x.co');
+  const send = calls.find(c => c.p.endsWith('/send')).body;
+  assert.equal(send.send_to_recipient, false);           // PayPal no escribe al cliente: lo hace Cobros
+  const usd = await pp.createInvoiceLink({ ...inv, currency: 'USD', amount: 50 }, client);
+  assert.equal(usd.usd, 50); assert.equal(usd.rate, null);
+  assert.equal(await pp.invoiceState('INV2-AAA'), 'paid');
+  stub.hasCredentials = () => false;
+  await assert.rejects(() => pp.createInvoiceLink(inv, client, 60.5), /PayPal no está configurado/);
+});
+
+test('comprobante de pago: contenido, número estable y aviso de que no es fiscal; cobrar lo envía una sola vez', async () => {
+  process.env.BUSINESS_NAME = 'Casa Labs';
+  const inv = { id: '12345678-aaaa-bbbb-cccc-1234567890ab', concept: 'Hosting', amount: 6050, currency: 'DOP', paid_at: '2026-11-23T16:00:00Z', paypal_usd_amount: 100, paypal_rate: 60.5 };
+  const m = L.receiptMessage(inv, { name: 'Ana' });
+  assert.equal(L.receiptNumber(inv), 'REC-12345678');
+  assert.match(m.subject, /Comprobante de pago REC-12345678/);
+  assert.match(m.body, /RD\$/); assert.match(m.body, /US\$/); assert.match(m.body, /no sustituye un comprobante fiscal/);
+
+  // Flujo completo con base y mensajería simuladas
+  const rows = { inv: { id: 'i1', tenant_id: 't', client_id: 'c1', status: 'pending', concept: 'Hosting', amount: 100, currency: 'USD', due_date: '2026-12-01', receipt_sent_at: null }, updates: [], sends: [] };
+  const client = { id: 'c1', name: 'Ana', email: 'a@x.co', phone: null, opt_in_email: true, opt_in_whatsapp: false };
+  const chain = (table) => { const q = { _t: table, _u: null };
+    q.select = () => q; q.eq = () => q; q.maybeSingle = async () => ({ data: table === 'cobros_invoices' ? { ...rows.inv } : client, error: null });
+    q.update = u => { q._u = u; return q; }; q.then = (res) => { if (q._u) { rows.updates.push(q._u); Object.assign(rows.inv, q._u); } res({ data: null, error: null }); };
+    return q; };
+  require.cache[require.resolve('../../lib/supabase')] = { id: 'x', filename: 'x', loaded: true, exports: { from: chain } };
+  require.cache[require.resolve('../../lib/cobros/messaging')] = { id: 'm', filename: 'm', loaded: true, exports: { providers: () => ({}), dispatch: async o => { rows.sends.push(o); return o.channel === 'email' ? { ok: true } : null; } } };
+  delete require.cache[require.resolve('../../lib/cobros/api')];
+  const api = require('../../lib/cobros/api');
+  const r1 = await api.markPaid({ tenantId: 't' }, '11111111-1111-4111-8111-111111111111');
+  assert.match(r1.message, /marcado como pagado/); assert.match(r1.message, /Comprobante de pago enviado/);
+  assert.equal(rows.sends.length >= 1 && rows.sends[0].kind, 'receipt');
+  assert.ok(rows.updates.some(u => u.status === 'paid')); assert.ok(rows.updates.some(u => u.receipt_sent_at));
+  const before = rows.sends.length;
+  rows.inv.status = 'pending'; // simula un segundo cobro del mismo registro ya con comprobante
+  await api.markPaid({ tenantId: 't' }, '11111111-1111-4111-8111-111111111111');
+  assert.equal(rows.sends.length, before);               // receipt_sent_at impide el doble envío
+});
+
+test('integración: botones de PayPal y comprobante en la pantalla, migraciones y ruta', () => {
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /data-pplink/); assert.match(ui, /data-ppcheck/); assert.match(ui, /name="paypal"/); assert.match(ui, /Comprobante/);
+  assert.match(read('api/cobros.js'), /paypal-check/);
+  assert.match(read('supabase/migrations/202611240001_cobros_paypal.sql'), /paypal_invoice_id/);
+  assert.match(read('supabase/migrations/202611240002_cobros_recibos.sql'), /receipt_sent_at/);
+  assert.match(read('supabase/migrations/202611240002_cobros_recibos.sql'), /'receipt'/);
+});

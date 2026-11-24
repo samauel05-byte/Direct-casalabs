@@ -61,7 +61,7 @@ module.exports = async (req, res) => {
   try {
     if (route === 'cron' && ['GET', 'POST'].includes(req.method)) {
       if (!cronAuthorized(req)) return res.status(401).json({ error: 'No autorizado' });
-      return res.json({ ok: true, ...(await api.runDaily()) });
+      return res.json({ ok: true, ...(await api.runDaily({ slot: Math.min(3, Math.max(1, Number(req.query && req.query.slot) || 1)) })) });
     }
     // Baja pública desde el enlace del correo: sin sesión; el token firmado es la autorización.
     if (route === 'unsubscribe' && ['GET', 'POST'].includes(req.method)) {

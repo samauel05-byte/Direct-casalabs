@@ -306,3 +306,8 @@ test('cada pago del plan se le avisa a Nexo (para que su regla antigua no suspen
   // la función de Nexo acepta mark_paid y el modo real de Direct/Nexo sigue exigiendo todo lo anterior
   assert.match(read('supabase/nexo/cobros-license/index.ts'), /mark_paid/);
 });
+
+test('Formulario del plan: calendario en una frase con ejemplo y opciones avanzadas', () => {
+  const ui = require('fs').readFileSync(require('path').join(__dirname, '../../public/cobros/index.html'), 'utf8');
+  assert.match(ui, /de cada mes, y el cliente tiene hasta el día/); assert.match(ui, /id="plan-sum"/); assert.match(ui, /Opciones avanzadas/);
+});

@@ -332,17 +332,26 @@ function openPlanModal(id){
     ${f('Cliente que paga *',`<select name="client_id" required><option value="">Selecciona…</option>${d.clients.map(c=>`<option value="${c.id}"${p&&p.client_id===c.id?' selected':''}>${esc(c.name)}${c.email?'':' (sin correo)'}</option>`).join('')}</select>`)}
     ${f('Concepto del cobro *','<input name="concept" required value="'+v('concept','Nexo + Direct — servicio mensual')+'">')}
     ${f('Monto mensual (US$) *','<input name="amount" type="number" step="0.01" min="1" required value="'+v('amount',df.amount)+'">')}
-    ${f('Día del mes en que se crea el cobro','<input name="create_day" type="number" min="1" max="28" required value="'+v('create_day',df.create_day)+'">')}
-    ${f('Día límite (del mes siguiente)','<input name="due_day" type="number" min="1" max="28" required value="'+v('due_day',df.due_day)+'">')}
-    ${f('Hora de corte (RD, HH:MM)','<input name="cutoff_time" required pattern="([01][0-9]|2[0-3]):[0-5][0-9]" value="'+v('cutoff_time',df.cutoff_time)+'">')}
+    </div>
+    <div style="margin-top:14px;border:1px solid var(--bdr);border-radius:12px;padding:12px;background:var(--surf2)">
+      <div style="font-weight:600;margin-bottom:8px">📅 Calendario del cobro</div>
+      <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;line-height:2.2">Se cobra el día <input name="create_day" type="number" min="1" max="28" required style="width:70px" value="${v('create_day',df.create_day)}"> de cada mes, y el cliente tiene hasta el día <input name="due_day" type="number" min="1" max="28" required style="width:70px" value="${v('due_day',df.due_day)}"> del mes siguiente para pagar.</div>
+      <div id="plan-sum" style="margin-top:8px;font-weight:600"></div>
+    </div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">Opciones avanzadas (avisos, hora de corte, qué se suspende)</summary><div class="grid" style="margin-top:10px">
+    ${f('Hora de corte el día límite (RD, HH:MM)','<input name="cutoff_time" required pattern="([01][0-9]|2[0-3]):[0-5][0-9]" value="'+v('cutoff_time',df.cutoff_time)+'">')}
     ${f('Avisos (días antes del límite; 0 = el día límite)','<input name="remind_offsets" value="'+v('remind_offsets',df.remind_offsets)+'">')}
     ${f('Firma de Direct que se suspende',`<select name="direct_tenant_id"><option value="">— ninguna —</option>${d.tenants.map(t=>`<option value="${t.id}"${(p?p.direct_tenant_id===t.id:t.id===d.me_tenant)?' selected':''}>${esc(t.name)}</option>`).join('')}</select>`)}
     ${f('Empresa de Nexo que se suspende (nombre exacto)','<input name="nexo_org" value="'+v('nexo_org',df.nexo_org)+'" placeholder="Vacío = no suspende Nexo">')}
-    ${f('Correo para avisos de administración','<input name="notify_email" type="email" value="'+v('notify_email','')+'" placeholder="Recibirás cada creación, pago, simulación y corte">')}</div>
+    ${f('Correo para avisos de administración','<input name="notify_email" type="email" value="'+v('notify_email','')+'" placeholder="Recibirás cada creación, pago, simulación y corte">')}</div></details>
     ${d.nexo_configured?'':'<div class="msg warn" style="margin-top:12px">Nexo aún no está conectado (falta la variable <b>NEXO_COBROS_SECRET</b> y la función en Nexo). En simulación no importa; es obligatorio antes del modo real si el plan suspende Nexo.</div>'}
     <div class="acts" style="margin-top:14px"><button type="button" class="btn" data-x>Cancelar</button><button class="btn pri">${p?'Guardar cambios':'Crear plan'}</button></div></form>`;
   document.body.appendChild(m); const form=m.querySelector('form');
   m.querySelector('[data-x]').onclick=()=>m.remove(); m.addEventListener('mousedown',e=>{ if(e.target===m) m.remove(); });
+  const MES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const sum=()=>{ const c=+form.create_day.value||0, l=+form.due_day.value||0, t=form.cutoff_time.value||''; const now=new Date(); let mo=now.getMonth(), y=now.getFullYear(); if(now.getDate()>c){ mo++; if(mo>11){ mo=0; y++; } }
+    const nm=(mo+1)%12, ny=mo===11?y+1:y; $('plan-sum').textContent=c&&l?`Ejemplo: se cobra el ${c} de ${MES[mo]} y se paga hasta el ${l} de ${MES[nm]} de ${ny}${t?' (si no paga, el corte es ese día a las '+t+')':''}.`:''; };
+  ['create_day','due_day','cutoff_time'].forEach(k=>form[k].addEventListener('input',sum)); sum();
   form.onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(form), btn=form.querySelector('.pri'); btn.disabled=true; const body={}; for(const [k,x] of fd.entries()) body[k]=x;
     try{ const r=p?await api('plans/'+id,{method:'PATCH',body}):await api('plans',{method:'POST',body}); m.remove(); await load(); flash(r.message); }
     catch(er){ btn.disabled=false; flash(er.message,'err'); window.scrollTo(0,0); } };

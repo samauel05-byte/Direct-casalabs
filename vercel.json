@@ -52,6 +52,8 @@
   "crons": [
     { "path": "/api/nala/jobs/worker", "schedule": "17 6 * * *" },
     { "path": "/api/nomina/cron", "schedule": "0 13 * * *" },
-    { "path": "/api/cobros/cron", "schedule": "0 12 * * *" }
+    { "path": "/api/cobros/cron?slot=1", "schedule": "0 12 * * *" },
+    { "path": "/api/cobros/cron?slot=2", "schedule": "0 17 * * *" },
+    { "path": "/api/cobros/cron?slot=3", "schedule": "0 22 * * *" }
   ]
 }

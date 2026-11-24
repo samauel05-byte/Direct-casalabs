@@ -94,7 +94,7 @@ test('integración con Direct: tarjeta en «Otros accesos», permiso por usuario
   assert.match(read('api/auth/login.js'), /access_cobros/);
   const v = JSON.parse(read('vercel.json'));
   assert.ok(v.rewrites.some(r => r.source === '/api/cobros/:path*'));
-  assert.ok(v.crons.some(c => c.path === '/api/cobros/cron'));
+  for (const n of [1, 2, 3]) assert.ok(v.crons.some(c => c.path === `/api/cobros/cron?slot=${n}`), `corrida ${n} del cron`);   // 8:00, 13:00 y 18:00 de RD
   const sql = read('supabase/migrations/202611230001_cobros.sql');
   for (const t of ['cobros_clients', 'cobros_invoices', 'cobros_campaigns', 'cobros_log']) assert.match(sql, new RegExp(`alter table public\\.${t} enable row level security`));
   assert.match(sql, /'camila@direct\.local'/);
@@ -217,7 +217,7 @@ test('avisos por cantidad: «N desde D» reparte los días; tasa automática con
   await assert.rejects(() => fx.getRate(async () => { throw new Error('red'); }), /escríbela a mano/);
   delete process.env.COBROS_RATE_MARKUP_PCT;
   const ui = read('public/cobros/index.html');
-  assert.match(ui, /name="remind_count"/); assert.match(ui, /name="remind_from"/); assert.match(read('api/cobros.js'), /\^fx\$/);
+  assert.match(read('api/cobros.js'), /\^fx\$/);
 });
 
 test('cotizaciones y factura: líneas sin ITBIS, numeración, PDF válido y envío con adjunto', async () => {
@@ -399,16 +399,6 @@ test('correo propio de Cobros: mismo servidor SMTP, otro usuario; NUNCA cae al b
   }
 });
 
-test('formulario de avisos: bloque claro con listas de cantidad y primer aviso, y vista previa con la misma regla del servidor', () => {
-  const ui = read('public/cobros/index.html');
-  assert.match(ui, /Avisos antes del vencimiento/); assert.match(ui, /name="remind_count"/); assert.match(ui, /name="remind_from"/);
-  assert.match(ui, /id="rem-preview"/); assert.doesNotMatch(ui, /<input name="remind_count"/);   // ya no son cuadros numéricos sueltos
-  // La vista previa reparte los avisos igual que el servidor (spreadDays)
-  const m = /const spread=\(count,from\)=>\{[^\n]*\};/.exec(ui);
-  assert.ok(m, 'la vista previa calcula los días en el navegador');
-  const spread = new Function(m[0] + '; return spread;')();
-  for (const [n, f] of [[2, 3], [3, 9], [1, 7], [6, 3], [5, 5], [4, 30], [6, 1]]) assert.deepEqual(spread(n, f), L.spreadDays(n, f), `${n} desde ${f}`);
-});
 
 test('PayPal 403: el mensaje explica que falta activar Invoicing y dónde', async () => {
   const stub = { hasCredentials: () => true, api: async () => { throw new Error('PayPal 403: Authorization failed due to insufficient permissions.'); } };
@@ -420,4 +410,77 @@ test('PayPal 403: el mensaje explica que falta activar Invoicing y dónde', asyn
   await assert.rejects(() => pp.invoiceState('INV2-X'), /Invoicing/);
   assert.match(pp.friendly(new Error('PayPal: no se pudo autenticar')).message, /credenciales/);
   assert.equal(pp.friendly(new Error('otra cosa')).message, 'otra cosa');
+});
+
+test('calendario de avisos: días exactos, varios correos por día en las 3 corridas, y la mora opcional', () => {
+  const today = '2026-12-05';
+  const inv = (o = {}) => ({ due_date: '2026-12-10', last_reminder_at: null, remind_dates: ['2026-12-05', '2026-12-06', '2026-12-07'], remind_per_day: 1, remind_overdue: true, ...o });
+  // solo los días marcados (el 5, el 6 y el 7); ni el 8 ni el día del vencimiento avisan si no se marcaron
+  assert.equal(L.shouldRemindToday(inv(), '2026-12-05'), true);
+  assert.equal(L.shouldRemindToday(inv(), '2026-12-06'), true);
+  assert.equal(L.shouldRemindToday(inv(), '2026-12-08'), false);
+  assert.equal(L.shouldRemindToday(inv(), '2026-12-10'), false);
+  assert.equal(L.shouldRemindToday(inv({ remind_dates: ['2026-12-10'] }), '2026-12-10'), true);          // marcando el vencimiento, avisa
+  // mora: cada 3 días si se dejó marcado; nada si se desmarcó
+  assert.equal(L.shouldRemindToday(inv(), '2026-12-13'), true);
+  assert.equal(L.shouldRemindToday(inv(), '2026-12-12'), false);
+  assert.equal(L.shouldRemindToday(inv({ remind_overdue: false }), '2026-12-13'), false);
+  // correos por día: N correos usan las N primeras corridas del día (1: 8:00, 2: 13:00, 3: 18:00)
+  const per = n => inv({ remind_per_day: n });
+  assert.deepEqual([1, 2, 3].map(s => L.shouldRemindToday(per(1), today, s)), [true, false, false]);
+  assert.deepEqual([1, 2, 3].map(s => L.shouldRemindToday(per(2), today, s)), [true, true, false]);
+  assert.deepEqual([1, 2, 3].map(s => L.shouldRemindToday(per(3), today, s)), [true, true, true]);
+  // no repite una corrida ya hecha: tras el 1.º correo del día solo toca el 2.º
+  const first = per(3); first.last_reminder_day = today; first.reminders_today = 1;
+  assert.deepEqual([1, 2, 3].map(s => L.shouldRemindToday(first, today, s)), [false, true, true]);
+  const two = per(3); two.last_reminder_day = today; two.reminders_today = 3;
+  assert.deepEqual([1, 2, 3].map(s => L.shouldRemindToday(two, today, s)), [false, false, false]);
+  assert.equal(L.shouldRemindToday({ ...per(3), last_reminder_day: '2026-12-04', reminders_today: 3 }, today, 1), true);   // otro día: se reinicia
+  // sin calendario sigue la regla anterior (3 y 1 antes, vencimiento y mora)
+  assert.equal(L.shouldRemindToday({ due_date: '2026-12-08', remind_dates: null }, today), true);
+  assert.equal(L.shouldRemindToday({ due_date: '2026-12-09', remind_dates: null }, today), false);
+
+  // fechas del calendario: únicas, ordenadas, desde hoy; vacío = por defecto; todo en el pasado = error
+  assert.deepEqual(L.parseDates(['2026-12-07', '2026-12-06', '2026-12-06', '2026-12-01', 'x'], today), ['2026-12-06', '2026-12-07']);
+  assert.equal(L.parseDates([], today), null); assert.equal(L.parseDates(undefined, today), null);
+  assert.throws(() => L.parseDates(['2026-12-01'], today), /al menos un día/);
+  assert.throws(() => L.parseDates(Array.from({ length: 61 }, (_, i) => { const d = new Date(Date.UTC(2026, 11, 5 + i)); return d.toISOString().slice(0, 10); }), today), /Máximo 60/);
+  assert.equal(L.parsePerDay(undefined), 1); assert.equal(L.parsePerDay(9), 3); assert.equal(L.parsePerDay('2'), 2); assert.equal(L.parsePerDay(0), 1);
+});
+
+test('los correos suben de tono: «se acerca» → «recordatorio» → «aviso importante», y el vencimiento y la mora tienen el suyo', () => {
+  process.env.BUSINESS_NAME = 'CaSa Labs';
+  const inv = n => ({ concept: 'Hosting', amount: 100, currency: 'USD', due_date: '2026-12-10', payment_link: 'https://pago.example/x', reminder_count: n });
+  const c = { name: 'Ana' };
+  const m0 = L.reminderMessage(inv(0), c, 5), m1 = L.reminderMessage(inv(1), c, 4), m2 = L.reminderMessage(inv(2), c, 3), m5 = L.reminderMessage(inv(5), c, 2);
+  assert.match(m0.subject, /Se acerca tu fecha de pago/); assert.match(m0.body, /queremos avisarte con tiempo/);
+  assert.match(m1.subject, /Recordatorio/); assert.match(m1.body, /te escribimos de nuevo/);
+  assert.match(m2.subject, /Aviso importante/); assert.match(m2.body, /todavía no registramos tu pago/);
+  assert.equal(m5.subject.startsWith('Aviso importante'), true);
+  assert.equal(new Set([m0.subject, m1.subject, m2.subject]).size, 3);                 // los tres asuntos son distintos
+  assert.match(L.reminderMessage(inv(3), c, 0).subject, /Hoy vence tu pago/);          // el día del vencimiento manda el suyo
+  assert.match(L.reminderMessage(inv(3), c, -3).subject, /Pago vencido/);               // y vencido también
+  assert.match(L.reminderMessage(inv(0), c, 7, -1).subject, /Nuevo cobro/);             // aviso al crear el cobro
+  for (const m of [m0, m1, m2]) { assert.match(m.body, /https:\/\/pago\.example\/x/); assert.match(m.body, /ignorar este mensaje/); }
+});
+
+test('calendario en la pantalla, edición de cobros existentes, y cuentas del cron por corrida', async () => {
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /id="sched-root"/); assert.match(ui, /function schedulePicker/); assert.match(ui, /data-day=/); assert.match(ui, /¿Cuántos correos por día\?/);
+  assert.match(ui, /Marcar rango/); assert.match(ui, /Todos los días hasta el vencimiento/); assert.match(ui, /openSchedModal/); assert.match(ui, /Calendario de avisos/);
+  assert.doesNotMatch(ui, /name="remind_count"|name="remind_from"|id="rem-preview"/);   // ya no hay cuadros sueltos de cantidad
+  assert.match(read('supabase/migrations/202611250004_cobros_calendario_avisos.sql'), /remind_dates date\[\]/);
+
+  // El cron recibe la corrida por ?slot= y la pasa a runDaily (limitada de 1 a 3)
+  const seen = [];
+  require.cache[require.resolve('../../lib/auth')] = { id: 'a', filename: 'a', loaded: true, exports: { authenticate: async () => null } };
+  require.cache[require.resolve('../../lib/supabase')] = { id: 's', filename: 's', loaded: true, exports: { from: () => ({}) } };
+  require.cache[require.resolve('../../lib/cobros/api')] = { id: 'c', filename: 'c', loaded: true, exports: { runDaily: async o => { seen.push(o.slot); return { slot: o.slot }; } } };
+  process.env.CRON_SECRET = 'x'.repeat(24);
+  delete require.cache[require.resolve('../../api/cobros')];
+  const handler = require('../../api/cobros');
+  const run = async slot => { const out = {}; await handler({ method: 'GET', query: { route: 'cron', ...(slot === undefined ? {} : { slot }) }, headers: { authorization: 'Bearer ' + 'x'.repeat(24) }, body: {} }, { setHeader() {}, status(c) { out.code = c; return this; }, json(b) { out.body = b; return this; } }); return out; };
+  await run('2'); await run('3'); await run(); await run('9'); await run('0');
+  assert.deepEqual(seen, [2, 3, 1, 3, 1]);
+  delete require.cache[require.resolve('../../lib/cobros/api')];
 });

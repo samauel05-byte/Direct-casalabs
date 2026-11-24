@@ -398,3 +398,26 @@ test('correo propio de Cobros: mismo servidor SMTP, otro usuario; NUNCA cae al b
     for (const k of Object.keys(e)) delete process.env[k];
   }
 });
+
+test('formulario de avisos: bloque claro con listas de cantidad y primer aviso, y vista previa con la misma regla del servidor', () => {
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /Avisos antes del vencimiento/); assert.match(ui, /name="remind_count"/); assert.match(ui, /name="remind_from"/);
+  assert.match(ui, /id="rem-preview"/); assert.doesNotMatch(ui, /<input name="remind_count"/);   // ya no son cuadros numéricos sueltos
+  // La vista previa reparte los avisos igual que el servidor (spreadDays)
+  const m = /const spread=\(count,from\)=>\{[^\n]*\};/.exec(ui);
+  assert.ok(m, 'la vista previa calcula los días en el navegador');
+  const spread = new Function(m[0] + '; return spread;')();
+  for (const [n, f] of [[2, 3], [3, 9], [1, 7], [6, 3], [5, 5], [4, 30], [6, 1]]) assert.deepEqual(spread(n, f), L.spreadDays(n, f), `${n} desde ${f}`);
+});
+
+test('PayPal 403: el mensaje explica que falta activar Invoicing y dónde', async () => {
+  const stub = { hasCredentials: () => true, api: async () => { throw new Error('PayPal 403: Authorization failed due to insufficient permissions.'); } };
+  require.cache[require.resolve('../../lib/paypal')] = { id: 'p', filename: 'p', loaded: true, exports: stub };
+  delete require.cache[require.resolve('../../lib/cobros/paypal')];
+  const pp = require('../../lib/cobros/paypal');
+  const inv = { concept: 'Hosting', amount: 100, currency: 'USD', due_date: '2026-12-01' };
+  await assert.rejects(() => pp.createInvoiceLink(inv, { name: 'Ana', email: 'a@x.co' }), e => /Invoicing/.test(e.message) && /Features/.test(e.message) && /403/.test(e.message));
+  await assert.rejects(() => pp.invoiceState('INV2-X'), /Invoicing/);
+  assert.match(pp.friendly(new Error('PayPal: no se pudo autenticar')).message, /credenciales/);
+  assert.equal(pp.friendly(new Error('otra cosa')).message, 'otra cosa');
+});

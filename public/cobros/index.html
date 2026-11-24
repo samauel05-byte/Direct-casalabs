@@ -110,8 +110,14 @@ async function vCobros(){
     ${f('Concepto *','<input name="concept" required>')}${f('Monto *','<input name="amount" type="number" step="0.01" min="0.01" required>')}
     ${f('Moneda','<select name="currency"><option value="DOP">RD$ (pesos)</option><option value="USD">US$ (dólares)</option></select>')}
     ${f('Vence *','<input name="due_date" type="date" required>')}${f('Enlace de pago propio (opcional)','<input name="payment_link" type="url" placeholder="Déjalo vacío para generarlo con PayPal">')}
-    ${f('¿Cuántas veces avisar antes del vencimiento?','<input name="remind_count" type="number" min="1" max="6" value="2">')}
-    ${f('Empezar a avisar desde (días antes)','<input name="remind_from" type="number" min="1" max="60" value="3">')}
+    <div style="grid-column:1/-1;border:1px solid var(--bdr);border-radius:12px;padding:12px 14px;background:var(--surf2)">
+      <div style="font-weight:600;margin-bottom:8px">🔔 Avisos antes del vencimiento</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:start">
+        <label class="f">Cantidad de avisos<select name="remind_count">${[1,2,3,4,5,6].map(n=>`<option value="${n}"${n===2?' selected':''}>${n} ${n===1?'aviso':'avisos'}</option>`).join('')}</select></label>
+        <label class="f">Primer aviso<select name="remind_from">${[1,2,3,4,5,7,10,14,21,30].map(n=>`<option value="${n}"${n===3?' selected':''}>${n} ${n===1?'día':'días'} antes del vencimiento</option>`).join('')}</select></label>
+      </div>
+      <div id="rem-preview" class="mut" style="margin-top:10px;line-height:1.5"></div>
+    </div>
     ${f('Tasa RD$ por US$ (automática; solo cobros en RD$ con PayPal)',`<input name="rate" type="number" step="0.01" min="20" placeholder="${fx&&fx.rate?'automática '+fx.rate:'automática'}" value="${fx&&fx.rate?fx.rate:''}">`)}
     </div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;align-items:center"><label class="chk"><input type="checkbox" name="paypal" ${d.providers&&d.providers.paypal?'checked':''}> Generar enlace de pago con PayPal</label><label class="chk"><input type="checkbox" name="notify"> Avisar al cliente al crear</label><button class="btn pri" style="margin-left:auto">Crear cobro</button></div></form>
     <div class="tw"><table><thead><tr><th>Cliente</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Estado</th><th>Avisos</th><th></th></tr></thead><tbody>${d.invoices.map(i=>{
@@ -119,6 +125,16 @@ async function vCobros(){
       return `<tr><td>${esc(i.client_name)}</td><td>${esc(i.concept)}${i.payment_link&&/^https?:\/\//i.test(i.payment_link)?` <a href="${esc(i.payment_link)}" target="_blank" rel="noopener noreferrer">enlace</a>`:''}</td><td style="white-space:nowrap"><b>${money(i.amount,i.currency)}</b></td><td style="white-space:nowrap">${dd(i.due_date)}</td>
       <td class="${i.status==='overdue'||late?'bad':i.status==='paid'?'okc':''}">${late?'Vencido':ST[i.status]}</td><td class="mut">${open?`<div>Avisa: ${(i.remind_days&&i.remind_days.length?i.remind_days:[3,1]).join(', ')} día(s) antes</div>`:''}${i.reminder_count}${i.last_reminder_at?' · '+dd(i.last_reminder_at):''}${i.paypal_usd_amount?`<div>PayPal: ${money(i.paypal_usd_amount,'USD')}</div>`:''}${i.status==='paid'&&i.receipt_sent_at?'<div class="okc">Comprobante enviado</div>':''}</td>
       <td><div class="acts"><button class="btn sm" data-fact="${i.id}" title="Envía la factura comercial (PDF) al cliente">${i.factura_seq?'Reenviar '+('FAC-'+String(i.factura_seq).padStart(4,'0')):'Facturar'}</button><button class="btn sm" data-fpdf="${i.id}">PDF</button>${open?`${!i.payment_link?`<button class="btn sm" data-pplink="${i.id}" data-cur="${i.currency}">Enlace PayPal</button>`:''}${i.paypal_invoice_id?`<button class="btn sm" data-ppcheck="${i.id}">Verificar pago</button>`:''}<button class="btn sm" data-ndays="${i.id}" data-cur="${esc((i.remind_days||[]).join(', '))}">Días de aviso</button><button class="btn sm" data-remind="${i.id}">Recordar</button><button class="btn sm" data-paid="${i.id}">Marcar pagado</button>`:''}</div></td></tr>`; }).join('')||'<tr><td colspan="7" class="mut">Aún no hay cobros.</td></tr>'}</tbody></table></div>`;
+  const finv=$('f-inv'), prev=$('rem-preview');
+  const spread=(count,from)=>{ const f0=Math.min(60,Math.max(1,Math.round(Number(from))||3)); const n=Math.min(6,f0,Math.max(1,Math.round(Number(count))||2)); return n===1?[f0]:Array.from({length:n},(_,i)=>Math.round(f0-i*(f0-1)/(n-1))); };
+  const shortDate=(iso,minus)=>{ const t=new Date(iso+'T12:00:00Z'); t.setUTCDate(t.getUTCDate()-minus); return new Intl.DateTimeFormat('es-DO',{day:'numeric',month:'short',timeZone:'UTC'}).format(t); };
+  const renderPrev=()=>{ const want=Number(finv.remind_count.value), from=Number(finv.remind_from.value), days=spread(want,from), due=finv.due_date.value;
+    const list=days.map(x=>due?`<b>${shortDate(due,x)}</b> (${x} d)`:`<b>${x}</b>`).join(', ');
+    let t=`Se avisará <b>${days.length} ${days.length===1?'vez':'veces'}</b>: ${due?list:list+' días antes'}.`;
+    if(want>from) t+=` <span style="color:var(--bad)">Con «${from} ${from===1?'día':'días'} antes» solo caben ${days.length} aviso(s); elige un primer aviso más lejano para tener ${want}.</span>`;
+    t+=` Además se avisa el <b>día del vencimiento</b> y, si se atrasa, <b>cada 3 días</b>.`+(due?'':' <i>Elige la fecha de vencimiento para ver los días exactos.</i>');
+    prev.innerHTML=t; };
+  finv.addEventListener('input',renderPrev); finv.addEventListener('change',renderPrev); renderPrev();
   $('f-inv').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
     try{ const r=await api('invoices',{method:'POST',body:{client_id:fd.get('client_id'),concept:fd.get('concept'),amount:fd.get('amount'),currency:fd.get('currency'),due_date:fd.get('due_date'),payment_link:fd.get('payment_link'),rate:fd.get('rate'),remind_count:fd.get('remind_count'),remind_from:fd.get('remind_from'),paypal:fd.get('paypal')==='on',notify:fd.get('notify')==='on'}}); await load(); flash(r.message); }
     catch(er){ flash(er.message,'err'); } };

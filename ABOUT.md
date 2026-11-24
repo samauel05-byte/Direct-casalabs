@@ -34,6 +34,7 @@
 
 ## Estado y novedades recientes
 
+- **Cobros: formulario de avisos más claro**: «Cantidad de avisos» y «Primer aviso» ahora son listas dentro de un bloque ordenado, con una vista previa que muestra los días exactos en que saldrán los avisos. Y si PayPal rechaza el enlace por permisos, el mensaje explica cómo activar «Invoicing».
 - **Cobros envía el correo con su propio usuario**: mismo servidor SMTP de Direct, pero con una cuenta propia de Cobros (`COBROS_SMTP_USER` / `COBROS_SMTP_PASS`), separada de `soporte@saveconsult.net` que usan las licencias y el Monitor. Si no está configurada, Cobros no envía (nunca usa el correo compartido) y lo avisa en pantalla.
 - **Cobros: baja automática con enlace**: cada correo de promoción trae un enlace «darme de baja» (y el botón «Cancelar suscripción» de Gmail/Outlook). La persona confirma en una página pública y queda en la lista de bajas sola, sin que nadie pegue su correo; nunca más recibe promociones. El enlace está firmado: no se puede dar de baja a otra persona.
 - **Cobros: promociones a una lista de correos pegada o subida de Excel**: en «Audiencia» eliges «Lista de correos», pegas la columna (correo y nombre) o subes el Excel, y se envía la oferta de tus servicios por correo. Se limpian repetidos y errores, se respetan las **bajas** (nueva tarjeta para registrar a quien responda BAJA) y se envía en tandas de hasta 150.

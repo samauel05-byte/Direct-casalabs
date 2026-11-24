@@ -217,9 +217,18 @@ async function vCobros(){
     ${f('Vence *','<input name="due_date" type="date" required>')}${f('Enlace de pago propio (opcional)','<input name="payment_link" type="url" placeholder="Déjalo vacío para generarlo con PayPal">')}
     <div style="grid-column:1/-1"><div id="sched-root"></div></div>
     ${f('Tasa RD$ por US$ (automática; solo cobros en RD$ con PayPal)',`<input name="rate" type="number" step="0.01" min="20" placeholder="${fx&&fx.rate?'automática '+fx.rate:'automática'}" value="${fx&&fx.rate?fx.rate:''}">`)}
+    <div id="pp-preview" style="grid-column:1/-1;line-height:1.5"></div>
     </div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;align-items:center"><label class="chk"><input type="checkbox" name="paypal" ${d.providers&&d.providers.paypal?'checked':''}> Generar enlace de pago con PayPal</label><label class="chk"><input type="checkbox" name="notify"> Avisar al cliente al crear</label><button class="btn pri" style="margin-left:auto">Crear cobro</button></div></form>
     <div class="tw"><table><thead><tr><th>Cliente</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Estado</th><th>Avisos</th><th>Acciones</th></tr></thead><tbody>${d.invoices.map(i=>invRow(i,d.today)).join('')||'<tr><td colspan="7" class="mut">Aún no hay cobros.</td></tr>'}</tbody></table></div>`;
   const finv=$('f-inv'); window.__invs=Object.fromEntries(d.invoices.map(i=>[i.id,i])); window.__clients=d.clients;
+  const ppPrev=()=>{ const el=$('pp-preview'), on=finv.paypal.checked, a=Number(finv.amount.value), cur=finv.currency.value, rate=Number(finv.rate.value);
+    if(!on){ el.innerHTML=''; return; }
+    if(!(a>0)){ el.innerHTML='<span class="mut">Escribe el monto y verás aquí exactamente cuánto cobrará PayPal.</span>'; return; }
+    if(cur==='USD'){ el.innerHTML=`<div class="msg ok" style="margin:0">💳 PayPal cobrará <b>exactamente ${money(a,'USD')}</b>, lo mismo que pusiste en el cobro.</div>`; return; }
+    if(!(rate>20&&rate<500)){ el.innerHTML='<div class="msg warn" style="margin:0">PayPal no cobra en pesos dominicanos: indica la tasa (RD$ por US$) para ver cuánto cobrará en dólares.</div>'; return; }
+    const usd=Math.round(a/rate*100)/100;
+    el.innerHTML=`<div class="msg ok" style="margin:0">💳 PayPal no cobra en pesos, así que cobrará <b>${money(usd,'USD')}</b> (${money(a,'DOP')} ÷ tasa ${rate.toFixed(2)}). En Direct el cobro sigue en ${money(a,'DOP')}.</div>`; };
+  ['amount','currency','rate'].forEach(n=>finv[n].addEventListener('input',ppPrev)); finv.paypal.addEventListener('change',ppPrev); ppPrev();
   const sp=schedulePicker($('sched-root'),{due:()=>finv.due_date.value});
   finv.due_date.addEventListener('change',()=>sp.refresh());
   $('f-inv').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
@@ -328,7 +337,7 @@ document.addEventListener('click',async e=>{
     else if(t.dataset.delcli){ if(!confirm('¿Eliminar a '+t.dataset.name+'? También se eliminan sus cobros.')) return; await api('clients/'+t.dataset.delcli,{method:'DELETE'}); await load(); flash('Cliente eliminado.'); }
     else if(t.dataset.remind){ t.disabled=true; const r=await api('invoices/'+t.dataset.remind+'/remind',{method:'POST',body:{}}); await load(); flash(r.message,r.sent?'ok':'err'); }
     else if(t.dataset.paid){ if(!confirm('¿Marcar como pagado? Se enviará el comprobante de pago al cliente.')) return; t.disabled=true; const r=await api('invoices/'+t.dataset.paid+'/paid',{method:'POST',body:{}}); await load(); flash(r.message); }
-    else if(t.dataset.pplink){ let rate=''; if(t.dataset.cur==='DOP'){ const a=await api('fx').catch(()=>null); rate=prompt('PayPal cobra en US$. Tasa RD$ por US$ (automática, puedes cambiarla):',a&&a.rate?a.rate:''); if(!rate) return; } t.disabled=true; const r=await api('invoices/'+t.dataset.pplink+'/paypal',{method:'POST',body:{rate}}); await load(); flash(r.message); }
+    else if(t.dataset.pplink){ let rate=''; if(t.dataset.cur==='DOP'){ const a=await api('fx').catch(()=>null); const inv=(window.__invs||{})[t.dataset.pplink]||{}; rate=prompt(`PayPal no cobra en pesos: cobrará en US$ lo equivalente a ${money(inv.amount,'DOP')}.\nTasa RD$ por US$ (automática, puedes cambiarla):`,a&&a.rate?a.rate:''); if(!rate) return; const usd=Math.round(Number(inv.amount)/Number(rate)*100)/100; if(!confirm(`PayPal cobrará ${money(usd,'USD')} (${money(inv.amount,'DOP')} ÷ ${Number(rate).toFixed(2)}). ¿Generar el enlace?`)) return; } t.disabled=true; const r=await api('invoices/'+t.dataset.pplink+'/paypal',{method:'POST',body:{rate}}); await load(); flash(r.message); }
     else if(t.dataset.ndays){ openSchedModal(t.dataset.ndays); }
     else if(t.dataset.edit){ openEditInvoice(t.dataset.edit); }
     else if(t.dataset.qsend){ t.disabled=true; const r=await api('quotes/'+t.dataset.qsend+'/send',{method:'POST',body:{}}); await load(); flash(r.message,r.sent?'ok':'err'); }

@@ -536,3 +536,14 @@ test('editar un cobro: solo pendientes/vencidos; si cambia monto o moneda y hay 
   assert.doesNotMatch(ui, /día\(s\) antes<\/div>/);                                       // se quitó el texto ambiguo y el «0» suelto
   delete require.cache[require.resolve('../../lib/cobros/api')];
 });
+
+test('PayPal cobra lo que está en el sistema: vista previa del monto en US$ con la misma cuenta del servidor', () => {
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /id="pp-preview"/); assert.match(ui, /PayPal cobrará <b>exactamente/); assert.match(ui, /PayPal no cobra en pesos/);
+  assert.match(ui, /¿Generar el enlace\?/);
+  // la cuenta de la pantalla (monto ÷ tasa, al centavo) coincide con la del servidor
+  for (const [a, r] of [[6050, 60.5], [9500, 60.13], [1234.56, 61.2], [80, 59.99], [100.005, 60]]) {
+    const pantalla = Math.round(a / r * 100) / 100;
+    assert.equal(pantalla, require('../../lib/cobros/paypal').toUsd(a, r), `${a} ÷ ${r}`);
+  }
+});

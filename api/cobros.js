@@ -42,6 +42,7 @@ const ROUTES = [
   ['GET', /^fx$/, ctx => api.fxRate(ctx)],
   ['GET', /^invoices$/, ctx => api.listInvoices(ctx)],
   ['POST', /^invoices$/, (ctx, q, b) => api.createInvoice(ctx, b)],
+  ['PATCH', /^invoices\/([^/]+)$/, (ctx, q, b, m) => api.updateInvoice(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/remind$/, (ctx, q, b, m) => api.remindInvoice(ctx, m[1])],
   ['POST', /^invoices\/([^/]+)\/notice-days$/, (ctx, q, b, m) => api.setRemindDays(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/paypal$/, (ctx, q, b, m) => api.paypalLink(ctx, m[1], b)],

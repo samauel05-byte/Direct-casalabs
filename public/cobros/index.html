@@ -22,7 +22,8 @@ h1,h2{font-family:'Josefin Sans','Poppins',sans-serif}
 .hdr h1{margin:0;font-size:18px;flex:1}
 .back,.btn{border:1px solid var(--bdr);background:var(--surf2);color:var(--fg);border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer}
 .btn.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
-.btn.sm{padding:5px 9px;font-size:12px}.btn.bad{color:var(--bad);border-color:var(--bad);background:transparent}
+.btn.sm{padding:5px 9px;font-size:12px}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--acc);font-weight:600}.btn.ghost:hover{background:var(--surf2)}.btn.bad{color:var(--bad);border-color:var(--bad);background:transparent}
 .btn:disabled{opacity:.5;cursor:default}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px 0;max-width:1100px;margin:0 auto}
 .tab{border:1px solid var(--bdr);background:var(--surf);color:var(--fg2);border-radius:999px;padding:7px 14px;cursor:pointer;font:inherit}
@@ -116,7 +117,7 @@ function compactDates(list){ const ds=[...list].sort(), out=[]; let a=null,b=nul
   for(const x of ds){ if(a&&addDays(b,1)===x){ b=x; } else { push(); a=b=x; } } push(); return out.join(', '); }
 function avisoTexto(i){
   if(i.remind_dates&&i.remind_dates.length){ const per=i.remind_per_day||1; return `Avisa: ${compactDates(i.remind_dates.map(x=>String(x).slice(0,10)))} · ${per} ${per===1?'correo':'correos'} al día`; }
-  return `Avisa: ${(i.remind_days&&i.remind_days.length?i.remind_days:[3,1]).join(', ')} día(s) antes`;
+  return `Avisa: ${(i.remind_days&&i.remind_days.length?i.remind_days:[3,1]).join(', ')} días antes`;
 }
 // Calendario donde se marcan los días de aviso. opt: {due:()=>'AAAA-MM-DD'|'', dates:[], perDay:1, overdue:true}
 function schedulePicker(root,opt){
@@ -174,6 +175,39 @@ function openSchedModal(id){ const inv=(window.__invs||{})[id]; if(!inv) return;
   m.querySelector('#sm-ok').onclick=async()=>{ try{ const g=pk.get(); const r=await api('invoices/'+id+'/notice-days',{method:'POST',body:{dates:g.dates,per_day:g.per_day,overdue:g.overdue,days:''}}); m.remove(); await load(); flash(r.message); }catch(er){ flash(er.message,'err'); m.remove(); } };
 }
 
+const ST_LBL={pending:'Pendiente',paid:'Pagado',overdue:'Vencido',cancelled:'Cancelado'};
+// Una fila de la tabla de cobros: datos arriba, acciones principales y, debajo, las secundarias.
+function invRow(i,today){
+  const late=i.status==='pending'&&i.due_date<today, open=i.status==='pending'||i.status==='overdue';
+  const fac=i.factura_seq?'FAC-'+String(i.factura_seq).padStart(4,'0'):'';
+  const link=i.payment_link&&/^https?:\/\//i.test(i.payment_link)?` <a href="${esc(i.payment_link)}" target="_blank" rel="noopener noreferrer" title="Abrir el enlace de pago">🔗</a>`:'';
+  const sent=`Enviados: ${i.reminder_count||0}${i.last_reminder_at?` · último ${dd(i.last_reminder_at)}`:''}`;
+  return `<tr><td>${esc(i.client_name)}</td>
+    <td>${esc(i.concept)}${link}${fac?`<div class="mut">${fac}</div>`:''}</td>
+    <td style="white-space:nowrap"><b>${money(i.amount,i.currency)}</b>${i.paypal_usd_amount?`<div class="mut">PayPal: ${money(i.paypal_usd_amount,'USD')}</div>`:''}</td>
+    <td style="white-space:nowrap">${dd(i.due_date)}</td>
+    <td class="${i.status==='overdue'||late?'bad':i.status==='paid'?'okc':''}"><b>${late?'Vencido':ST_LBL[i.status]}</b>${i.status==='paid'&&i.receipt_sent_at?'<div class="okc" style="font-size:12px;font-weight:500">Comprobante enviado</div>':''}</td>
+    <td class="mut" style="min-width:170px">${open?`<div>${avisoTexto(i)}</div>`:''}<div>${sent}</div></td>
+    <td style="min-width:340px"><div class="acts">${open?`<button class="btn sm" data-edit="${i.id}">✏️ Editar</button>`:''}<button class="btn sm" data-fact="${i.id}" title="${fac?`Reenvía la factura ${fac} (PDF) al cliente`:'Envía la factura comercial (PDF) al cliente'}">${fac?'Reenviar':'Facturar'}</button>${open?`<button class="btn sm pri" data-paid="${i.id}">Marcar pagado</button>`:''}</div>
+      <div class="acts" style="margin-top:4px"><button class="btn sm ghost" data-fpdf="${i.id}">PDF</button>${open&&!i.payment_link?`<button class="btn sm ghost" data-pplink="${i.id}" data-cur="${i.currency}">Enlace PayPal</button>`:''}${open&&i.paypal_invoice_id?`<button class="btn sm ghost" data-ppcheck="${i.id}">Verificar pago</button>`:''}${open?`<button class="btn sm ghost" data-ndays="${i.id}" title="Calendario de avisos">Avisos</button><button class="btn sm ghost" data-remind="${i.id}">Recordar</button>`:''}</div></td></tr>`;
+}
+// Editar un cobro que ya existe
+function openEditInvoice(id){ const inv=(window.__invs||{})[id]; if(!inv) return; const cl=window.__clients||[];
+  const m=document.createElement('div'); m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto';
+  m.innerHTML=`<form style="background:var(--surf);border-radius:16px;padding:18px;width:100%;max-width:640px"><h2 style="margin:0 0 4px;font-size:16px">Editar cobro</h2><div class="mut" style="margin-bottom:12px">Los cambios se aplican a los próximos avisos, facturas y PDF.</div>
+    <div class="grid">${f('Cliente',`<select name="client_id">${cl.map(c=>`<option value="${c.id}"${c.id===inv.client_id?' selected':''}>${esc(c.name)}</option>`).join('')}</select>`)}
+    ${f('Concepto','<input name="concept" required value="'+esc(inv.concept)+'">')}${f('Monto','<input name="amount" type="number" step="0.01" min="0.01" required value="'+esc(inv.amount)+'">')}
+    ${f('Moneda',`<select name="currency"><option value="DOP"${inv.currency==='DOP'?' selected':''}>RD$ (pesos)</option><option value="USD"${inv.currency==='USD'?' selected':''}>US$ (dólares)</option></select>`)}
+    ${f('Vence','<input name="due_date" type="date" required value="'+esc(String(inv.due_date).slice(0,10))+'">')}${f('Enlace de pago','<input name="payment_link" type="url" value="'+esc(inv.payment_link||'')+'" placeholder="Vacío = sin enlace">')}</div>
+    ${inv.paypal_invoice_id?'<div class="msg warn" style="margin-top:12px">Este cobro tiene una factura de PayPal. Si cambias el <b>monto</b> o la <b>moneda</b>, esa factura se cancela (para que no se pague el monto viejo) y tendrás que generar un enlace nuevo con «Enlace PayPal».</div>':''}
+    <div class="acts" style="margin-top:14px"><button type="button" class="btn" data-x>Cancelar</button><button class="btn pri">Guardar cambios</button></div></form>`;
+  document.body.appendChild(m); const form=m.querySelector('form');
+  m.querySelector('[data-x]').onclick=()=>m.remove(); m.addEventListener('mousedown',e=>{ if(e.target===m) m.remove(); });
+  form.onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(form), btn=form.querySelector('.pri'); btn.disabled=true;
+    try{ const r=await api('invoices/'+id,{method:'PATCH',body:{client_id:fd.get('client_id'),concept:fd.get('concept'),amount:fd.get('amount'),currency:fd.get('currency'),due_date:fd.get('due_date'),payment_link:fd.get('payment_link')}}); m.remove(); await load(); flash(r.message); }
+    catch(er){ btn.disabled=false; flash(er.message,'err'); window.scrollTo(0,0); } };
+}
+
 async function vCobros(){
   const d=await api('invoices'); const fx=await api('fx').catch(()=>null); const ST={pending:'Pendiente',paid:'Pagado',overdue:'Vencido',cancelled:'Cancelado'};
   $('view').innerHTML=(d.providers&&!d.providers.paypal?'<div class="msg warn">PayPal no está configurado en el servidor: no se podrán generar enlaces automáticos, pero puedes pegar uno propio.</div>':'')+`<form class="card" id="f-inv"><div class="grid">
@@ -184,12 +218,8 @@ async function vCobros(){
     <div style="grid-column:1/-1"><div id="sched-root"></div></div>
     ${f('Tasa RD$ por US$ (automática; solo cobros en RD$ con PayPal)',`<input name="rate" type="number" step="0.01" min="20" placeholder="${fx&&fx.rate?'automática '+fx.rate:'automática'}" value="${fx&&fx.rate?fx.rate:''}">`)}
     </div><div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;align-items:center"><label class="chk"><input type="checkbox" name="paypal" ${d.providers&&d.providers.paypal?'checked':''}> Generar enlace de pago con PayPal</label><label class="chk"><input type="checkbox" name="notify"> Avisar al cliente al crear</label><button class="btn pri" style="margin-left:auto">Crear cobro</button></div></form>
-    <div class="tw"><table><thead><tr><th>Cliente</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Estado</th><th>Avisos</th><th></th></tr></thead><tbody>${d.invoices.map(i=>{
-      const late=i.status==='pending'&&i.due_date<d.today, open=i.status==='pending'||i.status==='overdue';
-      return `<tr><td>${esc(i.client_name)}</td><td>${esc(i.concept)}${i.payment_link&&/^https?:\/\//i.test(i.payment_link)?` <a href="${esc(i.payment_link)}" target="_blank" rel="noopener noreferrer">enlace</a>`:''}</td><td style="white-space:nowrap"><b>${money(i.amount,i.currency)}</b></td><td style="white-space:nowrap">${dd(i.due_date)}</td>
-      <td class="${i.status==='overdue'||late?'bad':i.status==='paid'?'okc':''}">${late?'Vencido':ST[i.status]}</td><td class="mut">${open?`<div>${avisoTexto(i)}</div>`:''}${i.reminder_count}${i.last_reminder_at?' · '+dd(i.last_reminder_at):''}${i.paypal_usd_amount?`<div>PayPal: ${money(i.paypal_usd_amount,'USD')}</div>`:''}${i.status==='paid'&&i.receipt_sent_at?'<div class="okc">Comprobante enviado</div>':''}</td>
-      <td><div class="acts"><button class="btn sm" data-fact="${i.id}" title="Envía la factura comercial (PDF) al cliente">${i.factura_seq?'Reenviar '+('FAC-'+String(i.factura_seq).padStart(4,'0')):'Facturar'}</button><button class="btn sm" data-fpdf="${i.id}">PDF</button>${open?`${!i.payment_link?`<button class="btn sm" data-pplink="${i.id}" data-cur="${i.currency}">Enlace PayPal</button>`:''}${i.paypal_invoice_id?`<button class="btn sm" data-ppcheck="${i.id}">Verificar pago</button>`:''}<button class="btn sm" data-ndays="${i.id}">Calendario de avisos</button><button class="btn sm" data-remind="${i.id}">Recordar</button><button class="btn sm" data-paid="${i.id}">Marcar pagado</button>`:''}</div></td></tr>`; }).join('')||'<tr><td colspan="7" class="mut">Aún no hay cobros.</td></tr>'}</tbody></table></div>`;
-  const finv=$('f-inv'); window.__invs=Object.fromEntries(d.invoices.map(i=>[i.id,i]));
+    <div class="tw"><table><thead><tr><th>Cliente</th><th>Concepto</th><th>Monto</th><th>Vence</th><th>Estado</th><th>Avisos</th><th>Acciones</th></tr></thead><tbody>${d.invoices.map(i=>invRow(i,d.today)).join('')||'<tr><td colspan="7" class="mut">Aún no hay cobros.</td></tr>'}</tbody></table></div>`;
+  const finv=$('f-inv'); window.__invs=Object.fromEntries(d.invoices.map(i=>[i.id,i])); window.__clients=d.clients;
   const sp=schedulePicker($('sched-root'),{due:()=>finv.due_date.value});
   finv.due_date.addEventListener('change',()=>sp.refresh());
   $('f-inv').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target);
@@ -300,6 +330,7 @@ document.addEventListener('click',async e=>{
     else if(t.dataset.paid){ if(!confirm('¿Marcar como pagado? Se enviará el comprobante de pago al cliente.')) return; t.disabled=true; const r=await api('invoices/'+t.dataset.paid+'/paid',{method:'POST',body:{}}); await load(); flash(r.message); }
     else if(t.dataset.pplink){ let rate=''; if(t.dataset.cur==='DOP'){ const a=await api('fx').catch(()=>null); rate=prompt('PayPal cobra en US$. Tasa RD$ por US$ (automática, puedes cambiarla):',a&&a.rate?a.rate:''); if(!rate) return; } t.disabled=true; const r=await api('invoices/'+t.dataset.pplink+'/paypal',{method:'POST',body:{rate}}); await load(); flash(r.message); }
     else if(t.dataset.ndays){ openSchedModal(t.dataset.ndays); }
+    else if(t.dataset.edit){ openEditInvoice(t.dataset.edit); }
     else if(t.dataset.qsend){ t.disabled=true; const r=await api('quotes/'+t.dataset.qsend+'/send',{method:'POST',body:{}}); await load(); flash(r.message,r.sent?'ok':'err'); }
     else if(t.dataset.qpdf){ await download('quotes/'+t.dataset.qpdf+'/pdf'); }
     else if(t.dataset.qstatus){ const r=await api('quotes/'+t.dataset.qstatus+'/status',{method:'POST',body:{status:t.dataset.st}}); await load(); flash(r.message); }

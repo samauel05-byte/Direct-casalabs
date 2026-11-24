@@ -288,7 +288,7 @@ async function fileToText(file){
 // ── Planes de cobro recurrente (corte automático) ───────────────────────────────────────────────────
 const EV={plan_created:['🆕','Plan creado'],plan_updated:['✏️','Plan editado'],plan_paused:['⏸️','Plan pausado'],plan_resumed:['▶️','Plan activado'],mode_live:['🔴','Modo REAL'],mode_simulation:['🟡','Modo simulación'],
   invoice_created:['🧾','Cobro creado'],link_ready:['🔗','Enlace generado'],link_failed:['⚠️','Falló el enlace'],notice_sent:['✉️','Cobro enviado'],notice_failed:['⚠️','Falló el envío'],notice_skipped:['⚠️','Cobro sin enviar'],
-  paid:['✅','Pago recibido'],simulated_suspend:['🟡','SIMULACIÓN de corte'],suspended:['⛔','SUSPENDIDO'],reactivated:['🟢','REACTIVADO'],blocked_no_link:['🛡️','Corte evitado: sin enlace'],blocked_no_targets:['🛡️','Sin nada que suspender'],
+  paid:['✅','Pago recibido'],simulated_suspend:['🟡','SIMULACIÓN de corte'],suspended:['⛔','SUSPENDIDO'],reactivated:['🟢','REACTIVADO'],nexo_synced:['🔄','Nexo avisado del pago'],nexo_sync_error:['⚠️','No se pudo avisar a Nexo'],blocked_no_link:['🛡️','Corte evitado: sin enlace'],blocked_no_targets:['🛡️','Sin nada que suspender'],
   paypal_unreachable:['🛡️','Corte evitado: PayPal no respondió'],suspend_error:['⚠️','Error al suspender'],reactivate_error:['⚠️','Error al reactivar'],error:['⚠️','Error']};
 const fdt=iso=>iso?new Intl.DateTimeFormat('es-DO',{day:'numeric',month:'short',year:'numeric'}).format(new Date(iso+'T12:00:00Z')):'—';
 const fdtm=iso=>iso?new Intl.DateTimeFormat('es-DO',{dateStyle:'medium',timeStyle:'short',timeZone:TZ}).format(new Date(iso)):'—';

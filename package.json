@@ -13,7 +13,7 @@
     "test:conciliacion": "node --test tests/conciliacion/engine.test.js",
     "test:estados": "node --test tests/estados/unit.test.js tests/estados/statements.test.js tests/estados/flow.test.js",
     "test:licenses": "node --test --test-concurrency=1 tests/licenses/flow.test.js tests/licenses/paypal.test.js",
-    "test:cobros": "node --test tests/cobros/unit.test.js tests/cobros/plans.test.js",
+    "test:cobros": "node --test tests/cobros/unit.test.js tests/cobros/plans.test.js tests/licenses/bypass.test.js",
     "test:mora": "node --test tests/mora/engine.test.js tests/mora/plantilla.test.js"
   },
   "dependencies": {

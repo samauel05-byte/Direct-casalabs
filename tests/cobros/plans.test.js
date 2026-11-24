@@ -192,7 +192,7 @@ test('modo real: a las 11:55 sin pago suspende Direct y Nexo; al pagar los react
   await w2.api.processPlan(w2.plan(), T('2026-11-25T12:05:00Z'));
   w2.ctl.paypalState = 'paid';
   await w2.api.processPlan(w2.plan(), T('2026-12-05T15:56:00Z'));
-  assert.deepEqual(w2.rec.direct, []); assert.deepEqual(w2.rec.nexo, []); assert.equal(w2.inv().status, 'paid');
+  assert.deepEqual(w2.rec.direct, []); assert.deepEqual(w2.rec.nexo.filter(x => x[0] !== 'mark_paid'), []); assert.equal(w2.inv().status, 'paid');   // pagó a tiempo: nada se suspende (solo se avisa del pago a Nexo)
 });
 
 test('salvaguardas del corte real: PayPal caído, pausa, Nexo sin conexión y pago manual', async () => {
@@ -278,4 +278,31 @@ test('cron: «watch» (cada 15 min) y «cutoff» (11:55) solo revisan planes; y 
   const fn = read('supabase/nexo/cobros-license/index.ts');
   assert.match(fn, /x-cobros-secret/); assert.match(fn, /safeEqual/); assert.match(fn, /casa\\s\*labs/i); assert.match(fn, /license_events/);
   assert.match(read('supabase/migrations/202611260001_cobros_planes.sql'), /create table if not exists public\.cobros_plans/);
+});
+
+test('cada pago del plan se le avisa a Nexo (para que su regla antigua no suspenda a quien ya pagó) y se reintenta si falla', async () => {
+  const w = world();                                                                       // simulación: igual se avisa a Nexo de un pago real
+  await w.api.processPlan(w.plan(), T('2026-11-25T12:05:00Z'));
+  w.ctl.paypalState = 'paid';
+  await w.api.processPlan(w.plan(), T('2026-12-02T13:00:00Z'));                           // pagan antes del límite
+  assert.equal(w.inv().status, 'paid');
+  const mp = w.rec.nexo.filter(x => x[0] === 'mark_paid');
+  assert.equal(mp.length, 1); assert.equal(mp[0][1], 'Save Consultores');
+  assert.equal(mp[0][2].paid_period, '2026-11');                                            // ciclo 25-nov → 5-dic = período de Nexo 2026-11 (empieza el día 24)
+  assert.ok(w.kinds().includes('nexo_synced'));
+  await w.api.processPlan(w.plan(), T('2026-12-02T13:15:00Z')); await w.api.processPlan(w.plan(), T('2026-12-02T13:30:00Z'));
+  assert.equal(w.rec.nexo.filter(x => x[0] === 'mark_paid').length, 1);                     // ya avisado: no se repite
+
+  // Nexo caído: queda registrado, se reintenta en la siguiente revisión y entonces se avisa
+  const w2 = world(); await w2.api.processPlan(w2.plan(), T('2026-11-25T12:05:00Z'));
+  w2.ctl.nexoThrows = true; const orig = w2.rec.nexo.push.bind(w2.rec.nexo);
+  w2.ctl.paypalState = 'paid'; await w2.api.processPlan(w2.plan(), T('2026-12-02T13:00:00Z'));
+  assert.equal(w2.db.T.cobros_plan_events.filter(e => e.kind === 'nexo_sync_error').length, 1); assert.ok(!w2.kinds().includes('nexo_synced'));
+  await w2.api.processPlan(w2.plan(), T('2026-12-02T13:15:00Z')); assert.equal(w2.db.T.cobros_plan_events.filter(e => e.kind === 'nexo_sync_error').length, 1);   // el error no se repite
+  w2.ctl.nexoThrows = false; await w2.api.processPlan(w2.plan(), T('2026-12-02T13:30:00Z')); assert.ok(w2.kinds().includes('nexo_synced'));
+  // un plan sin empresa de Nexo no llama a Nexo
+  const w3 = world({ nexo_org: null }); await w3.api.processPlan(w3.plan(), T('2026-11-25T12:05:00Z')); w3.ctl.paypalState = 'paid'; await w3.api.processPlan(w3.plan(), T('2026-12-02T13:00:00Z'));
+  assert.deepEqual(w3.rec.nexo, []);
+  // la función de Nexo acepta mark_paid y el modo real de Direct/Nexo sigue exigiendo todo lo anterior
+  assert.match(read('supabase/nexo/cobros-license/index.ts'), /mark_paid/);
 });

@@ -1,7 +1,7 @@
 // Cobros (Direct) → Nexo: consultar, suspender o reactivar una empresa de Nexo por falta de pago.
 // Se despliega en el proyecto «nexo» de Supabase como Edge Function `cobros-license` (sin verificación de JWT:
 // la autorización es el secreto compartido NEXO_COBROS_SECRET que también está en Vercel, en el proyecto de Direct).
-//   POST { action: 'status' | 'suspend' | 'reactivate', org: '<uuid | nombre exacto>', reason?, period?, paid_period? }
+//   POST { action: 'status' | 'suspend' | 'reactivate' | 'mark_paid', org: '<uuid | nombre exacto>', reason?, period?, paid_period? }
 //   Cabecera: x-cobros-secret: <NEXO_COBROS_SECRET>
 // Seguridad: compara el secreto en tiempo constante, resuelve la empresa por id o por nombre EXACTO (si hay más de una, falla),
 // nunca suspende la empresa de la plataforma («CaSa Labs») y deja cada cambio en license_events.
@@ -26,7 +26,7 @@ serve(async (req) => {
 
   const body = await req.json().catch(() => ({}))
   const action = String(body.action || '')
-  if (!['status', 'suspend', 'reactivate'].includes(action)) return json({ ok: false, error: 'Acción desconocida' }, 400)
+  if (!['status', 'suspend', 'reactivate', 'mark_paid'].includes(action)) return json({ ok: false, error: 'Acción desconocida' }, 400)
   const orgRef = String(body.org || '').trim()
   if (!orgRef) return json({ ok: false, error: 'Falta la empresa' }, 400)
 
@@ -50,6 +50,21 @@ serve(async (req) => {
     if (e1) return json({ ok: false, error: 'No se pudo suspender' }, 500)
     await admin.from('license_events').insert({ org_id: org.id, kind: 'manual', payload: { status: 'suspended', note: 'Cobros: ' + (reason || 'pago no recibido'), by: 'cobros' } })
     return json({ ok: true, org: { ...view, status: 'suspended' } })
+  }
+
+  // mark_paid: un pago recibido en Cobros. Marca el período como pagado en la regla antigua de Nexo (payment_reminder) para que
+  // enforce_payment_deadlines no suspenda a quien ya pagó, y reactiva la empresa si estaba suspendida (igual que «Pago recibido»).
+  if (action === 'mark_paid') {
+    const per = String(body.paid_period || '').trim()
+    if (!/^\d{4}-\d{2}$/.test(per)) return json({ ok: false, error: 'paid_period inválido (AAAA-MM)' }, 400)
+    const st = { ...(org.settings || {}) }
+    if (st.payment_reminder) { const cur = String(st.payment_reminder.paid_period || ''); st.payment_reminder = { ...st.payment_reminder, paid_period: cur > per ? cur : per } }
+    const patch: Record<string, unknown> = { settings: st, last_payment_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+    if (org.status === 'suspended') patch.status = 'active'
+    const { error: e3 } = await admin.from('organizations').update(patch).eq('id', org.id)
+    if (e3) return json({ ok: false, error: 'No se pudo registrar el pago' }, 500)
+    await admin.from('license_events').insert({ org_id: org.id, kind: 'manual', payload: { status: 'active', note: 'Cobros: ' + (reason || `pago del período ${per} recibido`), by: 'cobros' } })
+    return json({ ok: true, org: { ...view, status: org.status === 'suspended' ? 'active' : org.status }, paid_period: per })
   }
 
   // reactivate: solo si la suspendió falta de pago (estado suspended); nunca revive una cancelada

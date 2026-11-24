@@ -10,6 +10,6 @@ Supabase de **Nexo** (no en el de Direct). Es una Edge Function sin JWT; la auto
 4. Desplegar la función `cobros-license` con `--no-verify-jwt` (código en `index.ts`).
 5. En Cobros → Planes → el plan: «Pasar a modo REAL» comprueba la conexión con `action: status` antes de activarse.
 
-Acciones: `status`, `suspend`, `reactivate`. Resuelve la empresa por id o por nombre exacto; nunca suspende «CaSa Labs»;
+Acciones: `status`, `suspend`, `reactivate` y `mark_paid` (avisa a Nexo de un pago recibido en Cobros: marca el período en `payment_reminder.paid_period` para que la regla antigua no suspenda a quien ya pagó). Resuelve la empresa por id o por nombre exacto; nunca suspende «CaSa Labs»;
 cada cambio queda en `license_events`. La regla antigua de Nexo (`enforce_payment_deadlines`, con `settings.payment_reminder`)
 sigue activa: al pasar una empresa a Cobros hay que quitarle `payment_reminder` para no tener dos reglas.

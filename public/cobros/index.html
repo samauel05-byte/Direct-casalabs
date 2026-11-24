@@ -358,21 +358,30 @@ async function vPromos(){
         <textarea id="list-text" rows="6" placeholder="ana@empresa.com&#9;Ana Pérez&#10;luis@otra.com&#9;Luis Soto"></textarea></label>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px"><label class="btn sm" style="cursor:pointer">📂 Subir Excel o CSV<input id="list-file" type="file" accept=".xlsx,.xls,.csv,.txt" hidden></label>
         <span id="list-count" class="mut"></span></div>
-      <p class="mut" style="margin:8px 0 0">Se quitan los repetidos, los inválidos y los correos de la lista de bajas. Solo canal Correo, hasta 150 por envío: envía en tandas, porque muchos correos de golpe a personas que no te conocen pueden hacer que bloqueen el buzón corporativo. Usa <b>{{nombre}}</b> solo si pegaste el nombre junto al correo.</p>
+      <p class="mut" style="margin:8px 0 0">Se quitan los repetidos, los inválidos y los correos de la lista de bajas. Solo canal Correo, hasta 150 por envío: envía en tandas, porque muchos correos de golpe a personas que no te conocen pueden hacer que bloqueen el buzón corporativo. El nombre que pegues junto al correo se usa en el mensaje.</p>
+      <label class="chk" style="margin-top:8px"><input type="checkbox" id="manual-toggle"> Prefiero escribir yo mismo el asunto y el mensaje</label>
     </div>
-    <div style="margin-top:12px">${f('Asunto (correo)','<input name="subject">')}</div>
-    <div style="margin-top:12px">${f('Mensaje * — variables: {{nombre}} {{empresa}} {{negocio}}','<textarea name="body" rows="5" required></textarea>')}</div>
+    <div id="auto-box" hidden style="margin-top:12px;border:1px solid var(--bdr);border-radius:12px;padding:12px;background:var(--surf2)">
+      <div style="font-weight:600;margin-bottom:4px">✨ El asunto y el mensaje se escriben solos</div>
+      <div class="mut" style="margin-bottom:8px;line-height:1.5">Cada destinatario recibe un correo de presentación de tus servicios con <b>su nombre</b>, en 3 versiones distintas para que no lleguen como un correo masivo. Al final lleva el enlace para darse de baja.</div>
+      <div id="auto-prev" class="mut">Pega la lista de correos y aquí verás el asunto y el mensaje que se enviará.</div></div>
+    <div id="manual-box"><div style="margin-top:12px">${f('Asunto (correo)','<input name="subject">')}</div>
+    <div style="margin-top:12px">${f('Mensaje * — variables: {{nombre}} {{empresa}} {{negocio}}','<textarea name="body" rows="5" required></textarea>')}</div></div>
     <label class="chk" style="margin-top:12px;align-items:flex-start"><input type="checkbox" name="confirm" style="margin-top:3px"><span>Confirmo que puedo contactar a estos destinatarios. Se respeta el consentimiento de cada cliente, se omiten los correos en bajas y se añade al final el aviso para responder BAJA.</span></label>
     <div class="right" style="margin-top:12px"><button class="btn pri">Enviar campaña</button></div></form>
     <div class="tw"><table><thead><tr><th>Fecha</th><th>Campaña</th><th>Canal</th><th>Audiencia</th><th>Enviados</th><th>Fallidos</th></tr></thead><tbody>${d.campaigns.map(c=>`<tr><td>${dt(c.created_at)}</td><td>${esc(c.name)}</td><td>${CHN[c.channel]}</td><td>${esc(c.audience_tag||'Todos')}</td><td>${c.sent_count}</td><td>${c.failed_count}</td></tr>`).join('')||'<tr><td colspan="6" class="mut">Sin campañas todavía.</td></tr>'}</tbody></table></div>`;
-  const aud=$('aud'), chan=document.querySelector('#f-camp [name=channel]'), box=$('listbox'), ta=$('list-text');
-  const upd=()=>{ const isList=aud.value==='__list'; box.hidden=!isList; if(isList){ chan.value='email'; } [...chan.options].forEach(o=>{ if(o.value!=='email') o.disabled=isList; });
+  const aud=$('aud'), chan=document.querySelector('#f-camp [name=channel]'), box=$('listbox'), ta=$('list-text'), manual=$('manual-toggle'), msgTa=document.querySelector('#f-camp [name=body]');
+  let prevTimer=null;
+  const refreshPrev=()=>{ clearTimeout(prevTimer); prevTimer=setTimeout(async()=>{ const el=$('auto-prev'), row=parseList(ta.value).rows[0]; if(!el) return;
+    if(!row){ el.className='mut'; el.textContent='Pega la lista de correos y aquí verás el asunto y el mensaje que se enviará.'; return; }
+    try{ const r=await api('campaigns/preview',{method:'POST',body:{name:row.name,email:row.email}}); el.className=''; el.innerHTML=`<div class="mut" style="font-size:12px">Así le llegaría, por ejemplo, a ${esc(row.name||row.email)}:</div><div style="margin-top:6px"><b>Asunto:</b> ${esc(r.subject)}</div><pre style="white-space:pre-wrap;font:inherit;margin:6px 0 0;padding:10px;border:1px solid var(--bdr);border-radius:10px;background:var(--bg)">${esc(r.body)}</pre>`; }catch(er){ el.className='mut'; el.textContent='No se pudo mostrar la vista previa: '+er.message; } },350); };
+  const upd=()=>{ const isList=aud.value==='__list', useAuto=isList&&!manual.checked; box.hidden=!isList; $('auto-box').hidden=!useAuto; $('manual-box').hidden=useAuto; msgTa.required=!useAuto; if(useAuto) refreshPrev(); if(isList){ chan.value='email'; } [...chan.options].forEach(o=>{ if(o.value!=='email') o.disabled=isList; });
     if(isList){ const r=parseList(ta.value); $('list-count').textContent=r.rows.length?`${r.rows.length} correo(s) válidos${r.dups?` · ${r.dups} repetidos`:''}${r.bad?` · ${r.bad} inválidos`:''}`:'Aún no hay correos.'; } };
-  aud.onchange=upd; ta.oninput=upd; upd();
+  aud.onchange=upd; ta.oninput=upd; manual.onchange=upd; upd();
   $('list-file').onchange=async e=>{ const file=e.target.files[0]; if(!file) return; try{ ta.value=await fileToText(file); upd(); }catch(er){ flash(er.message,'err'); } e.target.value=''; };
   $('f-camp').onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(e.target), btn=e.target.querySelector('button.pri'); btn.disabled=true; btn.textContent='Enviando…';
     const isList=fd.get('tag')==='__list';
-    try{ const r=await api('campaigns/send',{method:'POST',body:{name:fd.get('name'),channel:fd.get('channel'),tag:isList?'':fd.get('tag'),audience:isList?'list':'',emails:isList?parseList(ta.value).rows:undefined,subject:fd.get('subject'),body:fd.get('body'),confirm:fd.get('confirm')==='on'}}); await load(); flash(r.message); }
+    try{ const r=await api('campaigns/send',{method:'POST',body:{name:fd.get('name'),channel:fd.get('channel'),tag:isList?'':fd.get('tag'),audience:isList?'list':'',emails:isList?parseList(ta.value).rows:undefined,...(isList&&!manual.checked?{auto:true}:{subject:fd.get('subject'),body:fd.get('body')}),confirm:fd.get('confirm')==='on'}}); await load(); flash(r.message); }
     catch(er){ btn.disabled=false; btn.textContent='Enviar campaña'; flash(er.message,'err'); } };
   // Bajas
   const ob=await api('optouts').catch(()=>({optouts:[]}));

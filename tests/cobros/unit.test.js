@@ -547,3 +547,35 @@ test('PayPal cobra lo que está en el sistema: vista previa del monto en US$ con
     assert.equal(pantalla, require('../../lib/cobros/paypal').toUsd(a, r), `${a} ÷ ${r}`);
   }
 });
+
+test('Promociones automáticas: asunto y mensaje se generan solos, estables y sin variables sueltas', async () => {
+  const a = L.autoPromo({ name: 'Ferretería Ramírez', email: 'ferreteriaramirezsa@hotmail.com' });
+  assert.deepEqual(a, L.autoPromo({ name: 'Ferretería Ramírez', email: 'ferreteriaramirezsa@hotmail.com' }));   // estable
+  assert.match(a.subject, /Ferretería Ramírez/); assert.match(a.body, /^Hola Ferretería Ramírez,/);
+  assert.match(a.body, /me interesa/); assert.doesNotMatch(a.subject + a.body, /\{\{|undefined|http/);
+  const sn = L.autoPromo({ email: 'x@y.com' });
+  assert.match(sn.body, /^Hola,\n/); assert.match(sn.subject, /su negocio/);
+  const variants = new Set(Array.from({ length: 40 }, (_, i) => L.autoPromo({ email: `p${i}@x.com` }).variant));
+  assert.equal(variants.size, 3);
+  // envío automático por destinatario
+  const sent = [];
+  require.cache[require.resolve('../../lib/cobros/messaging')] = { id: 'm', filename: 'm', loaded: true, exports: { providers: () => ({}), dispatch: async o => { sent.push(o); return { ok: true }; } } };
+  const data = { cobros_optouts: [], cobros_clients: [] };
+  const q = table => { const o = {}; ['select', 'eq', 'in', 'contains', 'order', 'limit'].forEach(k => { o[k] = () => o; });
+    o.insert = () => o; o.update = () => o; o.single = async () => ({ data: { id: 'camp1' }, error: null });
+    o.then = res => res({ data: data[table] || [], error: null }); return o; };
+  require.cache[require.resolve('../../lib/supabase')] = { id: 's', filename: 's', loaded: true, exports: { from: q } };
+  delete require.cache[require.resolve('../../lib/cobros/api')];
+  const api = require('../../lib/cobros/api');
+  const emails = [{ email: 'ana@empresa.com', name: 'Ana' }, { email: 'luis@otra.co' }];
+  await assert.rejects(() => api.sendCampaign({ tenantId: 't' }, { name: 'X', channel: 'whatsapp', auto: true, confirm: true, audience: 'list', emails }), /solo para correo/);
+  await assert.rejects(() => api.sendCampaign({ tenantId: 't' }, { name: '', channel: 'email', auto: true, confirm: true, audience: 'list', emails }), /nombre/);
+  await api.sendCampaign({ tenantId: 't' }, { name: 'Auto', channel: 'email', auto: true, confirm: true, audience: 'list', emails });
+  assert.equal(sent.length, 2);
+  assert.match(sent[0].body, /^Hola Ana,/); assert.match(sent[0].subject, /Ana/); assert.match(sent[0].body, /darte de baja aquí/);
+  assert.match(sent[1].body, /^Hola,\n/);
+  // la ruta manual sigue exigiendo asunto y mensaje
+  await assert.rejects(() => api.sendCampaign({ tenantId: 't' }, { name: 'M', channel: 'email', confirm: true, audience: 'list', emails }), /Completa nombre, canal y mensaje/);
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /id="auto-box"/); assert.match(ui, /id="manual-toggle"/); assert.match(ui, /campaigns\/preview/); assert.match(read('api/cobros.js'), /campaigns\\\/preview/);
+});

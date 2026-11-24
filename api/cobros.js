@@ -59,6 +59,7 @@ const ROUTES = [
   ['POST', /^invoices\/([^/]+)\/paid$/, (ctx, q, b, m) => api.markPaid(ctx, m[1])],
   ['GET', /^campaigns$/, ctx => api.listCampaigns(ctx)],
   ['POST', /^campaigns\/send$/, (ctx, q, b) => api.sendCampaign(ctx, b)],
+  ['POST', /^campaigns\/preview$/, (ctx, q, b) => api.previewCampaign(ctx, b)],
   ['GET', /^optouts$/, ctx => api.listOptouts(ctx)],
   ['POST', /^optouts$/, (ctx, q, b) => api.addOptouts(ctx, b)],
   ['POST', /^optouts\/remove$/, (ctx, q, b) => api.removeOptout(ctx, b)],

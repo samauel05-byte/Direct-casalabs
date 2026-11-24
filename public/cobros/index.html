@@ -23,6 +23,7 @@ h1,h2{font-family:'Josefin Sans','Poppins',sans-serif}
 .back,.btn{border:1px solid var(--bdr);background:var(--surf2);color:var(--fg);border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer}
 .btn.pri{background:var(--acc);color:#fff;border-color:var(--acc);font-weight:600}
 .btn.sm{padding:5px 9px;font-size:12px}
+.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
 .btn.ghost{background:transparent;border-color:transparent;color:var(--acc);font-weight:600}.btn.ghost:hover{background:var(--surf2)}.btn.bad{color:var(--bad);border-color:var(--bad);background:transparent}
 .btn:disabled{opacity:.5;cursor:default}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px 0;max-width:1100px;margin:0 auto}
@@ -56,7 +57,7 @@ td{padding:8px 10px;border-top:1px solid var(--bdr);vertical-align:top}
 let TOKEN='', SESSION_ID='', TAB='resumen';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const TABS=[['resumen','Resumen'],['clientes','Clientes'],['cotizaciones','Cotizaciones'],['cobros','Cobros'],['promos','Promociones'],['historial','Historial']];
+const TABS=[['resumen','Resumen'],['clientes','Clientes'],['cotizaciones','Cotizaciones'],['cobros','Cobros'],['planes','Planes'],['promos','Promociones'],['historial','Historial']];
 const sid=()=>SESSION_ID||localStorage.getItem('direct_session_id')||'';
 async function api(route,opts={}){
   const h={Authorization:'Bearer '+TOKEN}; if(sid()) h['X-Direct-Session']=sid(); if(opts.body) h['Content-Type']='application/json';
@@ -76,7 +77,7 @@ const f=(label,inner)=>`<label class="f">${label}${inner}</label>`;
 
 async function load(){
   renderTabs(); $('view').innerHTML='<p class="mut">Cargando…</p>';
-  try{ await ({resumen:vResumen,clientes:vClientes,cotizaciones:vCotizaciones,cobros:vCobros,promos:vPromos,historial:vHistorial})[TAB](); }
+  try{ await ({resumen:vResumen,clientes:vClientes,cotizaciones:vCotizaciones,cobros:vCobros,planes:vPlanes,promos:vPromos,historial:vHistorial})[TAB](); }
   catch(e){ $('view').innerHTML=''; flash(e.message,'err'); }
 }
 const TIPO={reminder:'Recordatorio',promo:'Promoción',invoice:'Cobro',receipt:'Comprobante',quote:'Cotización',factura:'Factura'}, CH={email:'Correo',whatsapp:'WhatsApp'};
@@ -284,6 +285,69 @@ async function fileToText(file){
   return await file.text();
 }
 
+// ── Planes de cobro recurrente (corte automático) ───────────────────────────────────────────────────
+const EV={plan_created:['🆕','Plan creado'],plan_updated:['✏️','Plan editado'],plan_paused:['⏸️','Plan pausado'],plan_resumed:['▶️','Plan activado'],mode_live:['🔴','Modo REAL'],mode_simulation:['🟡','Modo simulación'],
+  invoice_created:['🧾','Cobro creado'],link_ready:['🔗','Enlace generado'],link_failed:['⚠️','Falló el enlace'],notice_sent:['✉️','Cobro enviado'],notice_failed:['⚠️','Falló el envío'],notice_skipped:['⚠️','Cobro sin enviar'],
+  paid:['✅','Pago recibido'],simulated_suspend:['🟡','SIMULACIÓN de corte'],suspended:['⛔','SUSPENDIDO'],reactivated:['🟢','REACTIVADO'],blocked_no_link:['🛡️','Corte evitado: sin enlace'],blocked_no_targets:['🛡️','Sin nada que suspender'],
+  paypal_unreachable:['🛡️','Corte evitado: PayPal no respondió'],suspend_error:['⚠️','Error al suspender'],reactivate_error:['⚠️','Error al reactivar'],error:['⚠️','Error']};
+const fdt=iso=>iso?new Intl.DateTimeFormat('es-DO',{day:'numeric',month:'short',year:'numeric'}).format(new Date(iso+'T12:00:00Z')):'—';
+const fdtm=iso=>iso?new Intl.DateTimeFormat('es-DO',{dateStyle:'medium',timeStyle:'short',timeZone:TZ}).format(new Date(iso)):'—';
+function planCard(p,d){
+  const mode=p.mode==='live'?'<span class="chip" style="background:rgba(220,38,38,.14);color:var(--bad)">🔴 MODO REAL</span>':'<span class="chip" style="background:rgba(245,158,11,.18);color:#92400e">🟡 Simulación</span>';
+  const st=p.suspended?'<span class="chip" style="background:rgba(220,38,38,.14);color:var(--bad)">⛔ Suspendido</span>':p.active?'<span class="chip" style="background:rgba(21,146,74,.14);color:var(--ok)">Activo</span>':'<span class="chip" style="background:var(--surf2)">⏸️ Pausado</span>';
+  const tn=(d.tenants.find(t=>t.id===p.direct_tenant_id)||{}).name;
+  const targets=[p.direct_tenant_id?`Direct (${esc(tn||'firma')})`:'',p.nexo_org?`Nexo (${esc(p.nexo_org)})`:''].filter(Boolean).join(' y ')||'<i>nada configurado</i>';
+  const inv=p.invoice, cyc=p.cycle, days=Math.ceil((new Date(p.cutoff_at)-new Date(p.now))/864e5);
+  const invTxt=inv?`${money(inv.amount,inv.currency)} · <b>${inv.status==='paid'?'Pagado ✅':'Pendiente'}</b> · ${inv.payment_link?`<a href="${esc(inv.payment_link)}" target="_blank" rel="noopener noreferrer">🔗 enlace de pago</a>`:'<b class="bad">sin enlace de PayPal todavía</b>'}`:`Aún no se crea (se crea el ${fdt(cyc.createDate)} desde las 8:00 a. m.)`;
+  const adm=d.is_admin;
+  return `<div class="card" style="border-left:4px solid ${p.mode==='live'?'var(--bad)':'#f59e0b'}">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px"><h2 style="margin:0;font-size:16px">${esc(p.name)}</h2>${mode}${st}<span class="mut" style="margin-left:auto">${esc(p.client_name)} · <b>${money(p.amount,'USD')}</b> al mes</span></div>
+    <div class="mut" style="line-height:1.7">
+      📅 Se crea el cobro el <b>${p.create_day}</b> de cada mes · vence el <b>${p.due_day}</b> del siguiente · corte a las <b>${esc(p.cutoff_time)}</b> (hora de RD)<br>
+      ⏳ Ciclo actual: ${esc(P_label(cyc.period))} — vence <b>${fdt(cyc.dueDate)}</b>, corte <b>${fdtm(p.cutoff_at)}</b> ${days>=0?`(faltan ${days} ${days===1?'día':'días'})`:'(ya pasó)'}<br>
+      🧾 Cobro del ciclo: ${invTxt}<br>
+      🔔 Avisos: ${esc((p.remind_offsets||[]).map(o=>o===0?'el día límite':o+' d antes').join(', '))}<br>
+      ✂️ Si no pagan a la hora de corte: ${p.mode==='live'?'<b class="bad">se suspende</b>':'<b>solo se registra (simulación)</b>'} ${targets}${p.notify_email?` · avisos de administración a ${esc(p.notify_email)}`:' · <b class="bad">sin correo de administración</b>'}</div>
+    ${adm?`<div class="acts" style="margin:10px 0;justify-content:flex-start"><button class="btn sm" data-plan-run="${p.id}">🔍 Revisar ahora</button>${!inv?`<button class="btn sm" data-plan-gen="${p.id}">🧾 Crear el cobro ahora</button>`:''}<button class="btn sm" data-plan-edit="${p.id}">✏️ Editar</button><button class="btn sm" data-plan-active="${p.id}" data-on="${p.active?0:1}">${p.active?'⏸️ Pausar':'▶️ Activar'}</button>${p.mode==='live'?`<button class="btn sm" data-plan-mode="${p.id}" data-m="simulation">🟡 Volver a simulación</button>`:`<button class="btn sm bad" data-plan-mode="${p.id}" data-m="live">🔴 Pasar a modo REAL</button>`}${p.suspended?`<button class="btn sm pri" data-plan-react="${p.id}">🟢 Reactivar accesos</button>`:''}<button class="btn sm bad" data-plan-del="${p.id}">Eliminar</button></div>`:''}
+    <details ${p.events.length&&p.events.length<=4?'open':''}><summary class="mut" style="cursor:pointer">Historial del plan (${p.events.length})</summary><div class="tw" style="margin-top:6px"><table><tbody>${p.events.map(e=>{ const x=EV[e.kind]||['•',e.kind]; return `<tr><td style="white-space:nowrap">${fdtm(e.created_at)}</td><td style="white-space:nowrap">${x[0]} ${x[1]}</td><td class="mut">${esc(e.detail||'')}</td></tr>`; }).join('')||'<tr><td class="mut">Sin eventos todavía.</td></tr>'}</tbody></table></div></details></div>`;
+}
+const P_label=ym=>{ const [y,m]=ym.split('-').map(Number); return `${MESES[m-1]} de ${y}`; };
+
+async function vPlanes(){
+  const d=await api('plans'); window.__plans=Object.fromEntries(d.plans.map(x=>[x.id,x])); window.__pd=d;
+  const warnSelf=d.tenants.some(t=>t.id===d.me_tenant);
+  $('view').innerHTML=`<div class="card"><h2 style="margin:0 0 6px;font-size:16px">Cobro recurrente con corte automático</h2>
+    <p class="mut" style="margin:0;line-height:1.6">Un plan crea cada mes el cobro con su enlace de PayPal y se lo envía al cliente, <b>detecta el pago solo</b> (cada 15 minutos) y, si a la hora de corte no se pagó, <b>suspende Direct y Nexo</b>; cuando pagan, los <b>reactiva solos</b>. Empieza en <b>simulación</b>: solo registra lo que habría hecho.</p>
+    ${warnSelf?'<div class="msg warn" style="margin:10px 0 0">⚠️ La firma de Direct de este plan incluye a las personas que usan Cobros. Al suspenderla se bloquea a <b>todos sus usuarios</b>; el administrador de la plataforma (root) nunca queda fuera.</div>':''}
+    ${d.is_admin?`<div style="margin-top:10px"><button class="btn pri" id="plan-new">+ Nuevo plan</button></div>`:'<p class="mut" style="margin:10px 0 0">Solo el administrador de la plataforma (root) crea o cambia planes. Aquí puedes ver su estado.</p>'}</div>
+    ${d.plans.map(p=>planCard(p,d)).join('')||'<div class="card mut">Aún no hay planes.</div>'}`;
+  const nb=$('plan-new'); if(nb) nb.onclick=()=>openPlanModal();
+}
+function openPlanModal(id){
+  const d=window.__pd, p=id?(window.__plans||{})[id]:null, df=d.defaults;
+  const m=document.createElement('div'); m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto';
+  const v=(k,fb)=>esc(p?(Array.isArray(p[k])?p[k].join(', '):(p[k]==null?'':p[k])):fb);
+  m.innerHTML=`<form style="background:var(--surf);border-radius:16px;padding:18px;width:100%;max-width:720px"><h2 style="margin:0 0 4px;font-size:16px">${p?'Editar plan':'Nuevo plan de cobro recurrente'}</h2><div class="mut" style="margin-bottom:12px">${p?'Los cambios aplican al próximo ciclo; el cobro ya creado no cambia.':'Se crea en modo <b>simulación</b>: no suspende nada.'}</div>
+    <div class="grid">${f('Nombre del plan *','<input name="name" required value="'+v('name','Save Consultores — Nexo + Direct')+'">')}
+    ${f('Cliente que paga *',`<select name="client_id" required><option value="">Selecciona…</option>${d.clients.map(c=>`<option value="${c.id}"${p&&p.client_id===c.id?' selected':''}>${esc(c.name)}${c.email?'':' (sin correo)'}</option>`).join('')}</select>`)}
+    ${f('Concepto del cobro *','<input name="concept" required value="'+v('concept','Nexo + Direct — servicio mensual')+'">')}
+    ${f('Monto mensual (US$) *','<input name="amount" type="number" step="0.01" min="1" required value="'+v('amount',df.amount)+'">')}
+    ${f('Día del mes en que se crea el cobro','<input name="create_day" type="number" min="1" max="28" required value="'+v('create_day',df.create_day)+'">')}
+    ${f('Día límite (del mes siguiente)','<input name="due_day" type="number" min="1" max="28" required value="'+v('due_day',df.due_day)+'">')}
+    ${f('Hora de corte (RD, HH:MM)','<input name="cutoff_time" required pattern="([01][0-9]|2[0-3]):[0-5][0-9]" value="'+v('cutoff_time',df.cutoff_time)+'">')}
+    ${f('Avisos (días antes del límite; 0 = el día límite)','<input name="remind_offsets" value="'+v('remind_offsets',df.remind_offsets)+'">')}
+    ${f('Firma de Direct que se suspende',`<select name="direct_tenant_id"><option value="">— ninguna —</option>${d.tenants.map(t=>`<option value="${t.id}"${(p?p.direct_tenant_id===t.id:t.id===d.me_tenant)?' selected':''}>${esc(t.name)}</option>`).join('')}</select>`)}
+    ${f('Empresa de Nexo que se suspende (nombre exacto)','<input name="nexo_org" value="'+v('nexo_org',df.nexo_org)+'" placeholder="Vacío = no suspende Nexo">')}
+    ${f('Correo para avisos de administración','<input name="notify_email" type="email" value="'+v('notify_email','')+'" placeholder="Recibirás cada creación, pago, simulación y corte">')}</div>
+    ${d.nexo_configured?'':'<div class="msg warn" style="margin-top:12px">Nexo aún no está conectado (falta la variable <b>NEXO_COBROS_SECRET</b> y la función en Nexo). En simulación no importa; es obligatorio antes del modo real si el plan suspende Nexo.</div>'}
+    <div class="acts" style="margin-top:14px"><button type="button" class="btn" data-x>Cancelar</button><button class="btn pri">${p?'Guardar cambios':'Crear plan'}</button></div></form>`;
+  document.body.appendChild(m); const form=m.querySelector('form');
+  m.querySelector('[data-x]').onclick=()=>m.remove(); m.addEventListener('mousedown',e=>{ if(e.target===m) m.remove(); });
+  form.onsubmit=async e=>{ e.preventDefault(); const fd=new FormData(form), btn=form.querySelector('.pri'); btn.disabled=true; const body={}; for(const [k,x] of fd.entries()) body[k]=x;
+    try{ const r=p?await api('plans/'+id,{method:'PATCH',body}):await api('plans',{method:'POST',body}); m.remove(); await load(); flash(r.message); }
+    catch(er){ btn.disabled=false; flash(er.message,'err'); window.scrollTo(0,0); } };
+}
+
 async function vPromos(){
   const d=await api('campaigns'); const CHN={both:'Correo + WhatsApp',email:'Correo',whatsapp:'WhatsApp'};
   $('view').innerHTML=providerWarn(d.providers)+`<form class="card" id="f-camp"><div class="grid">
@@ -340,6 +404,15 @@ document.addEventListener('click',async e=>{
     else if(t.dataset.pplink){ let rate=''; if(t.dataset.cur==='DOP'){ const a=await api('fx').catch(()=>null); const inv=(window.__invs||{})[t.dataset.pplink]||{}; rate=prompt(`PayPal no cobra en pesos: cobrará en US$ lo equivalente a ${money(inv.amount,'DOP')}.\nTasa RD$ por US$ (automática, puedes cambiarla):`,a&&a.rate?a.rate:''); if(!rate) return; const usd=Math.round(Number(inv.amount)/Number(rate)*100)/100; if(!confirm(`PayPal cobrará ${money(usd,'USD')} (${money(inv.amount,'DOP')} ÷ ${Number(rate).toFixed(2)}). ¿Generar el enlace?`)) return; } t.disabled=true; const r=await api('invoices/'+t.dataset.pplink+'/paypal',{method:'POST',body:{rate}}); await load(); flash(r.message); }
     else if(t.dataset.ndays){ openSchedModal(t.dataset.ndays); }
     else if(t.dataset.edit){ openEditInvoice(t.dataset.edit); }
+    else if(t.dataset.planEdit){ openPlanModal(t.dataset.planEdit); }
+    else if(t.dataset.planRun){ t.disabled=true; const r=await api('plans/'+t.dataset.planRun+'/run',{method:'POST',body:{}}); await load(); flash(r.message); }
+    else if(t.dataset.planGen){ if(!confirm('Se creará el cobro de este ciclo, con su enlace de PayPal, y se enviará al cliente por correo. ¿Continuar?')) return; t.disabled=true; const r=await api('plans/'+t.dataset.planGen+'/generate',{method:'POST',body:{}}); await load(); flash(r.message); }
+    else if(t.dataset.planActive){ const on=t.dataset.on==='1'; if(!on&&!confirm('Mientras esté pausado el plan no crea cobros ni corta. ¿Pausar?')) return; const r=await api('plans/'+t.dataset.planActive+'/active',{method:'POST',body:{active:on}}); await load(); flash(r.message); }
+    else if(t.dataset.planMode){ const live=t.dataset.m==='live'; let confirmText='';
+      if(live){ confirmText=prompt('⚠️ MODO REAL\n\nSi el cobro no se paga a la hora de corte, se SUSPENDERÁ el acceso de todos los usuarios de la firma de Direct y de la empresa de Nexo del plan (root nunca queda fuera).\n\nEscribe SUSPENDER para confirmar:')||''; if(!confirmText) return; }
+      const r=await api('plans/'+t.dataset.planMode+'/mode',{method:'POST',body:{mode:live?'live':'simulation',confirm:confirmText}}); await load(); flash(r.message); }
+    else if(t.dataset.planReact){ if(!confirm('Se reactivará el acceso suspendido (Direct y Nexo) sin esperar el pago. ¿Continuar?')) return; t.disabled=true; const r=await api('plans/'+t.dataset.planReact+'/reactivate',{method:'POST',body:{}}); await load(); flash(r.message); }
+    else if(t.dataset.planDel){ if(!confirm('¿Eliminar este plan? Los cobros que ya creó se conservan.')) return; const r=await api('plans/'+t.dataset.planDel,{method:'DELETE'}); await load(); flash(r.message); }
     else if(t.dataset.qsend){ t.disabled=true; const r=await api('quotes/'+t.dataset.qsend+'/send',{method:'POST',body:{}}); await load(); flash(r.message,r.sent?'ok':'err'); }
     else if(t.dataset.qpdf){ await download('quotes/'+t.dataset.qpdf+'/pdf'); }
     else if(t.dataset.qstatus){ const r=await api('quotes/'+t.dataset.qstatus+'/status',{method:'POST',body:{status:t.dataset.st}}); await load(); flash(r.message); }

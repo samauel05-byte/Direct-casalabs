@@ -484,3 +484,55 @@ test('calendario en la pantalla, edición de cobros existentes, y cuentas del cr
   assert.deepEqual(seen, [2, 3, 1, 3, 1]);
   delete require.cache[require.resolve('../../lib/cobros/api')];
 });
+
+test('editar un cobro: solo pendientes/vencidos; si cambia monto o moneda y hay factura de PayPal, se cancela y se desvincula', async () => {
+  const calls = { patch: [], paypal: [] };
+  let row;
+  const reset = o => { row = { id: '11111111-1111-4111-8111-111111111111', tenant_id: 't', client_id: 'c1', concept: 'Hosting', amount: 100, currency: 'USD', due_date: '2026-11-10', status: 'overdue', payment_link: 'https://www.paypal.com/invoice/p/#X', paypal_invoice_id: 'INV2-X', paypal_usd_amount: 100, paypal_rate: null, items: [{ desc: 'a', qty: 1, price: 100 }], ...o }; calls.patch = []; calls.paypal = []; };
+  const q = table => { const o = { _u: null };
+    ['select', 'eq', 'in', 'order', 'limit'].forEach(k => { o[k] = () => o; });
+    o.maybeSingle = async () => ({ data: table === 'cobros_invoices' ? { ...row } : { id: 'c2' }, error: null });
+    o.update = u => { o._u = u; return o; };
+    o.single = async () => { calls.patch.push(o._u); Object.assign(row, o._u); return { data: { ...row }, error: null }; };
+    o.then = res => res({ data: [], error: null }); return o; };
+  require.cache[require.resolve('../../lib/supabase')] = { id: 's', filename: 's', loaded: true, exports: { from: q } };
+  const ppState = { fail: false };
+  require.cache[require.resolve('../../lib/paypal')] = { id: 'p', filename: 'p', loaded: true, exports: { hasCredentials: () => true, api: async (pth, init) => { calls.paypal.push(pth); if (ppState.fail) throw new Error('PayPal 403: Authorization failed due to insufficient permissions.'); return {}; } } };
+  delete require.cache[require.resolve('../../lib/cobros/paypal')]; delete require.cache[require.resolve('../../lib/cobros/api')];
+  const api = require('../../lib/cobros/api');
+  const ID = '11111111-1111-4111-8111-111111111111', ctx = { tenantId: 't' };
+
+  // pagado o cancelado: no se edita
+  reset({ status: 'paid' }); await assert.rejects(() => api.updateInvoice(ctx, ID, { concept: 'x' }), /ya está pagado/);
+  reset({ status: 'cancelled' }); await assert.rejects(() => api.updateInvoice(ctx, ID, { concept: 'x' }), /ya está pagado o cancelado/);
+  // validaciones
+  reset(); await assert.rejects(() => api.updateInvoice(ctx, ID, { concept: '  ' }), /concepto/);
+  await assert.rejects(() => api.updateInvoice(ctx, ID, { amount: '0' }), /mayor que 0/);
+  await assert.rejects(() => api.updateInvoice(ctx, ID, { due_date: 'mañana' }), /fecha/);
+  await assert.rejects(() => api.updateInvoice(ctx, ID, { payment_link: 'ftp://x' }), /http/);
+  // sin cambios reales (la pantalla manda todos los campos tal cual): no toca nada
+  reset(); let r = await api.updateInvoice(ctx, ID, { concept: 'Hosting', amount: '100', currency: 'USD', due_date: '2026-11-10', payment_link: 'https://www.paypal.com/invoice/p/#X', client_id: 'c1' });
+  assert.match(r.message, /No hay cambios/); assert.equal(calls.patch.length, 0); assert.equal(calls.paypal.length, 0);
+  // cambio que no toca el dinero (concepto y vencimiento): conserva la factura de PayPal; un vencido movido al futuro vuelve a pendiente
+  reset(); r = await api.updateInvoice(ctx, ID, { concept: 'Hosting 2027', due_date: '2099-01-01', amount: '100', currency: 'USD' });
+  assert.deepEqual(calls.paypal, []); assert.equal(calls.patch[0].concept, 'Hosting 2027'); assert.equal(calls.patch[0].due_date, '2099-01-01'); assert.equal(calls.patch[0].status, 'pending');
+  assert.equal(calls.patch[0].paypal_invoice_id, undefined); assert.match(r.message, /Cobro actualizado\.$/);
+  // cambia el monto con factura de PayPal: se cancela en PayPal, se desvincula el enlace y se descartan las líneas viejas
+  reset(); r = await api.updateInvoice(ctx, ID, { amount: '95', payment_link: 'https://www.paypal.com/invoice/p/#X' });
+  assert.deepEqual(calls.paypal, ['/v2/invoicing/invoices/INV2-X/cancel']);
+  const u = calls.patch[0]; assert.equal(u.amount, 95); assert.equal(u.paypal_invoice_id, null); assert.equal(u.payment_link, null); assert.equal(u.paypal_usd_amount, null); assert.equal(u.items, null);
+  assert.match(r.message, /se canceló/);
+  // si PayPal no deja cancelar, igual se desvincula y se avisa que se cancele a mano
+  reset(); ppState.fail = true; r = await api.updateInvoice(ctx, ID, { currency: 'DOP' });
+  assert.equal(calls.patch[0].paypal_invoice_id, null); assert.match(r.message, /cancélala en PayPal/); ppState.fail = false;
+  // cambia el monto y pone a la vez otro enlace propio: se conserva el nuevo
+  reset(); await api.updateInvoice(ctx, ID, { amount: '120', payment_link: 'https://pago.example/mio' });
+  assert.equal(calls.patch[0].payment_link, 'https://pago.example/mio');
+  // cambio de cliente verificado dentro de la firma; y la ruta existe
+  reset(); await api.updateInvoice(ctx, ID, { client_id: '22222222-2222-4222-8222-222222222222' }); assert.equal(calls.patch[0].client_id, 'c2');
+  assert.match(read('api/cobros.js'), /'PATCH', \/\^invoices/);
+  const ui = read('public/cobros/index.html');
+  assert.match(ui, /data-edit=/); assert.match(ui, /function openEditInvoice/); assert.match(ui, /function invRow/); assert.match(ui, /Enviados: /);
+  assert.doesNotMatch(ui, /día\(s\) antes<\/div>/);                                       // se quitó el texto ambiguo y el «0» suelto
+  delete require.cache[require.resolve('../../lib/cobros/api')];
+});

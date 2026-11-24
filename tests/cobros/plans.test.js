@@ -311,3 +311,9 @@ test('Formulario del plan: calendario en una frase con ejemplo y opciones avanza
   const ui = require('fs').readFileSync(require('path').join(__dirname, '../../public/cobros/index.html'), 'utf8');
   assert.match(ui, /de cada mes, y el cliente tiene hasta el día/); assert.match(ui, /id="plan-sum"/); assert.match(ui, /Opciones avanzadas/);
 });
+
+test('Correo de administración por defecto en planes nuevos', () => {
+  const fs = require('fs'), path = require('path');
+  assert.match(fs.readFileSync(path.join(__dirname, '../../lib/cobros/api.js'), 'utf8'), /notify_email: process\.env\.COBROS_ADMIN_EMAIL \|\| 'info@casalabs\.com\.do'/);
+  assert.match(fs.readFileSync(path.join(__dirname, '../../public/cobros/index.html'), 'utf8'), /v\('notify_email',df\.notify_email/);
+});

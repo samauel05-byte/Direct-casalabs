@@ -343,7 +343,7 @@ function openPlanModal(id){
     ${f('Avisos (días antes del límite; 0 = el día límite)','<input name="remind_offsets" value="'+v('remind_offsets',df.remind_offsets)+'">')}
     ${f('Firma de Direct que se suspende',`<select name="direct_tenant_id"><option value="">— ninguna —</option>${d.tenants.map(t=>`<option value="${t.id}"${(p?p.direct_tenant_id===t.id:t.id===d.me_tenant)?' selected':''}>${esc(t.name)}</option>`).join('')}</select>`)}
     ${f('Empresa de Nexo que se suspende (nombre exacto)','<input name="nexo_org" value="'+v('nexo_org',df.nexo_org)+'" placeholder="Vacío = no suspende Nexo">')}
-    ${f('Correo para avisos de administración','<input name="notify_email" type="email" value="'+v('notify_email','')+'" placeholder="Recibirás cada creación, pago, simulación y corte">')}</div></details>
+    ${f('Correo para avisos de administración','<input name="notify_email" type="email" value="'+v('notify_email',df.notify_email||'')+'" placeholder="Recibirás cada creación, pago, simulación y corte">')}</div></details>
     ${d.nexo_configured?'':'<div class="msg warn" style="margin-top:12px">Nexo aún no está conectado (falta la variable <b>NEXO_COBROS_SECRET</b> y la función en Nexo). En simulación no importa; es obligatorio antes del modo real si el plan suspende Nexo.</div>'}
     <div class="acts" style="margin-top:14px"><button type="button" class="btn" data-x>Cancelar</button><button class="btn pri">${p?'Guardar cambios':'Crear plan'}</button></div></form>`;
   document.body.appendChild(m); const form=m.querySelector('form');

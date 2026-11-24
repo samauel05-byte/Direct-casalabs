@@ -39,6 +39,15 @@ const ROUTES = [
   ['POST', /^quotes\/([^/]+)\/convert$/, (ctx, q, b, m) => api.convertQuote(ctx, m[1], b)],
   ['POST', /^invoices\/([^/]+)\/factura$/, (ctx, q, b, m) => api.facturar(ctx, m[1])],
   ['GET', /^invoices\/([^/]+)\/pdf$/, (ctx, q, b, m) => api.facturaPdf(ctx, m[1])],
+  ['GET', /^plans$/, ctx => api.listPlans(ctx)],
+  ['POST', /^plans$/, (ctx, q, b) => api.createPlan(ctx, b)],
+  ['PATCH', /^plans\/([^/]+)$/, (ctx, q, b, m) => api.updatePlan(ctx, m[1], b)],
+  ['DELETE', /^plans\/([^/]+)$/, (ctx, q, b, m) => api.deletePlan(ctx, m[1])],
+  ['POST', /^plans\/([^/]+)\/active$/, (ctx, q, b, m) => api.setPlanActive(ctx, m[1], b)],
+  ['POST', /^plans\/([^/]+)\/mode$/, (ctx, q, b, m) => api.setPlanMode(ctx, m[1], b)],
+  ['POST', /^plans\/([^/]+)\/run$/, (ctx, q, b, m) => api.runPlanNow(ctx, m[1])],
+  ['POST', /^plans\/([^/]+)\/generate$/, (ctx, q, b, m) => api.generatePlanNow(ctx, m[1])],
+  ['POST', /^plans\/([^/]+)\/reactivate$/, (ctx, q, b, m) => api.reactivatePlanNow(ctx, m[1])],
   ['GET', /^fx$/, ctx => api.fxRate(ctx)],
   ['GET', /^invoices$/, ctx => api.listInvoices(ctx)],
   ['POST', /^invoices$/, (ctx, q, b) => api.createInvoice(ctx, b)],
@@ -62,6 +71,9 @@ module.exports = async (req, res) => {
   try {
     if (route === 'cron' && ['GET', 'POST'].includes(req.method)) {
       if (!cronAuthorized(req)) return res.status(401).json({ error: 'No autorizado' });
+      // «watch» (cada 15 min) y «cutoff» (a la hora de corte) solo revisan los planes de cobro recurrente.
+      const rawSlot = String((req.query && req.query.slot) || '');
+      if (rawSlot === 'watch' || rawSlot === 'cutoff') return res.json({ ok: true, ...(await api.runPlansOnly()) });
       return res.json({ ok: true, ...(await api.runDaily({ slot: Math.min(3, Math.max(1, Number(req.query && req.query.slot) || 1)) })) });
     }
     // Baja pública desde el enlace del correo: sin sesión; el token firmado es la autorización.

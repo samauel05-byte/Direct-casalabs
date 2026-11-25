@@ -579,3 +579,14 @@ test('Promociones automáticas: asunto y mensaje se generan solos, estables y si
   const ui = read('public/cobros/index.html');
   assert.match(ui, /id="auto-box"/); assert.match(ui, /id="manual-toggle"/); assert.match(ui, /campaigns\/preview/); assert.match(read('api/cobros.js'), /campaigns\\\/preview/);
 });
+
+test('PayPal: el error 422 incluye el motivo real (details) para poder corregirlo', async () => {
+  process.env.PAYPAL_CLIENT_ID = 'id'; process.env.PAYPAL_CLIENT_SECRET = 'sec';
+  const realFetch = global.fetch;
+  global.fetch = async url => String(url).includes('oauth2/token')
+    ? { ok: true, json: async () => ({ access_token: 't', expires_in: 300 }) }
+    : { ok: false, status: 422, json: async () => ({ name: 'UNPROCESSABLE_ENTITY', message: 'The requested action could not be performed.', details: [{ issue: 'DUPLICATE_INVOICE_NUMBER', field: '/detail/invoice_number', description: 'Invoice number already exists.' }] }) };
+  delete require.cache[require.resolve('../../lib/paypal')];
+  try { await assert.rejects(() => require('../../lib/paypal').api('/v2/invoicing/invoices', { method: 'POST', body: '{}' }), /422.*DUPLICATE_INVOICE_NUMBER.*invoice_number/); }
+  finally { global.fetch = realFetch; delete require.cache[require.resolve('../../lib/paypal')]; }
+});

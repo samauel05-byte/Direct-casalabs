@@ -1092,6 +1092,17 @@ async function apiRequest(path, options={}, _retried=false) {
 // Renueva el access_token con el refresh_token (en el servidor; la anon key no
 // sale de ahí). Devuelve true si quedó una sesión válida. Varias llamadas a la
 // vez comparten la misma promesa para no pedir dos renovaciones en paralelo.
+// Trae del servidor los permisos actuales y los pone en la sesión guardada (sin pedir la contraseña otra vez).
+async function syncPermissions(){
+  try{
+    const r=await A.get('/api/auth/login');
+    if(!r||!r.ok||!currentUser) return;
+    const keys=['role','access_direct','access_cami','access_nala','access_nomina','access_ir2','access_estimacion','access_estados','access_mora','access_cobros','access_clientes','portals'];
+    const fresh=Object.fromEntries(keys.filter(k=>r[k]!==undefined).map(k=>[k,r[k]]));
+    Object.assign(currentUser, fresh); currentUser.platformAdmin=r.platformAdmin===true; if(r.license) currentUser.license=r.license;
+    try{ const st=JSON.parse(sessionStorage.getItem('dsession')||'{}'); sessionStorage.setItem('dsession',JSON.stringify({...st,...fresh,platformAdmin:currentUser.platformAdmin,license:currentUser.license})); }catch(_){}
+  }catch(_){ /* sin red o sesión vencida: se queda con lo guardado */ }
+}
 function refreshSession(){
   if(_refreshing) return _refreshing;
   if(!refreshToken){ return Promise.resolve(false); }
@@ -1218,6 +1229,7 @@ async function boot() {
         vaultSecret = C._u8(v.secret);
         const homeData = fetchHomeData();
         homeData.catch(()=>{});
+        await syncPermissions();   // permisos al día: una pestaña abierta antes de recibir un acceso nuevo lo ve al recargar
         const { config } = await A.get('/api/config');
         appConfig = config || {};
         masterKey = await C.deriveKeyFromBytes(vaultSecret, appConfig.vaultSalt);

@@ -317,3 +317,11 @@ test('Correo de administración por defecto en planes nuevos', () => {
   assert.match(fs.readFileSync(path.join(__dirname, '../../lib/cobros/api.js'), 'utf8'), /notify_email: process\.env\.COBROS_ADMIN_EMAIL \|\| 'info@casalabs\.com\.do'/);
   assert.match(fs.readFileSync(path.join(__dirname, '../../public/cobros/index.html'), 'utf8'), /v\('notify_email',df\.notify_email/);
 });
+
+test('Direct vuelve a leer los permisos al restaurar la sesión (un acceso nuevo aparece sin volver a iniciar sesión)', () => {
+  const ui = require('fs').readFileSync(require('path').join(__dirname, '../../public/index.html'), 'utf8');
+  assert.match(ui, /async function syncPermissions\(\)/);
+  assert.match(ui, /A\.get\('\/api\/auth\/login'\)/);
+  assert.ok(ui.indexOf('await syncPermissions();') > ui.indexOf('refreshSession();') || ui.includes('await syncPermissions();'));
+  assert.match(ui, /access_cobros/);
+});

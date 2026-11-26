@@ -58,3 +58,16 @@ test('un usuario con alcance limitado en NALA no ve empresas no asignadas', asyn
   DATA.nala_member_clients = [{ user_id: 'u1', client_id: 'c1' }];
   assert.strictEqual((await run(sess, { rnc: '131557122', periodo: '202609' })).code, 200);
 });
+
+test('el RNC exacto gana sobre una cédula igual en otra empresa (YURY vs. AVANTSA)', async () => {
+  DATA.nala_members = []; DATA.nala_member_clients = [];
+  DATA.direct_clients = [
+    { id: 'a1', legal_name: 'AVANTSA EIRL', rnc: '132088301', cedula: '00118598119', status: 'active' },
+    { id: 'y1', legal_name: 'YURY PAOLA PINILLA VEGA', rnc: '00118598119', cedula: null, status: 'active' },
+  ];
+  assert.strictEqual((await run(sess, { rnc: '001-1859811-9', periodo: '202609' })).body.client.legal_name, 'YURY PAOLA PINILLA VEGA');
+  assert.strictEqual((await run(sess, { rnc: '132088301', periodo: '202609' })).body.client.legal_name, 'AVANTSA EIRL');
+  // si solo coincide por cédula, se sigue encontrando
+  DATA.direct_clients = [DATA.direct_clients[0]];
+  assert.strictEqual((await run(sess, { rnc: '00118598119', periodo: '202609' })).body.client.legal_name, 'AVANTSA EIRL');
+});
